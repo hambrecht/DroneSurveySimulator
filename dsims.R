@@ -22,6 +22,10 @@ fov <- 60      # field of view in degrees
 image_wdith <- 2 * altitude * tan((fov * (pi / 180)) / 2)
 print(image_wdith)
 
+# https://distancesampling.org/R/vignettes/mexico-analysis.html
+
+
+
 
 # Distance example using dsims
 # https://examples.distancesampling.org/dsims-truncation/dsims-examples.html

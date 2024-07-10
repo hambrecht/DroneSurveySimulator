@@ -30,7 +30,7 @@ print(image_wdith)
 # Distance example using dsims
 # https://examples.distancesampling.org/dsims-truncation/dsims-examples.html
 # load shapefile
-wum_strata <- 'D:/WMU/shapefiles/prop_dec_strata_dis_352.shp'
+wum_strata <- sf::st_read("D:\\WMU\\base_data\\WMU\\wmu_501_3400.shp")
 strata <- sf::st_read(wum_strata)
 
 # replace numbers with letters
@@ -52,8 +52,8 @@ if (all(all_valid)) {
 # Create the survey region
 region <- make.region(region.name = "study area",
                       units = "m",
-                      strata.name = strata$prop_dec,
-                      shape = strata)
+                      strata.name = "A",
+                      shape = wum_strata)
 
 region@region$geometry <- st_make_valid(region@region$geometry)
 # The plot function allows plotting in km or m.
@@ -63,8 +63,9 @@ plot(region)
 
 ## # Create the density surface
 density <- make.density(region = region,
-                        x.space = 1000,
-                        constant = 1)
+                        x.space = 600,
+                        constant = 1,
+                        density.surface = dsm.xy)
 
 
 # Add a hotspot to the density surface, centre located at x = 15000, y = 4000 with
@@ -81,7 +82,7 @@ plot(density, region)
 
 # Create the population description, with a population size N = 200
 pop.desc <- make.population.description(region = region,
-                                        density = density,
+                                        density = density ,
                                         N = rep(200, length(region@strata.name)),
                                         fixed.N = TRUE)
 

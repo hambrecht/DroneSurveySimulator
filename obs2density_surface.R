@@ -6,6 +6,8 @@ library(terra)
 library(Distance)
 library(sf)
 library(dplyr)
+library(units)
+library(purrr)
 
 # plotting options
 gg.opts <- theme(
@@ -18,33 +20,67 @@ gg.opts <- theme(
 set.seed(11123)
 
 # load data
-data <- sf::st_read("D:\\WMU\\survey_data\\501_moose_locations.shp")
-head(data)
-plot(data, max.plot = 1)
+moose <- sf::st_read("D:\\WMU\\survey_data\\501_moose_locations.shp")
+transects <- sf::st_read("D:\\WMU\\survey_data\\WMU 501 (2018-2019)\\WMU501_transects_2018.gpx", layer = "tracks") %>%
+  sf::st_transform(crs = 3400)
+head(moose)
+head(transects)
+transects <- transects %>%
+  dplyr::select(1)
+terra::plot(moose, max.plot = 1)
+terra::plot(transects)
+
+segmentize_transect <- function(transect, segment_length) {
+  total_length <- st_length(transect)
+  num_segments <- ceiling(total_length / segment_length)
+  segments <- vector("list", num_segments)
+  
+  for (i in 1:num_segments) {
+    start_dist <- (i - 1) * segment_length
+    end_dist <- min(i * segment_length, total_length)
+    segments[[i]] <- st_line_substring(transect, start_dist, end_dist)
+  }
+  
+  segments_sf <- do.call(rbind, segments)
+  return(segments_sf)
+}
+
+segment_length <- units::set_units(1, km)
+transects_segmented <- transects %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(geometry = list(segmentize_transect(geometry, segment_length))) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(geometry) %>%
+  sf::st_sf()
+
+
+
 
 # rename columns
-data$Transect.Label <- data$name
-data$Sample.Label <- paste(data$name, data$ident, sep = "_")
-data$object <- data$ident
-data$size <- 1
+moose$Transect.Label <- moose$name
+moose$object <- row_number(moose) # add unique ID to each observation based on row number
+moose$Sample.Label <- paste(moose$name, moose$object, sep = "_")
+moose$size <- 1
+
+# TDDO split transects into segements
 
 # add and convert units to km
-data$Effort <- 10
-data$distance <- data$distance / 1000
+moose$Effort <- 10
+moose$distance <- moose$distance / 1000
 
 # remove unnessecary colums
-data <- data[, -which(names(data) %in% c("distance_2", "aircraft", "date", "y_proj", "x_proj", "name", "layer", "ident"))]
+moose <- moose[, -which(names(moose) %in% c("distance_2", "aircraft", "date", "y_proj", "x_proj", "name", "layer", "ident"))]
 
-# check data
-head(data)
+# check moose
+head(moose)
 
 # create seperate df
-segdata <- sf::st_drop_geometry(data[, which(names(data) %in% c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label"))])
-distdata <- sf::st_drop_geometry(data[, which(names(data) %in% c("object", "Latitude", "Longitude", "distance", "Effort", "size"))])
+segdata <- as.data.frame(sf::st_drop_geometry(moose[, which(names(moose) %in% c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label"))]))
+distdata <- as.data.frame(sf::st_drop_geometry(moose[, which(names(moose) %in% c("object", "Latitude", "Longitude", "distance", "Effort", "size"))]))
 distdata$detected <- 1
-segdata$x <- distdata$x <- sf::st_coordinates(data)[, 1]
-segdata$y <- distdata$y <- sf::st_coordinates(data)[, 2]
-obsdata <- sf::st_drop_geometry(data[, which(names(data) %in% c("object", "distance", "Effort", "Sample.Label", "size"))])
+segdata$x <- distdata$x <- sf::st_coordinates(moose)[, 1]
+segdata$y <- distdata$y <- sf::st_coordinates(moose)[, 2]
+obsdata <- as.data.frame(sf::st_drop_geometry(moose[, which(names(moose) %in% c("object", "distance", "Effort", "Sample.Label", "size"))]))
 
 head(segdata)
 head(distdata)
@@ -62,8 +98,8 @@ grid <- rast(ext(wmu), resolution = 500) # Use ext instead of extent
 crs(grid) <- crs(wmu) # Ensure the correct object (wmu) is referenced
 gridpolygon <- as.polygons(grid)
 wmu_vect <- vect(wmu)
-pred_grid <- intersect(wmu_vect, gridpolygon) # Ensure the correct object (wmu) is referenced
-plot(pred_grid)
+pred_grid <- terra::intersect(wmu_vect, gridpolygon) # Ensure the correct object (wmu) is referenced
+terra::plot(pred_grid)
 
 # given the argument fill (the covariate vector to use as the fill) and a name,
 # return a geom_polygon object

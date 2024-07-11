@@ -33,6 +33,15 @@ nrow(transects) # = 177
 
 
 split_into_segments <- function(linestring) {
+  # # Check if linestring is of type sfc_LINESTRING, convert if necessary
+  # if (!inherits(linestring, "sfc_LINESTRING")) {
+  #   if (inherits(linestring, "sfc") && any(st_geometry_type(linestring) == "LINESTRING")) {
+  #     linestring <- st_cast(linestring, "LINESTRING")
+  #   } else {
+  #     stop("Input must be a LINESTRING geometry")
+  #   }
+  # }
+
   # Ensure total_length is a units object
   total_length <- st_length(linestring)
   if (!inherits(total_length, "units")) {
@@ -62,7 +71,7 @@ split_into_segments <- function(linestring) {
   segment_lengths[num_segments] <- last_segment_length
 
   # Generate points along the linestring at the specified intervals
-  points <- st_line_sample(linestring, sample = seq(0, 1, length.out = num_segments + 1))
+  points <- sf::st_line_sample(linestring, sample = seq(0, 1, length.out = num_segments + 1))
 
   # Create segments between consecutive points
   segments <- map2(
@@ -70,13 +79,20 @@ split_into_segments <- function(linestring) {
     .y = points[-1],
     .f = ~ st_sfc(st_linestring(x = st_coordinates(c(.x, .y))), crs = st_crs(linestring))
   )
-
+  
   # Combine all segments into a single sf object
   do.call(rbind, segments)
 }
 
-# Apply the corrected function
-transects_segmentized <- transects %>%
+# Assuming 'transects' is your sf object with MULTILINESTRING geometries
+
+# Step 1: Explode MULTILINESTRINGs to LINESTRINGs
+transects_linestrings <- transects %>%
+  st_cast("LINESTRING")
+
+terra::plot(transects_linestrings)
+# Step 2: Apply split_into_segments to each LINESTRING
+transects_segments <- transects_linestrings %>%
   st_geometry() %>%
   map(split_into_segments) %>%
   do.call(rbind, .) %>%

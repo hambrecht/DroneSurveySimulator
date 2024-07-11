@@ -33,45 +33,44 @@ nrow(transects) # = 177
 
 
 split_into_segments <- function(linestring) {
-  
   # Ensure total_length is a units object
   total_length <- st_length(linestring)
   if (!inherits(total_length, "units")) {
     total_length <- set_units(total_length, "m") # Assuming meters, adjust as necessary
   }
-  
+
   # Convert total_length to kilometers
   total_length_km <- set_units(total_length, "km")
-  
+
   # Calculate the number of segments, ensuring the result is compatible with units
   num_segments <- ceiling(as.numeric(total_length_km))
-  
+
   # Initialize an empty list for segment lengths
   segment_lengths <- vector("list", num_segments)
-  
+
   # Adjust the last segment length if necessary
   # This part seems to be missing the calculation of segment_lengths before adjusting the last segment
   # Assuming equal division of segments, here's a placeholder calculation
   equal_segment_length <- total_length_km / num_segments
   segment_lengths <- rep(equal_segment_length, num_segments)
-  
+
   # Ensure the operation is compatible with units for the last segment length adjustment
   last_segment_length <- total_length_km - sum(segment_lengths[1:(num_segments - 1)])
   if (!inherits(last_segment_length, "units")) {
     last_segment_length <- set_units(last_segment_length, "km") # Adjust unit as necessary
   }
   segment_lengths[num_segments] <- last_segment_length
-  
+
   # Generate points along the linestring at the specified intervals
   points <- st_line_sample(linestring, sample = seq(0, 1, length.out = num_segments + 1))
-  
+
   # Create segments between consecutive points
   segments <- map2(
     .x = points[-length(points)],
     .y = points[-1],
-    .f = ~st_sfc(st_linestring(x = st_coordinates(c(.x, .y))), crs = st_crs(linestring))
+    .f = ~ st_sfc(st_linestring(x = st_coordinates(c(.x, .y))), crs = st_crs(linestring))
   )
-  
+
   # Combine all segments into a single sf object
   do.call(rbind, segments)
 }

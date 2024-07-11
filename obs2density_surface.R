@@ -32,20 +32,17 @@ terra::plot(transects)
 nrow(transects) # = 177
 
 
-split_into_segments <- function(linestring) {
-  # # Check if linestring is of type sfc_LINESTRING, convert if necessary
-  # if (!inherits(linestring, "sfc_LINESTRING")) {
-  #   if (inherits(linestring, "sfc") && any(st_geometry_type(linestring) == "LINESTRING")) {
-  #     linestring <- st_cast(linestring, "LINESTRING")
-  #   } else {
-  #     stop("Input must be a LINESTRING geometry")
-  #   }
-  # }
 
+split_into_segments <- function(linestring) {
   # Ensure total_length is a units object
   total_length <- st_length(linestring)
   if (!inherits(total_length, "units")) {
     total_length <- set_units(total_length, "m") # Assuming meters, adjust as necessary
+  }
+
+  # Check if total_length is greater than 0
+  if (as.numeric(total_length) <= 0) {
+    stop("Linestring has a non-positive length")
   }
 
   # Convert total_length to kilometers
@@ -54,34 +51,57 @@ split_into_segments <- function(linestring) {
   # Calculate the number of segments, ensuring the result is compatible with units
   num_segments <- ceiling(as.numeric(total_length_km))
 
-  # Initialize an empty list for segment lengths
-  segment_lengths <- vector("list", num_segments)
+  # Check if num_segments is greater than 0
+  if (num_segments <= 0) {
+    stop("Number of segments calculated is not positive")
+  }
 
-  # Adjust the last segment length if necessary
-  # This part seems to be missing the calculation of segment_lengths before adjusting the last segment
-  # Assuming equal division of segments, here's a placeholder calculation
+  # Assuming equal division of segments
   equal_segment_length <- total_length_km / num_segments
   segment_lengths <- rep(equal_segment_length, num_segments)
 
-  # Ensure the operation is compatible with units for the last segment length adjustment
+  # Adjust the last segment length
   last_segment_length <- total_length_km - sum(segment_lengths[1:(num_segments - 1)])
   if (!inherits(last_segment_length, "units")) {
-    last_segment_length <- set_units(last_segment_length, "km") # Adjust unit as necessary
+    last_segment_length <- set_units(last_segment_length, "km")
   }
   segment_lengths[num_segments] <- last_segment_length
 
   # Generate points along the linestring at the specified intervals
   points <- sf::st_line_sample(linestring, sample = seq(0, 1, length.out = num_segments + 1))
 
+  # Convert MULTIPOINT to POINTs
+  points <- st_cast(points, "POINT")
+
+  # Check if points generation is successful
+  if (length(points) < 2) {
+    stop(paste("Failed to generate sufficient points for segments", id, sep = " "))
+  }
+
   # Create segments between consecutive points
   segments <- map2(
     .x = points[-length(points)],
     .y = points[-1],
-    .f = ~ st_sfc(st_linestring(x = st_coordinates(c(.x, .y))), crs = st_crs(linestring))
+    .f = ~ {
+      segment <- st_sfc(st_linestring(x = st_coordinates(c(.x, .y))), crs = st_crs(linestring))
+      st_sf(geometry = segment)
+    }
   )
-  
-  # Combine all segments into a single sf object
-  do.call(rbind, segments)
+
+  # Check if segments are created successfully
+  if (length(segments) < 1) {
+    stop("Failed to create segments")
+  }
+
+  # Combine all segments into a single sf object using do.call(rbind, ...)
+  segments_sf <- do.call(rbind, segments)
+
+  # Check if the final sf object is valid and not empty
+  if (nrow(segments_sf) < 1) {
+    stop("Final sf object is empty")
+  }
+
+  return(segments_sf)
 }
 
 # Assuming 'transects' is your sf object with MULTILINESTRING geometries
@@ -90,16 +110,18 @@ split_into_segments <- function(linestring) {
 transects_linestrings <- transects %>%
   st_cast("LINESTRING")
 
-terra::plot(transects_linestrings)
+
 # Step 2: Apply split_into_segments to each LINESTRING
 transects_segments <- transects_linestrings %>%
   st_geometry() %>%
   map(split_into_segments) %>%
-  do.call(rbind, .) %>%
-  st_sf()
+  bind_rows() %>% # Use bind_rows to combine all sf objects
+  st_sf() # Ensure the result is an sf object
+
+
 
 # Check the number of features now
-nrow(transects_segmentized)
+nrow(transects_segments)
 # rename columns
 moose$Transect.Label <- moose$name
 moose$object <- row_number(moose) # add unique ID to each observation based on row number

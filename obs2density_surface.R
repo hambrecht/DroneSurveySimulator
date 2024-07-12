@@ -8,6 +8,7 @@ library(sf)
 library(dplyr)
 library(units)
 library(purrr)
+library(dsims)
 
 # plotting options
 gg.opts <- theme(
@@ -152,9 +153,11 @@ for (i in 1:nrow(moose)) {
 moose <- merge(moose, closest_segments, by.x = "row.names", by.y = "moose_id")
 
 # rename columns
-moose$size <- 1
+colnames(moose)[1] <- "object"
+colnames(moose)[5] <- "Transect.Label"
 
 # add and convert units to km
+moose$size <- 1
 moose$Effort <- 10
 moose$distance <- moose$distance / 1000
 
@@ -162,7 +165,7 @@ moose$distance <- moose$distance / 1000
 head(moose)
 
 # create seperate df
-# segdata <- as.data.frame(sf::st_drop_geometry(moose[, which(names(moose) %in% c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label"))]))
+segdata <- as.data.frame(sf::st_drop_geometry(moose[, which(names(moose) %in% c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label"))]))
 distdata <- as.data.frame(sf::st_drop_geometry(moose[, which(names(moose) %in% c("object", "Latitude", "Longitude", "distance", "Effort", "size"))]))
 distdata$detected <- 1
 segdata$x <- distdata$x <- sf::st_coordinates(moose)[, 1]
@@ -219,8 +222,6 @@ preddata <- data.frame(x = sf::st_coordinates(centroids_sf)[, 1], y = sf::st_coo
 # Display the first few rows of the data frame
 head(preddata)
 
-
-
 # Explorartory data anaylsis
 # Distance data
 # histograms
@@ -232,22 +233,56 @@ summary(detfc.hr.null)
 par(mfrow = c(1, 2))
 plot(detfc.hr.null, showpoints = FALSE, pl.den = 0, lwd = 2)
 ddf.gof(detfc.hr.null$ddf)
-
+par(mfrow = c(1, 1))
 # Fitting a DSM
 dsm.xy <- dsm(count ~ s(x, y), detfc.hr.null, segdata, obsdata, method = "REML")
 summary(dsm.xy)
 vis.gam(dsm.xy, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = 100)
-plot(data, max.plot = 1, add = TRUE)
 gam.check(dsm.xy)
 rqgam_check(dsm.xy)
+vis_concurvity(dsm.xy)
+dsm.yx[1, ]
 
 # Autocorrelation
 dsm_cor(dsm.xy, max.lag = 10, Segment.Label = "Sample.Label")
 
+# Create the survey region
+region <- make.region(
+  region.name = "study area",
+  units = "m",
+  strata.name = "A",
+  shape = wmu
+)
+
+class(dsm.xy)
+
+## # Create the density surface
+density <- make.density(
+  region = region,
+  x.space = 206,
+  constant = 1,
+  density.surface = dsm.xy
+)
+
+# Create the population description, with a population size N = 200
+pop.desc <- make.population.description(
+  region = region,
+  density = dsm.xy,
+  N = rep(200, length(region@strata.name)),
+  fixed.N = TRUE
+)
+
+
 # Abundance estimation
+preddata_df <- as.data.frame(preddata)
+preddata_df$rowID <- row.names(preddata_df)
 dsm.xy.pred <- predict(dsm.xy, preddata, preddata$area)
+plot(dsm.xy.pred)
+
+dsm.xy.pred_df <- as.data.frame(dsm.xy.pred)
+dsm.xy.pred_df$rowID <- row.names(dsm.xy.pred_df)
 p <- ggplot() +
-  grid_plot_obj(dsm.xy.pred, "Abundance", pred_grid) +
+  grid_plot_obj(dsm.xy.pred_df, "Abundance", preddata_df) +
   coord_equal() +
   gg.opts
 p <- p + geom_path(aes(x = x, y = y), data = survey.area)

@@ -20,11 +20,13 @@ gg.opts <- theme(
 set.seed(11123)
 
 # load data
-moose <- sf::st_read("D:\\WMU\\survey_data\\501_moose_locations.shp")
+moose <- sf::st_read("D:\\WMU\\survey_data\\501_moose_locations.shp") %>%
+  sf::st_transform(crs = 3400)
 transects <- sf::st_read("D:\\WMU\\survey_data\\WMU 501 (2018-2019)\\WMU501_transects_2018.gpx", layer = "tracks") %>%
   sf::st_transform(crs = 3400)
 head(moose)
 head(transects)
+moose <- moose[, which(names(moose) %in% c("Latitude", "Longitude", "date", "name"))]
 transects <- transects %>%
   dplyr::select(1)
 terra::plot(moose, max.plot = 1)
@@ -118,30 +120,49 @@ transects_segments <- transects_linestrings %>%
   bind_rows() %>% # Use bind_rows to combine all sf objects
   st_sf() # Ensure the result is an sf object
 
-
+st_crs(transects_segments) <- st_crs(transects)
 
 # Check the number of features now
 nrow(transects_segments)
-# rename columns
-moose$Transect.Label <- moose$name
-moose$object <- row_number(moose) # add unique ID to each observation based on row number
-moose$Sample.Label <- paste(moose$name, moose$object, sep = "_")
-moose$size <- 1
+transects_segments$Sample.Label <- row_number(transects_segments)
+head(transects_segments)
 
-# TDDO split transects into segements
+# Calculate distances between each point in moose and each segment in transects_segments
+distances <- st_distance(moose, transects_segments, tolerance = set_units(600, "m"))
+
+# Initialize a data frame to store the closest segment ID and distance for each moose point
+closest_segments <- data.frame(
+  moose_id = integer(nrow(moose)), # add unique ID to each observation based on row number
+  Sample.Label = integer(nrow(moose)),
+  distance = numeric(nrow(moose))
+)
+
+# Loop through each point in moose to find the closest segment
+for (i in 1:nrow(moose)) {
+  # Find the index of the minimum distance for the current point
+  min_distance_index <- which.min(distances[i, ])
+
+  # Store the results
+  closest_segments$moose_id[i] <- i
+  closest_segments$Sample.Label[i] <- transects_segments$Sample.Label[min_distance_index] # Assuming 'Sample.Label' is the identifier
+  closest_segments$distance[i] <- distances[i, min_distance_index]
+}
+
+# Optionally, join the closest_segments info back to the moose data frame if needed
+moose <- merge(moose, closest_segments, by.x = "row.names", by.y = "moose_id")
+
+# rename columns
+moose$size <- 1
 
 # add and convert units to km
 moose$Effort <- 10
 moose$distance <- moose$distance / 1000
 
-# remove unnessecary colums
-moose <- moose[, -which(names(moose) %in% c("distance_2", "aircraft", "date", "y_proj", "x_proj", "name", "layer", "ident"))]
-
 # check moose
 head(moose)
 
 # create seperate df
-segdata <- as.data.frame(sf::st_drop_geometry(moose[, which(names(moose) %in% c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label"))]))
+# segdata <- as.data.frame(sf::st_drop_geometry(moose[, which(names(moose) %in% c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label"))]))
 distdata <- as.data.frame(sf::st_drop_geometry(moose[, which(names(moose) %in% c("object", "Latitude", "Longitude", "distance", "Effort", "size"))]))
 distdata$detected <- 1
 segdata$x <- distdata$x <- sf::st_coordinates(moose)[, 1]

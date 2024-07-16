@@ -244,10 +244,40 @@ vis_concurvity(dsm.xy)
 dsm.xy$smooth
 dsm.xy$coefficients
 density_values <- predict(dsm.xy, type = "response")
-plot(density_values)
-dsm.xy$
-  View(dsm.xy)
-# Autocorrelation
+as.vector(density_values)
+# Assuming 'dsm.xy' is your gam object
+# Extract the 'smooth' component
+smooth_terms <- dsm.xy$smooth
+
+# Extract the shift values
+shift_values <- smooth_terms[[1]]$shift
+
+# Extract coordinates from 'Xu'
+# Assuming 'Xu' is the correct component within the smooth terms
+Xu <- smooth_terms[[1]]$Xu
+
+# Apply the shift to the coordinates
+density_surface <- Xu + matrix(rep(shift_values, each = nrow(Xu)), ncol = 2, byrow = TRUE)
+
+# View the adjusted coordinates
+print(density_surface)
+density_surface <- as.data.frame(density_surface)
+
+density_surface$density <- as.vector(density_values)
+colnames(density_surface) <- c("x", "y", "density")
+
+ggplot(density_surface, aes(x = x, y = y, color = density)) +
+  geom_point() +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(
+    title = "Scatter Plot of Adjusted Coordinates and Density Values",
+    x = "X Coordinate",
+    y = "Y Coordinate",
+    color = "Density"
+  ) +
+  theme_minimal()
+
+#  Autocorrelation
 dsm_cor(dsm.xy, max.lag = 10, Segment.Label = "Sample.Label")
 
 # Create the survey region
@@ -262,9 +292,9 @@ region <- make.region(
 ## # Create the density surface
 density <- make.density(
   region = region,
-  x.space = 300,
+  x.space = 500,
   constant = 1,
-  density.surface = density_values
+  density.surface = density_surface
 )
 
 # Create the population description, with a population size N = 200

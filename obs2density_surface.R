@@ -241,8 +241,12 @@ vis.gam(dsm.xy, plot.type = "contour", view = c("x", "y"), asp = 1, type = "resp
 gam.check(dsm.xy)
 rqgam_check(dsm.xy)
 vis_concurvity(dsm.xy)
-dsm.yx[1, ]
-
+dsm.xy$smooth
+dsm.xy$coefficients
+density_values <- predict(dsm.xy, type = "response")
+plot(density_values)
+dsm.xy$
+  View(dsm.xy)
 # Autocorrelation
 dsm_cor(dsm.xy, max.lag = 10, Segment.Label = "Sample.Label")
 
@@ -254,14 +258,13 @@ region <- make.region(
   shape = wmu
 )
 
-class(dsm.xy)
 
 ## # Create the density surface
 density <- make.density(
   region = region,
-  x.space = 206,
+  x.space = 300,
   constant = 1,
-  density.surface = dsm.xy
+  density.surface = density_values
 )
 
 # Create the population description, with a population size N = 200

@@ -10,6 +10,11 @@ library(units)
 library(purrr)
 library(dsims)
 
+# Example data
+# load("C:\\Users\\lhambrec\\Downloads\\mexdolphins.RData")
+# data(mexdolphins)
+
+
 # plotting options
 gg.opts <- theme(
   panel.grid.major = element_blank(),
@@ -234,21 +239,31 @@ par(mfrow = c(1, 2))
 plot(detfc.hr.null, showpoints = FALSE, pl.den = 0, lwd = 2)
 ddf.gof(detfc.hr.null$ddf)
 par(mfrow = c(1, 1))
+
 # Fitting a DSM
 dsm.xy <- dsm(count ~ s(x, y), detfc.hr.null, segdata, obsdata, method = "REML")
 summary(dsm.xy)
-vis.gam(dsm.xy, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = 100)
+vis.gam(dsm.xy, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = 500)
 gam.check(dsm.xy)
 rqgam_check(dsm.xy)
 vis_concurvity(dsm.xy)
+
+test_grid <- data.frame(x = terra::crds(pred_grid)[, 1], y = terra::crds(pred_grid)[, 2], offset = dsm.xy$offset[1])
+dsm.xy.pred <- predict(dsm.xy, newdata = test_grid, , type = "response", off.set = test_grid$offset)
+
+plot(dsm.xy.pred)
+
+
+
 dsm.xy$smooth
 dsm.xy$coefficients
-density_values <- predict(dsm.xy, type = "response")
-as.vector(density_values)
+density_values <- as.vector(predict(dsm.xy, type = "response"))
+
+
 # Assuming 'dsm.xy' is your gam object
 # Extract the 'smooth' component
 smooth_terms <- dsm.xy$smooth
-
+print(smooth_terms)
 # Extract the shift values
 shift_values <- smooth_terms[[1]]$shift
 
@@ -280,6 +295,39 @@ ggplot(density_surface, aes(x = x, y = y, color = density)) +
 #  Autocorrelation
 dsm_cor(dsm.xy, max.lag = 10, Segment.Label = "Sample.Label")
 
+
+
+
+# Abundance estimation
+preddata$offset <- dsm.xy$offset[1]
+dsm.xy.pred <- dsm::predict(dsm.xy, preddata, 0)
+pred_grid$predictions <- dsm.xy.pred
+# Plot the SpatVector directly
+plot(pred_grid,
+  col = terrain.colors(10)[as.numeric(cut(pred_grid$predictions, breaks = 10))],
+  main = "Predictions",
+  legend = TRUE
+)
+
+# round to group areas together
+pred_grid$predictions <- round(pred_grid$predictions, 1)
+
+# Convert SpatVector to sf object
+pred_grid_sf <- st_as_sf(pred_grid)
+
+# Calculate centroids
+centroids <- st_centroid(pred_grid_sf)
+
+# Extract x and y coordinates from centroids
+centroids_df <- st_coordinates(centroids)
+
+# Prepare the list
+result_list <- list(
+  sf_grid = pred_grid_sf,
+  density_values = pred_grid_sf$predictions,
+  centroids = centroids_df
+)
+
 # Create the survey region
 region <- make.region(
   region.name = "study area",
@@ -292,9 +340,9 @@ region <- make.region(
 ## # Create the density surface
 density <- make.density(
   region = region,
-  x.space = 500,
+  x.space = 600,
   constant = 1,
-  density.surface = density_surface
+  density.surface = result_list
 )
 
 # Create the population description, with a population size N = 200
@@ -304,20 +352,3 @@ pop.desc <- make.population.description(
   N = rep(200, length(region@strata.name)),
   fixed.N = TRUE
 )
-
-
-# Abundance estimation
-preddata_df <- as.data.frame(preddata)
-preddata_df$rowID <- row.names(preddata_df)
-dsm.xy.pred <- predict(dsm.xy, preddata, preddata$area)
-plot(dsm.xy.pred)
-
-dsm.xy.pred_df <- as.data.frame(dsm.xy.pred)
-dsm.xy.pred_df$rowID <- row.names(dsm.xy.pred_df)
-p <- ggplot() +
-  grid_plot_obj(dsm.xy.pred_df, "Abundance", preddata_df) +
-  coord_equal() +
-  gg.opts
-p <- p + geom_path(aes(x = x, y = y), data = survey.area)
-p <- p + labs(fill = "Abundance")
-print(p)

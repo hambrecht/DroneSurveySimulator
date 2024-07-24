@@ -15,15 +15,8 @@ library(dsims)
 # data(mexdolphins)
 
 
-# plotting options
-gg.opts <- theme(
-  panel.grid.major = element_blank(),
-  panel.grid.minor = element_blank(),
-  panel.background = element_blank()
-)
-
-# make the results reproducible
-set.seed(11123)
+# Define variables
+GRID_SIZE = 500
 
 # load data
 moose <- sf::st_read("D:\\WMU\\survey_data\\501_moose_locations.shp") %>%
@@ -189,7 +182,7 @@ head(obsdata)
 wmu <- sf::st_read("D:\\WMU\\base_data\\WMU\\wmu_501_3400.shp")
 
 # Create an empty SpatRaster
-grid <- rast(ext(wmu), resolution = 500) # Use ext instead of extent
+grid <- rast(ext(wmu), resolution = GRID_SIZE) # Use ext instead of extent
 crs(grid) <- crs(wmu) # Ensure the correct object (wmu) is referenced
 gridpolygon <- as.polygons(grid)
 wmu_vect <- vect(wmu)
@@ -243,96 +236,43 @@ par(mfrow = c(1, 1))
 # Fitting a DSM
 dsm.xy <- dsm(count ~ s(x, y), detfc.hr.null, segdata, obsdata, method = "REML")
 summary(dsm.xy)
-vis.gam(dsm.xy, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = 500)
+vis.gam(dsm.xy, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 gam.check(dsm.xy)
 rqgam_check(dsm.xy)
 vis_concurvity(dsm.xy)
 
-test_grid <- data.frame(x = terra::crds(pred_grid)[, 1], y = terra::crds(pred_grid)[, 2], offset = dsm.xy$offset[1])
-dsm.xy.pred <- predict(dsm.xy, newdata = test_grid, , type = "response", off.set = test_grid$offset)
-
-plot(dsm.xy.pred)
-
-
-
-dsm.xy$smooth
-dsm.xy$coefficients
-density_values <- as.vector(predict(dsm.xy, type = "response"))
-
-
-# Assuming 'dsm.xy' is your gam object
-# Extract the 'smooth' component
-smooth_terms <- dsm.xy$smooth
-print(smooth_terms)
-# Extract the shift values
-shift_values <- smooth_terms[[1]]$shift
-
-# Extract coordinates from 'Xu'
-# Assuming 'Xu' is the correct component within the smooth terms
-Xu <- smooth_terms[[1]]$Xu
-
-# Apply the shift to the coordinates
-density_surface <- Xu + matrix(rep(shift_values, each = nrow(Xu)), ncol = 2, byrow = TRUE)
-
-# View the adjusted coordinates
-print(density_surface)
-density_surface <- as.data.frame(density_surface)
-
-density_surface$density <- as.vector(density_values)
-colnames(density_surface) <- c("x", "y", "density")
-
-ggplot(density_surface, aes(x = x, y = y, color = density)) +
-  geom_point() +
-  scale_color_gradient(low = "blue", high = "red") +
-  labs(
-    title = "Scatter Plot of Adjusted Coordinates and Density Values",
-    x = "X Coordinate",
-    y = "Y Coordinate",
-    color = "Density"
-  ) +
-  theme_minimal()
-
-#  Autocorrelation
-dsm_cor(dsm.xy, max.lag = 10, Segment.Label = "Sample.Label")
-
-
-
+# Autocorrelation
+dsm_cor(dsm.xy, max.lag=10, Segment.Label="Sample.Label")
 
 # Abundance estimation
 preddata$offset <- dsm.xy$offset[1]
 dsm.xy.pred <- dsm::predict(dsm.xy, preddata, 0)
 pred_grid$predictions <- dsm.xy.pred
-# Plot the SpatVector directly
+
+# Plot the SpatVector
 plot(pred_grid,
   col = terrain.colors(10)[as.numeric(cut(pred_grid$predictions, breaks = 10))],
-  main = "Predictions",
+  main = "Abundance",
   legend = TRUE
 )
+#  Calculate abundance over the survey area by simply summing these predictions:
+sum(dsm.xy.pred)
 
-# round to group areas together
-pred_grid$predictions <- round(pred_grid$predictions, 1)
 
 # Convert SpatVector to sf object
 pred_grid_sf <- st_as_sf(pred_grid)
-
-# Perform the union operation
-pred_grid_sf_union <- pred_grid_sf %>%
-  group_by(predictions) %>%
-  summarise(geometry = st_union(geometry), .groups = "drop")
-
+head(pred_grid_sf)
 
 # Calculate centroids
-centroids <- st_centroid(pred_grid_sf_union)
+centroids <- st_centroid(pred_grid_sf)
 
 # Extract x and y coordinates from centroids
 centroids_df <- st_coordinates(centroids)
 
-# Prepare the list
-result_list <- list(
-  sf_grid = pred_grid_sf_union,
-  density.surface = pred_grid_sf_union$predictions,
-  centroids = centroids_df
-)
+density_surface <- data.frame(density = pred_grid_sf$predictions, x = centroids_df[,1], y = centroids_df[,2], centroids$geometry)
+head(density_surface)
+plot(density_surface)
+
 
 # Create the survey region
 region <- make.region(
@@ -341,14 +281,13 @@ region <- make.region(
   strata.name = "A",
   shape = wmu
 )
-
+plot(region)
 
 ## # Create the density surface
 density <- make.density(
   region = region,
-  x.space = 5000,
-  constant = 1,
-  # density.surface = result_list
+  x.space = GRID_SIZE,
+  density.surface = c(density_surface)
 )
 
 # Create the population description, with a population size N = 200

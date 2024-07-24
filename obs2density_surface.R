@@ -315,16 +315,22 @@ pred_grid$predictions <- round(pred_grid$predictions, 1)
 # Convert SpatVector to sf object
 pred_grid_sf <- st_as_sf(pred_grid)
 
+# Perform the union operation
+pred_grid_sf_union <- pred_grid_sf %>%
+  group_by(predictions) %>%
+  summarise(geometry = st_union(geometry), .groups = "drop")
+
+
 # Calculate centroids
-centroids <- st_centroid(pred_grid_sf)
+centroids <- st_centroid(pred_grid_sf_union)
 
 # Extract x and y coordinates from centroids
 centroids_df <- st_coordinates(centroids)
 
 # Prepare the list
 result_list <- list(
-  sf_grid = pred_grid_sf,
-  density_values = pred_grid_sf$predictions,
+  sf_grid = pred_grid_sf_union,
+  density.surface = pred_grid_sf_union$predictions,
   centroids = centroids_df
 )
 
@@ -340,9 +346,9 @@ region <- make.region(
 ## # Create the density surface
 density <- make.density(
   region = region,
-  x.space = 600,
+  x.space = 5000,
   constant = 1,
-  density.surface = result_list
+  # density.surface = result_list
 )
 
 # Create the population description, with a population size N = 200

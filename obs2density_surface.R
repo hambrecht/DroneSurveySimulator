@@ -10,6 +10,7 @@ library(sf)
 library(dplyr)
 library(units)
 library(purrr)
+# install.packages("C:/Users/lhambrec/Sync/1_Projects/Simulator/dsims_1.0.4.tar.gz", repos = NULL, type = "source")
 library(dsims)
 
 # Define constants
@@ -20,11 +21,11 @@ load_spatial_data <- function(moose_path, transects_path, crs) {
   moose <- sf::st_read(moose_path) %>%
     sf::st_transform(crs = crs) %>%
     select(Latitude, Longitude, date, name)
-  
+
   transects <- sf::st_read(transects_path, layer = "tracks") %>%
     sf::st_transform(crs = crs) %>%
     select(1)
-  
+
   list(moose = moose, transects = transects)
 }
 
@@ -33,27 +34,27 @@ split_into_segments <- function(linestring) {
   total_length <- st_length(linestring)
   total_length <- if (!inherits(total_length, "units")) set_units(total_length, "m") else total_length
   stopifnot(as.numeric(total_length) > 0)
-  
+
   total_length_km <- set_units(total_length, "km")
   num_segments <- ceiling(as.numeric(total_length_km))
   stopifnot(num_segments > 0)
-  
+
   equal_segment_length <- total_length_km / num_segments
   segment_lengths <- rep(equal_segment_length, num_segments)
   segment_lengths[num_segments] <- total_length_km - sum(segment_lengths[1:(num_segments - 1)])
-  
+
   points <- sf::st_line_sample(linestring, sample = seq(0, 1, length.out = num_segments + 1)) %>%
     st_cast("POINT")
   stopifnot(length(points) >= 2)
-  
+
   segments <- map2(points[-length(points)], points[-1], ~ {
     segment <- st_sfc(st_linestring(x = st_coordinates(c(.x, .y))), crs = st_crs(linestring))
     st_sf(geometry = segment)
   })
-  
+
   segments_sf <- do.call(rbind, segments)
   stopifnot(nrow(segments_sf) >= 1)
-  
+
   segments_sf
 }
 
@@ -100,7 +101,7 @@ colnames(moose)[1] <- "object"
 colnames(moose)[5] <- "Transect.Label"
 moose$size <- 1
 moose$Effort <- 10
-# moose$distance <- moose$distance / 1000
+moose$distance <- moose$distance / 1000
 
 # Prepare data for density surface modelling
 segdata <- as.data.frame(sf::st_drop_geometry(moose[, c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label")]))
@@ -112,11 +113,30 @@ obsdata <- as.data.frame(sf::st_drop_geometry(moose[, c("object", "distance", "E
 
 # Load WMU outline and create prediction grid
 wmu <- sf::st_read("D:\\WMU\\base_data\\WMU\\wmu_501_3400.shp")
-grid <- rast(ext(wmu), resolution = GRID_SIZE)
-crs(grid) <- crs(wmu)
-gridpolygon <- as.polygons(grid)
-wmu_vect <- vect(wmu)
-pred_grid <- terra::intersect(wmu_vect, gridpolygon)
+# Select only the OBJECTID column
+wmu <- wmu[, "OBJECTID"]
+# Create the survey region
+region <- make.region(
+  region.name = "study area",
+  shape = wmu
+)
+plot(region)
+
+## # Create the density surface
+density <- dsims::make.density(
+  region = region,
+  x.space = GRID_SIZE,
+)
+
+density@density.surface[[1]]
+coords <- sf::st_drop_geometry(density@density.surface[[1]][, c("x", "y")])
+
+
+# grid <- rast(ext(wmu), resolution = GRID_SIZE)
+# crs(grid) <- crs(wmu)
+# gridpolygon <- as.polygons(grid)
+# wmu_vect <- vect(wmu)
+# pred_grid <- terra::intersect(wmu_vect, gridpolygon)
 
 # Function to create plot objects for predictions
 grid_plot_obj <- function(fill, name, sf_obj) {
@@ -125,23 +145,23 @@ grid_plot_obj <- function(fill, name, sf_obj) {
   combined_sf <- sf_obj %>%
     mutate(id = row_number()) %>%
     left_join(data, by = c("id" = "row.names"))
-  
+
   ggplot(combined_sf) +
     geom_sf(aes_string(fill = name)) +
     theme_minimal()
 }
 
 # Extract centroid coordinates and area of each polygon
-centroids <- terra::centroids(pred_grid)
-centroids_sf <- st_as_sf(centroids, coords = c("x", "y"), crs = 3400, agr = "constant")
-areas <- terra::expanse(pred_grid)
+# centroids <- terra::centroids(pred_grid)
+# centroids_sf <- st_as_sf(centroids, coords = c("x", "y"), crs = 3400, agr = "constant")
+# areas <- terra::expanse(pred_grid)
 
 # Combine coordinates and areas into a data frame for prediction
-preddata <- data.frame(
-  x = sf::st_coordinates(centroids_sf)[, 1],
-  y = sf::st_coordinates(centroids_sf)[, 2],
-  area = areas
-)
+# preddata <- data.frame(
+#   x = sf::st_coordinates(centroids_sf)[, 1],
+#   y = sf::st_coordinates(centroids_sf)[, 2],
+#   area = areas
+# )
 
 # Exploratory data analysis and density surface modelling
 detfc.hr.null <- ds(distdata, max(distdata$distance), key = "hr", adjustment = NULL)
@@ -163,67 +183,12 @@ vis_concurvity(dsm.xy)
 dsm_cor(dsm.xy, max.lag = 10, Segment.Label = "Sample.Label")
 
 # Estimate abundance
-preddata$offset <- dsm.xy$offset[1]
-dsm.xy.pred <- predict(dsm.xy, preddata, 0)
-pred_grid$predictions <- dsm.xy.pred
-
-# Plot abundance predictions
-plot(pred_grid,
-  col = terrain.colors(10)[as.numeric(cut(pred_grid$predictions, breaks = 10))],
-  main = "Abundance",
-  legend = TRUE
-)
-
+dsm.xy.pred <- predict(dsm.xy, coords, dsm.xy$offset[1])
 # Calculate total abundance over the survey area
 sum(dsm.xy.pred)
 
+# fill density object with predeicted values
+density@density.surface[[1]]$density <- dsm.xy.pred
 
-
-
-# https://workshops.distancesampling.org/stand-intermed-2018/practicals/09-DSsim.pdf
-# You will see that an object called “density.surface” has appeared in the workspace. This object is a list with
-# one element (if the region had been divided up into strata then this list would contain an element for each
-# strata). To have a look at what the density surface data look like type head(density.surface[[1]]). You
-# can see that it is a data set of x and y locations and the densities at each point.
-# To create the density object you will need to provide the density surface, the region object for which it was
-# created and the grid spacing that was used. I used a grid spacing of 1,000 m in both the x and y directions
-# to create this density surface. The density surface describing animal distribution is shown in Figure 2.
-
-# Convert SpatVector to sf object
-pred_grid_sf <- st_as_sf(pred_grid)
-head(pred_grid_sf)
-
-# Calculate centroids
-centroids <- st_centroid(pred_grid_sf)
-
-# Extract x and y coordinates from centroids
-centroids_df <- st_coordinates(centroids)
-
-density_surface <- data.frame(density = pred_grid_sf$predictions, x = centroids_df[, 1], y = centroids_df[, 2], centroids$geometry)
-head(density_surface)
-plot(density_surface)
-
-
-# Create the survey region
-region <- make.region(
-  region.name = "study area",
-  units = "m",
-  strata.name = "A",
-  shape = wmu
-)
-plot(region)
-
-## # Create the density surface
-density <- make.density(
-  region = region,
-  x.space = GRID_SIZE,
-  density.surface = c(density_surface)
-)
-
-# Create the population description, with a population size N = 200
-pop.desc <- make.population.description(
-  region = region,
-  density = dsm.xy,
-  N = rep(200, length(region@strata.name)),
-  fixed.N = TRUE
-)
+# plot density
+plot(density)

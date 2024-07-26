@@ -1,9 +1,13 @@
+
+
+
 # Re-producable example
 # load libraries
 library(dsm)
 library(dsims)
 library(Distance)
 library(sf)
+library(units)
 
 # load example data
 data(mexdolphins)
@@ -12,9 +16,26 @@ data(mexdolphins)
 pred_grid <- sf::st_read("prediction-grid.shp")
 survey_area <- sf::st_read("survey-area.shp")
 
+# Extract geometries
+geometries <- st_geometry(pred_grid)
+
+# Initialize vectors to store widths and heights
+widths <- numeric(length(geometries))
+heights <- numeric(length(geometries))
+
+# Calculate the bounding box for each polygon and compute width and height
+for (i in seq_along(geometries)) {
+  bbox <- st_bbox(geometries[[i]])
+  widths[i] <- bbox$xmax - bbox$xmin
+  heights[i] <- bbox$ymax - bbox$ymin
+}
+
+# Calculate the average width and height
+average_width <- mean(widths)
+average_height <- mean(heights)
+
 # Convert SpatVector to sf object
 pred_grid_sf <- st_as_sf(pred_grid)
-survey_area
 
 # Estimating the detection function
 detfc.hr.null <- ds(distdata, max(distdata$distance), key = "hr", adjustment = NULL)
@@ -48,7 +69,8 @@ region <- make.region(
 ## Create the density with pre-defined density surface
 pre_ds_density <- dsims::make.density(
     region = region,
-    x.space = 18553,
+    x.space = average_width,
+    y.space = average_height,
     density.surface = density_surface_ls
 )
 # Error: All strata must have some cells with non-zero density. Check that you have correctly specified your density grid. Large grid spacing may also generate this error.
@@ -56,7 +78,8 @@ pre_ds_density <- dsims::make.density(
 # Create density = 1
 density_1 <- dsims::make.density(
     region = region,
-    x.space = 18553,
+    x.space = average_width,
+    y.space = average_height
 )
 
 # Get density surface from density = 1
@@ -65,7 +88,8 @@ reverse_density_surface <- get.densities(density_1, coords = TRUE)
 # Create the density from density surface retrieved from 1 density
 rev_density <- density <- dsims::make.density(
     region = region,
-    x.space = 18553,
+    x.space = average_width,
+    y.space = average_height,
     density.surface = reverse_density_surface
 )
 # Error: All strata must have some cells with non-zero density. Check that you have correctly specified your density grid. Large grid spacing may also generate this error.
@@ -76,7 +100,8 @@ dsm.xy.pred <- predict(dsm.xy, reverse_density_surface, 0)
 reverse_density_surface$predictions <- dsm.xy.pred
 rev_rev_density <- dsims::make.density(
     region = region,
-    x.space = 18553,
+    x.space = average_width,
+    y.space = average_height,
     density.surface = reverse_density_surface
 )
 # Error: All strata must have some cells with non-zero density. Check that you have correctly specified your density grid. Large grid spacing may also generate this error.

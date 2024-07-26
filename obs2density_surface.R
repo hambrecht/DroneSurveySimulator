@@ -11,7 +11,6 @@ library(dplyr)
 library(tidyr)
 library(units)
 library(purrr)
-# install.packages("C:/Users/lhambrec/Sync/1_Projects/Simulator/dsims_1.0.4.tar.gz", repos = NULL, type = "source")
 library(dsims)
 
 # Define constants

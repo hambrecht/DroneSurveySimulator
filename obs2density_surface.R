@@ -127,16 +127,7 @@ density <- dsims::make.density(
   region = region,
   x.space = GRID_SIZE,
 )
-
-density@density.surface[[1]]
 coords <- sf::st_drop_geometry(density@density.surface[[1]][, c("x", "y")])
-
-
-# grid <- rast(ext(wmu), resolution = GRID_SIZE)
-# crs(grid) <- crs(wmu)
-# gridpolygon <- as.polygons(grid)
-# wmu_vect <- vect(wmu)
-# pred_grid <- terra::intersect(wmu_vect, gridpolygon)
 
 # Function to create plot objects for predictions
 grid_plot_obj <- function(fill, name, sf_obj) {
@@ -150,18 +141,6 @@ grid_plot_obj <- function(fill, name, sf_obj) {
     geom_sf(aes_string(fill = name)) +
     theme_minimal()
 }
-
-# Extract centroid coordinates and area of each polygon
-# centroids <- terra::centroids(pred_grid)
-# centroids_sf <- st_as_sf(centroids, coords = c("x", "y"), crs = 3400, agr = "constant")
-# areas <- terra::expanse(pred_grid)
-
-# Combine coordinates and areas into a data frame for prediction
-# preddata <- data.frame(
-#   x = sf::st_coordinates(centroids_sf)[, 1],
-#   y = sf::st_coordinates(centroids_sf)[, 2],
-#   area = areas
-# )
 
 # Exploratory data analysis and density surface modelling
 detfc.hr.null <- ds(distdata, max(distdata$distance), key = "hr", adjustment = NULL)

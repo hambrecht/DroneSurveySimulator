@@ -74,19 +74,95 @@ sbfi <- data$sbfi
 
 # Rename columns in sbfi
 org_sbfi_names <- colnames(sbfi)
-colnames(sbfi) <- c("OBJECTID", "ID", "TILE", "AREA_HA", "PERIMETER_M", "JURISDICTION", "ECOZONE", "ECOPROVINCE", "ECOREGION", "MANAGEMENT", "LC_WATER", "LC_SNOW_ICE", "LC_ROCK_RUBBLE", "LC_EXPOSED_BARREN", "LC_BRYOIDS", "LC_SHRUBS", "LC_WETLAND", "LC_WETLAND_TREED", "LC_HERBS", "LC_CONIFEROUS", "LC_BROADLEAF", "LC_MIXEDWOOD", "LC_TREED", "LC_FAO_FOREST", "LC_WETLAND_VEGETATION", "DISTURB_FIRE_PERC", "DISTURB_FIRE_YEAR", "DISTURB_FIRE_MAGNITUDE_MIN", "DISTURB_FIRE_MAGNITUDE_MAX", "DISTURB_FIRE_MAGNITUDE_AVG", "DISTURB_FIRE_MAGNITUDE_SD", "DISTURB_FIRE_MAGNITUDE_MEDIAN", "DISTURB_HARVEST_PERC", "DISTURB_HARVEST_YEAR", "RECOVERY_FIRE_MIN", "RECOVERY_FIRE_MAX", "RECOVERY_FIRE_AVG", "RECOVERY_FIRE_SD", "RECOVERY_FIRE_MEDIAN", "RECOVERY_HARVEST_MIN", "RECOVERY_HARVEST_MAX", "RECOVERY_HARVEST_AVG", "RECOVERY_HARVEST_SD", "RECOVERY_HARVEST_MEDIAN", "AGE_MIN", "AGE_MAX", "AGE_AVG", "AGE_SD", "AGE_MEDIAN", "AGE_0_10", "AGE_10_20", "AGE_20_30", "AGE_30_40", "AGE_40_50", "AGE_50_60", "AGE_60_70", "AGE_70_80", "AGE_80_90", "AGE_90_100", "AGE_100_110", "AGE_110_120", "AGE_120_130", "AGE_130_140", "AGE_140_150", "AGE_GT_150", "STRUCTURE_CANOPY_HEIGHT_MIN", "STRUCTURE_CANOPY_HEIGHT_MAX", "STRUCTURE_CANOPY_HEIGHT_AVG", "STRUCTURE_CANOPY_HEIGHT_SD", "STRUCTURE_CANOPY_HEIGHT_MEDIAN", "STRUCTURE_CANOPY_COVER_MIN", "STRUCTURE_CANOPY_COVER_MAX", "STRUCTURE_CANOPY_COVER_AVG", "STRUCTURE_CANOPY_COVER_SD", "STRUCTURE_CANOPY_COVER_MEDIAN", "STRUCTURE_LOREYS_HEIGHT_MIN", "STRUCTURE_LOREYS_HEIGHT_MAX", "STRUCTURE_LOREYS_HEIGHT_AVG", "STRUCTURE_LOREYS_HEIGHT_SD", "STRUCTURE_LOREYS_HEIGHT_MEDIAN", "STRUCTURE_BASAL_AREA_MIN", "STRUCTURE_BASAL_AREA_MAX", "STRUCTURE_BASAL_AREA_AVG", "STRUCTURE_BASAL_AREA_SD", "STRUCTURE_BASAL_AREA_MEDIAN", "STRUCTURE_BASAL_AREA_TOTAL", "STRUCTURE_AGB_MIN", "STRUCTURE_AGB_MAX", "STRUCTURE_AGB_AVG", "STRUCTURE_AGB_SD", "STRUCTURE_AGB_MEDIAN", "STRUCTURE_AGB_TOTAL", "STRUCTURE_VOLUME_MIN", "STRUCTURE_VOLUME_MAX", "STRUCTURE_VOLUME_AVG", "STRUCTURE_VOLUME_SD", "STRUCTURE_VOLUME_MEDIAN", "STRUCTURE_VOLUME_TOTAL", "SPECIES_NUMBER", "SPECIES_1", "SPECIES_1_PERC", "SPECIES_2", "SPECIES_2_PERC", "SPECIES_3", "SPECIES_3_PERC", "SPECIES_4", "SPECIES_4_PERC", "SPECIES_5", "SPECIES_5_PERC", "SPECIES_CONIFEROUS_PERC", "SPECIES_CML_1", "SPECIES_CML_1_PERC", "SPECIES_CML_2", "SPECIES_CML_2_PERC", "SPECIES_CML_3", "SPECIES_CML_3_PERC", "SPECIES_CML_4", "SPECIES_CML_4_PERC", "SPECIES_CML_5", "SPECIES_CML_5_PERC", "SPECIES_CML_CONIFEROUS_PERC", "SPECIES_CML_ASSEMBLAGES", "SPECIES_CML_ASSEMBLAGES_PERC", "SYMB_LAND_BASE_LEVEL", "SYMB_LAND_COVER_LEVEL", "SYMB_VEGETATION_LEVEL", "SYMB_DISTURBANCE", "SYMB_RECOVERY", "SYMB_AGE", "Shape_Length", "Shape_Area", "layer", "path", "geometry")
+colnames(sbfi) <- c(
+  # Basic information
+  "OBJECTID", "ID", "TILE", "AREA_HA", "PERIMETER_M", "JURISDICTION", 
+  "ECOZONE", "ECOPROVINCE", "ECOREGION", "MANAGEMENT",
+
+  # Land Cover
+  "LC_WATER", "LC_SNOW_ICE", "LC_ROCK_RUBBLE", "LC_EXPOSED_BARREN", 
+  "LC_BRYOIDS", "LC_SHRUBS", "LC_WETLAND", "LC_WETLAND_TREED", 
+  "LC_HERBS", "LC_CONIFEROUS", "LC_BROADLEAF", "LC_MIXEDWOOD", 
+  "LC_TREED", "LC_FAO_FOREST", "LC_WETLAND_VEGETATION",
+
+  # Disturbance by Fire
+  "DISTURB_FIRE_PERC", "DISTURB_FIRE_YEAR", "DISTURB_FIRE_MAGNITUDE_MIN", 
+  "DISTURB_FIRE_MAGNITUDE_MAX", "DISTURB_FIRE_MAGNITUDE_AVG", 
+  "DISTURB_FIRE_MAGNITUDE_SD", "DISTURB_FIRE_MAGNITUDE_MEDIAN",
+
+  # Disturbance by Harvest
+  "DISTURB_HARVEST_PERC", "DISTURB_HARVEST_YEAR",
+
+  # Recovery from Disturbance by Fire
+  "RECOVERY_FIRE_MIN", "RECOVERY_FIRE_MAX", "RECOVERY_FIRE_AVG", 
+  "RECOVERY_FIRE_SD", "RECOVERY_FIRE_MEDIAN",
+
+  # Recovery from Disturbance by Harvest
+  "RECOVERY_HARVEST_MIN", "RECOVERY_HARVEST_MAX", "RECOVERY_HARVEST_AVG", 
+  "RECOVERY_HARVEST_SD", "RECOVERY_HARVEST_MEDIAN",
+
+  # Age of the Forest
+  "AGE_MIN", "AGE_MAX", "AGE_AVG", "AGE_SD", "AGE_MEDIAN", 
+  "AGE_0_10", "AGE_10_20", "AGE_20_30", "AGE_30_40", "AGE_40_50", 
+  "AGE_50_60", "AGE_60_70", "AGE_70_80", "AGE_80_90", "AGE_90_100", 
+  "AGE_100_110", "AGE_110_120", "AGE_120_130", "AGE_130_140", 
+  "AGE_140_150", "AGE_GT_150",
+
+  # Canopy Structure
+  "STRUCTURE_CANOPY_HEIGHT_MIN", "STRUCTURE_CANOPY_HEIGHT_MAX", 
+  "STRUCTURE_CANOPY_HEIGHT_AVG", "STRUCTURE_CANOPY_HEIGHT_SD", 
+  "STRUCTURE_CANOPY_HEIGHT_MEDIAN", "STRUCTURE_CANOPY_COVER_MIN", 
+  "STRUCTURE_CANOPY_COVER_MAX", "STRUCTURE_CANOPY_COVER_AVG", 
+  "STRUCTURE_CANOPY_COVER_SD", "STRUCTURE_CANOPY_COVER_MEDIAN",
+
+  # Lorey's Height
+  "STRUCTURE_LOREYS_HEIGHT_MIN", "STRUCTURE_LOREYS_HEIGHT_MAX", 
+  "STRUCTURE_LOREYS_HEIGHT_AVG", "STRUCTURE_LOREYS_HEIGHT_SD", 
+  "STRUCTURE_LOREYS_HEIGHT_MEDIAN",
+
+  # Basal Area
+  "STRUCTURE_BASAL_AREA_MIN", "STRUCTURE_BASAL_AREA_MAX", 
+  "STRUCTURE_BASAL_AREA_AVG", "STRUCTURE_BASAL_AREA_SD", 
+  "STRUCTURE_BASAL_AREA_MEDIAN", "STRUCTURE_BASAL_AREA_TOTAL",
+
+  # Above-Ground Biomass (AGB)
+  "STRUCTURE_AGB_MIN", "STRUCTURE_AGB_MAX", "STRUCTURE_AGB_AVG", 
+  "STRUCTURE_AGB_SD", "STRUCTURE_AGB_MEDIAN", "STRUCTURE_AGB_TOTAL",
+
+  # Tree Volume
+  "STRUCTURE_VOLUME_MIN", "STRUCTURE_VOLUME_MAX", "STRUCTURE_VOLUME_AVG", 
+  "STRUCTURE_VOLUME_SD", "STRUCTURE_VOLUME_MEDIAN", "STRUCTURE_VOLUME_TOTAL",
+
+  # Species Composition
+  "SPECIES_NUMBER", "SPECIES_1", "SPECIES_1_PERC", "SPECIES_2", 
+  "SPECIES_2_PERC", "SPECIES_3", "SPECIES_3_PERC", "SPECIES_4", 
+  "SPECIES_4_PERC", "SPECIES_5", "SPECIES_5_PERC", "SPECIES_CONIFEROUS_PERC", 
+  "SPECIES_CML_1", "SPECIES_CML_1_PERC", "SPECIES_CML_2", 
+  "SPECIES_CML_2_PERC", "SPECIES_CML_3", "SPECIES_CML_3_PERC", 
+  "SPECIES_CML_4", "SPECIES_CML_4_PERC", "SPECIES_CML_5", 
+  "SPECIES_CML_5_PERC", "SPECIES_CML_CONIFEROUS_PERC", 
+  "SPECIES_CML_ASSEMBLAGES", "SPECIES_CML_ASSEMBLAGES_PERC",
+
+  # Symbolic Levels and Others
+  "SYMB_LAND_BASE_LEVEL", "SYMB_LAND_COVER_LEVEL", "SYMB_VEGETATION_LEVEL", 
+  "SYMB_DISTURBANCE", "SYMB_RECOVERY", "SYMB_AGE", "Shape_Length", 
+  "Shape_Area", "layer", "path", "geometry"
+)
 
 # Perform spatial join to get the polygon attributes for each point
 joined <- st_join(moose, sbfi)
-result <- joined[, c("STRUCTURE_CANOPY_HEIGHT_MEDIAN", "STRUCTURE_CANOPY_COVER_MEDIAN")]
+result <- joined[, c("STRUCTURE_CANOPY_HEIGHT_MEDIAN", "STRUCTURE_CANOPY_COVER_MEDIAN", "STRUCTURE_AGB_MEDIAN", "STRUCTURE_AGB_TOTAL", "STRUCTURE_VOLUME_MEDIAN", "STRUCTURE_VOLUME_TOTAL")]
 
 # Replace NA values with 0
-result <- result %>% replace_na(list(STRUCTURE_CANOPY_HEIGHT_MEDIAN = 0, STRUCTURE_CANOPY_COVER_MEDIAN = 0))
+result <- result %>% replace_na(list(STRUCTURE_CANOPY_HEIGHT_MEDIAN = 0, STRUCTURE_CANOPY_COVER_MEDIAN = 0, STRUCTURE_AGB_MEDIAN = 0, STRUCTURE_AGB_TOTAL = 0 , STRUCTURE_VOLUME_MEDIAN = 0, STRUCTURE_VOLUME_TOTAL = 0))
 
 # Add the results to the original points sf object
 moose$canopy_height <- result$STRUCTURE_CANOPY_HEIGHT_MEDIAN
 moose$canopy_cover <- result$STRUCTURE_CANOPY_COVER_MEDIAN
-
+moose$agb <- result$STRUCTURE_AGB_MEDIAN
+moose$agb_total <- result$STRUCTURE_AGB_TOTAL
+moose$vol <- result$STRUCTURE_VOLUME_MEDIAN
+moose$vol_total <- result$STRUCTURE_VOLUME_TOTAL
 
 # Split transects into segments
 transects_segments <- transects %>%
@@ -125,8 +201,8 @@ moose$Effort <- 10
 moose$distance <- moose$distance / 1000
 
 # Prepare data for density surface modelling
-segdata <- as.data.frame(sf::st_drop_geometry(moose[, c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label", "canopy_height", "canopy_cover")]))
-distdata <- as.data.frame(sf::st_drop_geometry(moose[, c("object", "Latitude", "Longitude", "distance", "Effort", "size", "canopy_height", "canopy_cover")]))
+segdata <- as.data.frame(sf::st_drop_geometry(moose[, c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label", "canopy_height", "canopy_cover", "agb", "agb_total", "vol", "vol_total")]))
+distdata <- as.data.frame(sf::st_drop_geometry(moose[, c("object", "Latitude", "Longitude", "distance", "Effort", "size", "canopy_height", "canopy_cover", "agb", "agb_total", "vol", "vol_total")]))
 distdata$detected <- 1
 segdata$x <- distdata$x <- sf::st_coordinates(moose)[, 1]
 segdata$y <- distdata$y <- sf::st_coordinates(moose)[, 2]
@@ -177,7 +253,6 @@ detfc.hr.height <- ds(distdata, max(distdata$distance),
   key = "hr", adjustment = NULL
 )
 summary(detfc.hr.height)
-par(mfrow = c(1, 2))
 plot(detfc.hr.height, showpoints = FALSE, pl.den = 0, lwd = 2)
 ddf.gof(detfc.hr.height$ddf)
 
@@ -187,49 +262,128 @@ detfc.hr.cover <- ds(distdata, max(distdata$distance),
   key = "hr", adjustment = NULL
 )
 summary(detfc.hr.cover)
-par(mfrow = c(1, 2))
 plot(detfc.hr.cover, showpoints = FALSE, pl.den = 0, lwd = 2)
 ddf.gof(detfc.hr.cover$ddf)
+
+# Canopy AGB model
+detfc.hr.agb <- ds(distdata, max(distdata$distance),
+  formula = ~ as.factor(agb),
+  key = "hr", adjustment = NULL
+)
+summary(detfc.hr.agb)
+plot(detfc.hr.agb, showpoints = FALSE, pl.den = 0, lwd = 2)
+ddf.gof(detfc.hr.agb$ddf)
+
+# Canopy AGB total model
+detfc.hr.agb_total <- ds(distdata, max(distdata$distance),
+  formula = ~ as.factor(agb_total),
+  key = "hr", adjustment = NULL
+)
+summary(detfc.hr.agb_total)
+plot(detfc.hr.agb_total, showpoints = FALSE, pl.den = 0, lwd = 2)
+ddf.gof(detfc.hr.agb_total$ddf)
+
+# Canopy Volume model
+detfc.hr.vol <- ds(distdata, max(distdata$distance),
+  formula = ~ as.factor(vol),
+  key = "hr", adjustment = NULL
+)
+summary(detfc.hr.vol)
+plot(detfc.hr.vol, showpoints = FALSE, pl.den = 0, lwd = 2)
+ddf.gof(detfc.hr.vol$ddf)
+
+# Canopy Volume total model
+detfc.hr.vol_total <- ds(distdata, max(distdata$distance),
+  formula = ~ as.factor(vol_total),
+  key = "hr", adjustment = NULL
+)
+summary(detfc.hr.vol_total)
+plot(detfc.hr.vol_total, showpoints = FALSE, pl.den = 0, lwd = 2)
+ddf.gof(detfc.hr.vol_total$ddf)
 
 par(mfrow = c(1, 1))
 
 
 # Fit a DSM
+# null model
 dsm.xy <- dsm(count ~ s(x, y), detfc.hr.null, segdata, obsdata, method = "REML")
 summary(dsm.xy)
+plot(dsm.xy, select = 2)
 vis.gam(dsm.xy, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
-dsm.xy.height <- dsm(count ~ s(x, y, k = 10) + s(height, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
+# canopy height
+dsm.xy.height <- dsm(count ~ s(x, y, k = 10) + s(canopy_height, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
 summary(dsm.xy.height)
 plot(dsm.xy.height, select = 2)
 vis.gam(dsm.xy.height, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
-dsm.xy.cover <- dsm(count ~ s(x, y, k = 10) + s(cover, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
+# canopy cover
+dsm.xy.cover <- dsm(count ~ s(x, y, k = 10) + s(canopy_cover, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
 summary(dsm.xy.cover)
 plot(dsm.xy.cover, select = 2)
 vis.gam(dsm.xy.cover, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+# agb
+dsm.xy.agb <- dsm(count ~ s(x, y, k = 10) + s(agb, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
+summary(dsm.xy.agb)
+plot(dsm.xy.agb, select = 2)
+vis.gam(dsm.xy.agb, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+# agb total
+dsm.xy.agb_total <- dsm(count ~ s(x, y, k = 10) + s(agb_total, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
+summary(dsm.xy.agb_total)
+plot(dsm.xy.agb_total, select = 2)
+vis.gam(dsm.xy.agb_total, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+# vol
+dsm.xy.vol <- dsm(count ~ s(x, y, k = 10) + s(vol, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
+summary(dsm.xy.vol)
+plot(dsm.xy.vol, select = 2)
+vis.gam(dsm.xy.vol, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+# vol total
+dsm.xy.vol_total <- dsm(count ~ s(x, y, k = 10) + s(vol_total, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
+summary(dsm.xy.vol_total)
+plot(dsm.xy.vol_total, select = 2)
+vis.gam(dsm.xy.vol_total, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 
 # Spatial models when there are covariates in the detection function
+# height
 dsm.est.xy_height <- dsm(abundance.est ~ s(x, y), detfc.hr.height, segdata, obsdata, method = "REML")
 vis.gam(dsm.est.xy_height, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+# cover
 dsm.est.xy_cover <- dsm(abundance.est ~ s(x, y), detfc.hr.cover, segdata, obsdata, method = "REML")
 vis.gam(dsm.est.xy_cover, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+# agb
+dsm.est.xy_agb <- dsm(abundance.est ~ s(x, y), detfc.hr.agb, segdata, obsdata, method = "REML")
+vis.gam(dsm.est.xy_agb, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+# agb total
+dsm.est.xy_agb_total <- dsm(abundance.est ~ s(x, y), detfc.hr.agb_total, segdata, obsdata, method = "REML")
+vis.gam(dsm.est.xy_agb_total, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+# vol
+dsm.est.xy_vol <- dsm(abundance.est ~ s(x, y), detfc.hr.vol, segdata, obsdata, method = "REML")
+vis.gam(dsm.est.xy_vol, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+# vol total
+dsm.est.xy_vol_total <- dsm(abundance.est ~ s(x, y), detfc.hr.vol_total, segdata, obsdata, method = "REML")
+vis.gam(dsm.est.xy_vol_total, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 
 
 dsm.xy.tweedie <- dsm(count ~ s(x, y), detfc.hr.null, segdata, obsdata, family = tw(), method = "REML")
 summary(dsm.xy.tweedie)
+vis.gam(dsm.xy.tweedie, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+
 
 # model checking
 gam.check(dsm.xy)
 gam.check(dsm.xy.height)
 gam.check(dsm.xy.cover)
+gam.check(dsm.xy_agb)
+gam.check(dsm.xy_agb_total)
+gam.check(dsm.xy_vol)
+gam.check(dsm.xy_vol_total)
 gam.check(dsm.est.xy_height)
 gam.check(dsm.est.xy_cover)
+gam.check(dsm.est.xy_agb)
+gam.check(dsm.est.xy_agb_total)
+gam.check(dsm.est.xy_vol)
+gam.check(dsm.est.xy_vol_total)
 
 ## randomised quantile residuals
-rqgam.check(dsm.xy)
-rqgam.check(dsm.xy.height)
-rqgam.check(dsm.xy.cover)
-rqgam.check(dsm.est.xy_height)
-rqgam.check(dsm.est.xy_cover)
+rqgam_check(dsm.xy.tweedie)
 
 # gam.check(dsm.xy)
 # rqgam_check(dsm.xy)
@@ -239,37 +393,65 @@ rqgam.check(dsm.est.xy_cover)
 dsm_cor(dsm.xy, max.lag = 10, Segment.Label = "Sample.Label")
 dsm_cor(dsm.xy.height, max.lag = 10, Segment.Label = "Sample.Label")
 dsm_cor(dsm.xy.cover, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.xy_agb, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.xy_agb_total, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.xy_vol, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.xy_vol_total, max.lag = 10, Segment.Label = "Sample.Label")
 dsm_cor(dsm.est.xy_height, max.lag = 10, Segment.Label = "Sample.Label")
 dsm_cor(dsm.est.xy_cover, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.est.xy_agb, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.est.xy_agb_total, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.est.xy_vol, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.est.xy_vol_total, max.lag = 10, Segment.Label = "Sample.Label")
 
 # Model selection
 # make a data.frame to print out
 mod_results <- data.frame(
   "Model name" = c(
-    "`dsm.xy`", "`dsm.xy.height`", "`dsm.xy.cover`", "`dsm.est.xy_height`",
-    "`dsm.est.xy_cover`"
+    "`dsm.xy`", "`dsm.xy.tweedie`", "`dsm.xy.height`", "`dsm.xy.cover`", "`dsm.xy_agb`", "`dsm.xy_agb_total`", "`dsm.xy_vol`", "`dsm.xy_vol_total`",
+    "`dsm.est.xy_height`", "`dsm.est.xy_cover`", "`dsm.est.xy_agb`", "`dsm.est.xy_agb_total`", "`dsm.est.xy_vol`",
+    "`dsm.est.xy_vol_total`"
   ),
   "Description" = c(
     "Bivariate smooth of location, quasipoisson",
+    "Bivariate smooth of location, Tweedie, quasipoisson",
     "Bivariate smooth of location, smooth of height, quasipoisson",
     "Bivariate smooth of location, smooth of cover, quasipoisson",
+    "Bivariate smooth of location, smooth of AGB, quasipoisson",
+    "Bivariate smooth of location, smooth of AGB total, quasipoisson",
+    "Bivariate smooth of location, smooth of Volume, quasipoisson",
+    "Bivariate smooth of location, smooth of Volume total, quasipoisson",
     "Bivariate smooth of location, Tweedie, height covariate in detection function",
-    "Bivariate smooth of location, Tweedie, cover covariate in detection function"
+    "Bivariate smooth of location, Tweedie, cover covariate in detection function",
+    "Bivariate smooth of location, Tweedie, AGB covariate in detection function",
+    "Bivariate smooth of location, Tweedie, AGB total covariate in detection function",
+    "Bivariate smooth of location, Tweedie, Volume covariate in detection function",
+    "Bivariate smooth of location, Tweedie, Volume total covariate in detection function"
   ),
   "Deviance explained" = c(unlist(lapply(
     list(
       dsm.xy,
-      dsm.xy.depth,
       dsm.xy.tweedie,
-      dsm.xy.tweedie.soap,
-      dsm.est.xy
+      dsm.xy.height,
+      dsm.xy.cover,
+      dsm.xy_agb,
+      dsm.xy_agb_total,
+      dsm.xy_vol,
+      dsm.xy_vol_total
+      dsm.est.xy_height,
+      dsm.est.xy_cover,
+      dsm.est.xy_agb,
+      dsm.est.xy_agb_total,
+      dsm.est.xy_vol,
+      dsm.est.xy_vol_total
     ),
     function(x) {
       paste0(round(summary(x)$dev.expl * 100, 2), "%")
     }
-  )), NA)
+  )))
 )
 
+library(knitr)
 kable(mod_results, col.names = c("Model name", "Description", "Deviance explained"))
 
 # Abundance estimation

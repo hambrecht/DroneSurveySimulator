@@ -16,8 +16,9 @@ library(dsims)
 # Define constants
 GRID_SIZE <- 500
 
+
 # Function to load and transform spatial data
-load_spatial_data <- function(moose_path, transects_path, sbfi_path, crs) {
+load_spatial_data <- function(moose_path, transects_path, sbfi_path, wmu_path, crs) {
   moose <- sf::st_read(moose_path) %>%
     sf::st_transform(crs = crs) %>%
     select(Latitude, Longitude, date, name)
@@ -29,7 +30,10 @@ load_spatial_data <- function(moose_path, transects_path, sbfi_path, crs) {
   sbfi <- sf::st_read(sbfi_path) %>%
     sf::st_transform(crs = crs)
 
-  list(moose = moose, transects = transects, sbfi = sbfi)
+  wmu <- sf::st_read(wmu_path) %>%
+    sf::st_transform(crs = crs)
+
+  list(moose = moose, transects = transects, sbfi = sbfi, wmu = wmu)
 }
 
 # Function to split transects into segments
@@ -66,11 +70,13 @@ data_paths <- list(
   moose_path = "D:\\WMU\\survey_data\\501_moose_locations.shp",
   transects_path = "D:\\WMU\\survey_data\\WMU 501 (2018-2019)\\WMU501_transects_2018.gpx",
   sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_501.shp"
+  wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_501_3400.shp"
 )
 data <- load_spatial_data(data_paths$moose_path, data_paths$transects_path, data_paths$sbfi_path, crs = 3400)
 moose <- data$moose
 transects <- data$transects
 sbfi <- data$sbfi
+wmu <- data$wmu
 
 # Rename columns in sbfi
 org_sbfi_names <- colnames(sbfi)
@@ -149,6 +155,9 @@ colnames(sbfi) <- c(
   "Shape_Area", "layer", "path", "geometry"
 )
 
+# Select only the OBJECTID column
+wmu <- wmu[, "OBJECTID"]
+
 # Perform spatial join to get the polygon attributes for each point
 joined <- st_join(moose, sbfi)
 result <- joined[, c("STRUCTURE_CANOPY_HEIGHT_MEDIAN", "STRUCTURE_CANOPY_COVER_MEDIAN", "STRUCTURE_AGB_MEDIAN", "STRUCTURE_AGB_TOTAL", "STRUCTURE_VOLUME_MEDIAN", "STRUCTURE_VOLUME_TOTAL")]
@@ -208,10 +217,7 @@ segdata$x <- distdata$x <- sf::st_coordinates(moose)[, 1]
 segdata$y <- distdata$y <- sf::st_coordinates(moose)[, 2]
 obsdata <- as.data.frame(sf::st_drop_geometry(moose[, c("object", "distance", "Effort", "Sample.Label", "size")]))
 
-# Load WMU outline and create prediction grid
-wmu <- sf::st_read("D:\\WMU\\base_data\\WMU\\wmu_501_3400.shp")
-# Select only the OBJECTID column
-wmu <- wmu[, "OBJECTID"]
+
 # Create the survey region
 region <- make.region(
   region.name = "study area",

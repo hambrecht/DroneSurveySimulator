@@ -205,12 +205,12 @@ result <- joined[, c("STRUCTURE_CANOPY_HEIGHT_MEDIAN", "STRUCTURE_CANOPY_COVER_M
 result <- result %>% replace_na(list(STRUCTURE_CANOPY_HEIGHT_MEDIAN = 0, STRUCTURE_CANOPY_COVER_MEDIAN = 0, STRUCTURE_AGB_MEDIAN = 0, STRUCTURE_AGB_TOTAL = 0 , STRUCTURE_VOLUME_MEDIAN = 0, STRUCTURE_VOLUME_TOTAL = 0))
 
 # Add the results to the original points sf object
-moose$canopy_height <- result$STRUCTURE_CANOPY_HEIGHT_MEDIAN
-moose$canopy_cover <- result$STRUCTURE_CANOPY_COVER_MEDIAN
-moose$agb <- result$STRUCTURE_AGB_MEDIAN
-moose$agb_total <- result$STRUCTURE_AGB_TOTAL
-moose$vol <- result$STRUCTURE_VOLUME_MEDIAN
-moose$vol_total <- result$STRUCTURE_VOLUME_TOTAL
+moose$canopy_height <- round(result$STRUCTURE_CANOPY_HEIGHT_MEDIAN,0)
+moose$canopy_cover <- round(result$STRUCTURE_CANOPY_COVER_MEDIAN,0)
+moose$agb <- round(result$STRUCTURE_AGB_MEDIAN,-1)
+moose$agb_total <- round(result$STRUCTURE_AGB_TOTAL,-2)
+moose$vol <- round(result$STRUCTURE_VOLUME_MEDIAN,-1)
+moose$vol_total <- round(result$STRUCTURE_VOLUME_TOTAL,-2)
 
 # Split transects into segments
 transects_segments <- transects %>%
@@ -256,21 +256,11 @@ segdata$x <- distdata$x <- sf::st_coordinates(moose)[, 1]
 segdata$y <- distdata$y <- sf::st_coordinates(moose)[, 2]
 obsdata <- as.data.frame(sf::st_drop_geometry(moose[, c("object", "distance", "Effort", "Sample.Label", "size")]))
 ```
-### Examine input data frames
-Segmentation data
-```{r}
-head(segdata)
-```
-Distance data
-```{r}
-head(distdata)
-```
-Observation data
-```{r}
-head(obsdata)
-```
 
-### Density surface template
+```{r}
+print("test")
+```
+## Density surface template
 Create simgple density object to retrieve coordinates from and fill later with predicted abundance values
 ```{r}
 # Create the survey region
@@ -288,7 +278,41 @@ density <- dsims::make.density(
 coords <- sf::st_drop_geometry(density@density.surface[[1]][, c("x", "y")])
 ```
 
+## Exploratory data analysis
+Segmentation data
+```{r}
+head(segdata)
+```
+
+Observation data
+```{r}
+head(obsdata)
+```
+### Distance data
+Data frame
+```{r}
+head(distdata)
+```
+Histogram
+```{r}
+hist(distdata$distance,main="",xlab="Distance (m)")
+```
+### Spatial data
+Canopy height
+```{r}
+p <- ggplot() + grid_plot_obj(distdata$canopy_height, "Height", coords) + coord_equal()
+p <- p + labs(fill="Height",x="x",y="y",size="Distance")
+p <- p + geom_line(aes(x, y, group=Transect.Label), data=segdata)
+p <- p + geom_point(aes(x, y, size=distance), data=distdata, colour="red",alpha=I(0.7))
+p <- p + gg.opts
+print(p)
+```
+
+
 # Estimating the detection function
+The summary gives us information about parameter estimates, probability of detection, AIC. The plots show the fitted detection function and quantile-quantile plot.
+Left: Fitted detection function
+Right: Goodness of fit for the hazard-rate model
 
 Null model
 ```{r}
@@ -299,6 +323,7 @@ plot(detfc.hr.null, showpoints = FALSE, pl.den = 0, lwd = 2)
 ddf.gof(detfc.hr.null$ddf)
 ```
 
+Adding covariates in the detection function is common. The AIC should idealy be lower then the null model and goodnes of fit should be better
 Canopy height model
 ```{r}
 detfc.hr.height <- ds(distdata, max(distdata$distance),
@@ -368,6 +393,8 @@ par(mfrow = c(1, 1))
 ```
 
 # Fit a DSM
+Fitting a simple model. The summary gives use the deviance explained which can be used to compare between models. Furthermore, the model can be plotted the show the spatial distrubution of the density.
+
 Null model
 ```{r}
 dsm.xy <- dsm(count ~ s(x, y), detfc.hr.null, segdata, obsdata, method = "REML")
@@ -457,8 +484,9 @@ summary(dsm.xy.tweedie)
 vis.gam(dsm.xy.tweedie, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 ```
 
-# Model selection
-model checking
+# Model checking
+Checking goodness of fit
+The Q-Q plot should show a straight line for good fit
 ```{r}
 gam.check(dsm.xy)
 gam.check(dsm.xy.height)
@@ -476,10 +504,12 @@ gam.check(dsm.est.xy_vol_total)
 ```
 
 Randomised quantile residuals
+same as `gam.check` but removes the 0's in the data which can cause distracting artefacts in the plots such as lines.
 ```{r}
 rqgam_check(dsm.xy.tweedie)
 ```
 Check for autocorrelation
+
 ```{r}
 dsm_cor(dsm.xy, max.lag = 10, Segment.Label = "Sample.Label")
 dsm_cor(dsm.xy.height, max.lag = 10, Segment.Label = "Sample.Label")

@@ -205,7 +205,7 @@ result <- joined[, c("STRUCTURE_CANOPY_HEIGHT_MEDIAN", "STRUCTURE_CANOPY_COVER_M
 result <- result %>% replace_na(list(STRUCTURE_CANOPY_HEIGHT_MEDIAN = 0, STRUCTURE_CANOPY_COVER_MEDIAN = 0, STRUCTURE_AGB_MEDIAN = 0, STRUCTURE_AGB_TOTAL = 0 , STRUCTURE_VOLUME_MEDIAN = 0, STRUCTURE_VOLUME_TOTAL = 0))
 
 # Add the results to the original points sf object
-moose$canopy_height <- round(result$STRUCTURE_CANOPY_HEIGHT_MEDIAN,0)
+moose$canopy_height <- round(result$STRUCTURE_CANOPY_HEIGHT_MEDIAN,0) # round values to group similar values together and speed up the computation of the detection function
 moose$canopy_cover <- round(result$STRUCTURE_CANOPY_COVER_MEDIAN,0)
 moose$agb <- round(result$STRUCTURE_AGB_MEDIAN,-1)
 moose$agb_total <- round(result$STRUCTURE_AGB_TOTAL,-2)
@@ -257,9 +257,6 @@ segdata$y <- distdata$y <- sf::st_coordinates(moose)[, 2]
 obsdata <- as.data.frame(sf::st_drop_geometry(moose[, c("object", "distance", "Effort", "Sample.Label", "size")]))
 ```
 
-```{r}
-print("test")
-```
 ## Density surface template
 Create simgple density object to retrieve coordinates from and fill later with predicted abundance values
 ```{r}
@@ -273,7 +270,7 @@ plot(region)
 ## # Create the density surface
 density <- dsims::make.density(
   region = region,
-  x.space = GRID_SIZE,
+  x.space = GRID_SIZE
 )
 coords <- sf::st_drop_geometry(density@density.surface[[1]][, c("x", "y")])
 ```

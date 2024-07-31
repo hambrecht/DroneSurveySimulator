@@ -1,0 +1,639 @@
+---
+title: "Distance sampling approach for aerial survey data"
+author: "Leonard Hambrecht"
+date: "2024"
+output: html_document
+---
+
+# Introduction
+
+This script is imports aerial survey data and some vegetation layers.
+Through a distance sampling approach, the detection curve is caluclated based on various vegetation variables and the best model is selected. Based on the best model, a density surface is calucated.
+This approach is based on the example provided by David L. Miller [here](https://distancesampling.org/R/vignettes/mexico-analysis.html)
+
+# Preamble
+### Load packages
+Load necessary libraries for analysis and visualization
+```{r, warning=FALSE}
+library(dsm)
+library(ggplot2)
+library(terra)
+library(Distance)
+library(sf)
+library(dplyr)
+library(tidyr)
+library(units)
+library(purrr)
+library(dssd)
+library(lwgeom)
+library(dsims)
+```
+
+### Set variables
+```{r}
+# Set size of grid cells in metre
+GRID_SIZE <- 500
+# Define the height and field of view
+ALTITUDE <- 700 # height in meters
+FOV <- 60 # field of view in degrees
+# Calculate the width using the tangent function in meters
+IMAGE_WIDTH <- 2 * ALTITUDE * tan((FOV * (pi / 180)) / 2)
+```
+
+### Define functions
+
+```{r}
+# Function to load and transform spatial data
+load_spatial_data <- function(moose_path, transects_path, sbfi_path, wmu_path, crs) {
+  moose <- sf::st_read(moose_path) %>%
+    sf::st_transform(crs = crs) %>%
+    select(Latitude, Longitude, date, name)
+
+  transects <- sf::st_read(transects_path, layer = "tracks") %>%
+    sf::st_transform(crs = crs) %>%
+    select(1)
+
+  sbfi <- sf::st_read(sbfi_path) %>%
+    sf::st_transform(crs = crs)
+
+  wmu <- sf::st_read(wmu_path) %>%
+    sf::st_transform(crs = crs)
+
+  list(moose = moose, transects = transects, sbfi = sbfi, wmu = wmu)
+}
+
+
+# Function to split transects into segments
+split_into_segments <- function(linestring) {
+  total_length <- st_length(linestring)
+  total_length <- if (!inherits(total_length, "units")) set_units(total_length, "m") else total_length
+  stopifnot(as.numeric(total_length) > 0)
+
+  total_length_km <- set_units(total_length, "km")
+  num_segments <- ceiling(as.numeric(total_length_km))
+  stopifnot(num_segments > 0)
+
+  equal_segment_length <- total_length_km / num_segments
+  segment_lengths <- rep(equal_segment_length, num_segments)
+  segment_lengths[num_segments] <- total_length_km - sum(segment_lengths[1:(num_segments - 1)])
+
+  points <- sf::st_line_sample(linestring, sample = seq(0, 1, length.out = num_segments + 1)) %>%
+    st_cast("POINT")
+  stopifnot(length(points) >= 2)
+
+  segments <- map2(points[-length(points)], points[-1], ~ {
+    segment <- st_sfc(st_linestring(x = st_coordinates(c(.x, .y))), crs = st_crs(linestring))
+    st_sf(geometry = segment)
+  })
+
+  segments_sf <- do.call(rbind, segments)
+  stopifnot(nrow(segments_sf) >= 1)
+
+  segments_sf
+}
+
+# Function to create plot objects for predictions
+grid_plot_obj <- function(fill, name, sf_obj) {
+  data <- data.frame(fill = fill)
+  names(data) <- name
+  combined_sf <- sf_obj %>%
+    mutate(id = row_number()) %>%
+    left_join(data, by = c("id" = "row.names"))
+
+  ggplot(combined_sf) +
+    geom_sf(aes_string(fill = name)) +
+    theme_minimal()
+}
+```
+
+## The data
+Import data
+```{r}
+data_paths <- list(
+  moose_path = "D:\\WMU\\survey_data\\501_moose_locations.shp",
+  transects_path = "D:\\WMU\\survey_data\\WMU 501 (2018-2019)\\WMU501_transects_2018.gpx",
+  sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_501.shp",
+  wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_501_3400.shp"
+)
+data <- load_spatial_data(data_paths$moose_path, data_paths$transects_path, data_paths$sbfi_path, data_paths$wmu_path, crs = 3400)
+moose <- data$moose
+transects <- data$transects
+sbfi <- data$sbfi
+wmu <- data$wmu
+```
+
+### Format data
+```{r}
+# Rename columns in sbfi
+org_sbfi_names <- colnames(sbfi)
+colnames(sbfi) <- c(
+  # Basic information
+  "OBJECTID", "ID", "TILE", "AREA_HA", "PERIMETER_M", "JURISDICTION", 
+  "ECOZONE", "ECOPROVINCE", "ECOREGION", "MANAGEMENT",
+
+  # Land Cover
+  "LC_WATER", "LC_SNOW_ICE", "LC_ROCK_RUBBLE", "LC_EXPOSED_BARREN", 
+  "LC_BRYOIDS", "LC_SHRUBS", "LC_WETLAND", "LC_WETLAND_TREED", 
+  "LC_HERBS", "LC_CONIFEROUS", "LC_BROADLEAF", "LC_MIXEDWOOD", 
+  "LC_TREED", "LC_FAO_FOREST", "LC_WETLAND_VEGETATION",
+
+  # Disturbance by Fire
+  "DISTURB_FIRE_PERC", "DISTURB_FIRE_YEAR", "DISTURB_FIRE_MAGNITUDE_MIN", 
+  "DISTURB_FIRE_MAGNITUDE_MAX", "DISTURB_FIRE_MAGNITUDE_AVG", 
+  "DISTURB_FIRE_MAGNITUDE_SD", "DISTURB_FIRE_MAGNITUDE_MEDIAN",
+
+  # Disturbance by Harvest
+  "DISTURB_HARVEST_PERC", "DISTURB_HARVEST_YEAR",
+
+  # Recovery from Disturbance by Fire
+  "RECOVERY_FIRE_MIN", "RECOVERY_FIRE_MAX", "RECOVERY_FIRE_AVG", 
+  "RECOVERY_FIRE_SD", "RECOVERY_FIRE_MEDIAN",
+
+  # Recovery from Disturbance by Harvest
+  "RECOVERY_HARVEST_MIN", "RECOVERY_HARVEST_MAX", "RECOVERY_HARVEST_AVG", 
+  "RECOVERY_HARVEST_SD", "RECOVERY_HARVEST_MEDIAN",
+
+  # Age of the Forest
+  "AGE_MIN", "AGE_MAX", "AGE_AVG", "AGE_SD", "AGE_MEDIAN", 
+  "AGE_0_10", "AGE_10_20", "AGE_20_30", "AGE_30_40", "AGE_40_50", 
+  "AGE_50_60", "AGE_60_70", "AGE_70_80", "AGE_80_90", "AGE_90_100", 
+  "AGE_100_110", "AGE_110_120", "AGE_120_130", "AGE_130_140", 
+  "AGE_140_150", "AGE_GT_150",
+
+  # Canopy Structure
+  "STRUCTURE_CANOPY_HEIGHT_MIN", "STRUCTURE_CANOPY_HEIGHT_MAX", 
+  "STRUCTURE_CANOPY_HEIGHT_AVG", "STRUCTURE_CANOPY_HEIGHT_SD", 
+  "STRUCTURE_CANOPY_HEIGHT_MEDIAN", "STRUCTURE_CANOPY_COVER_MIN", 
+  "STRUCTURE_CANOPY_COVER_MAX", "STRUCTURE_CANOPY_COVER_AVG", 
+  "STRUCTURE_CANOPY_COVER_SD", "STRUCTURE_CANOPY_COVER_MEDIAN",
+
+  # Lorey's Height
+  "STRUCTURE_LOREYS_HEIGHT_MIN", "STRUCTURE_LOREYS_HEIGHT_MAX", 
+  "STRUCTURE_LOREYS_HEIGHT_AVG", "STRUCTURE_LOREYS_HEIGHT_SD", 
+  "STRUCTURE_LOREYS_HEIGHT_MEDIAN",
+
+  # Basal Area
+  "STRUCTURE_BASAL_AREA_MIN", "STRUCTURE_BASAL_AREA_MAX", 
+  "STRUCTURE_BASAL_AREA_AVG", "STRUCTURE_BASAL_AREA_SD", 
+  "STRUCTURE_BASAL_AREA_MEDIAN", "STRUCTURE_BASAL_AREA_TOTAL",
+
+  # Above-Ground Biomass (AGB)
+  "STRUCTURE_AGB_MIN", "STRUCTURE_AGB_MAX", "STRUCTURE_AGB_AVG", 
+  "STRUCTURE_AGB_SD", "STRUCTURE_AGB_MEDIAN", "STRUCTURE_AGB_TOTAL",
+
+  # Tree Volume
+  "STRUCTURE_VOLUME_MIN", "STRUCTURE_VOLUME_MAX", "STRUCTURE_VOLUME_AVG", 
+  "STRUCTURE_VOLUME_SD", "STRUCTURE_VOLUME_MEDIAN", "STRUCTURE_VOLUME_TOTAL",
+
+  # Species Composition
+  "SPECIES_NUMBER", "SPECIES_1", "SPECIES_1_PERC", "SPECIES_2", 
+  "SPECIES_2_PERC", "SPECIES_3", "SPECIES_3_PERC", "SPECIES_4", 
+  "SPECIES_4_PERC", "SPECIES_5", "SPECIES_5_PERC", "SPECIES_CONIFEROUS_PERC", 
+  "SPECIES_CML_1", "SPECIES_CML_1_PERC", "SPECIES_CML_2", 
+  "SPECIES_CML_2_PERC", "SPECIES_CML_3", "SPECIES_CML_3_PERC", 
+  "SPECIES_CML_4", "SPECIES_CML_4_PERC", "SPECIES_CML_5", 
+  "SPECIES_CML_5_PERC", "SPECIES_CML_CONIFEROUS_PERC", 
+  "SPECIES_CML_ASSEMBLAGES", "SPECIES_CML_ASSEMBLAGES_PERC",
+
+  # Symbolic Levels and Others
+  "SYMB_LAND_BASE_LEVEL", "SYMB_LAND_COVER_LEVEL", "SYMB_VEGETATION_LEVEL", 
+  "SYMB_DISTURBANCE", "SYMB_RECOVERY", "SYMB_AGE", "Shape_Length", 
+  "Shape_Area", "layer", "path", "geometry"
+)
+
+# Select only the OBJECTID column
+wmu <- wmu[, "OBJECTID"]
+
+# Perform spatial join to get the polygon attributes for each point
+joined <- st_join(moose, sbfi)
+result <- joined[, c("STRUCTURE_CANOPY_HEIGHT_MEDIAN", "STRUCTURE_CANOPY_COVER_MEDIAN", "STRUCTURE_AGB_MEDIAN", "STRUCTURE_VOLUME_MEDIAN")]
+
+# Replace NA values with 0
+result <- result %>% replace_na(list(STRUCTURE_CANOPY_HEIGHT_MEDIAN = 0, STRUCTURE_CANOPY_COVER_MEDIAN = 0, STRUCTURE_AGB_MEDIAN = 0, STRUCTURE_VOLUME_MEDIAN = 0))
+
+# Add the results to the original points sf object
+moose$canopy_height <- round(result$STRUCTURE_CANOPY_HEIGHT_MEDIAN,0) # round values to group similar values together and speed up the computation of the detection function
+moose$canopy_cover <- round(result$STRUCTURE_CANOPY_COVER_MEDIAN,0)
+moose$agb <- round(result$STRUCTURE_AGB_MEDIAN,-1)
+moose$vol <- round(result$STRUCTURE_VOLUME_MEDIAN,-1)
+
+# Split transects into segments
+transects_segments <- transects %>%
+  st_cast("LINESTRING") %>%
+  st_geometry() %>%
+  map(split_into_segments) %>%
+  bind_rows() %>%
+  st_sf()
+
+st_crs(transects_segments) <- st_crs(transects)
+transects_segments$Sample.Label <- row_number(transects_segments)
+
+# Calculate distances between moose points and transect segments
+distances <- st_distance(moose, transects_segments, tolerance = set_units(600, "m"))
+
+# Find closest segment for each moose point
+closest_segments <- data.frame(
+  moose_id = integer(nrow(moose)),
+  Sample.Label = integer(nrow(moose)),
+  distance = numeric(nrow(moose))
+)
+
+for (i in 1:nrow(moose)) {
+  min_distance_index <- which.min(distances[i, ])
+  closest_segments$moose_id[i] <- i
+  closest_segments$Sample.Label[i] <- transects_segments$Sample.Label[min_distance_index]
+  closest_segments$distance[i] <- distances[i, min_distance_index]
+}
+
+# Merge closest segments with moose data
+moose <- merge(moose, closest_segments, by.x = "row.names", by.y = "moose_id")
+colnames(moose)[1] <- "object"
+colnames(moose)[5] <- "Transect.Label"
+moose$size <- 1
+moose$Effort <- 10
+moose$distance <- moose$distance / 1000
+
+# Prepare data for density surface modelling
+segdata <- as.data.frame(sf::st_drop_geometry(moose[, c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label", "canopy_height", "canopy_cover", "agb", "vol")]))
+distdata <- as.data.frame(sf::st_drop_geometry(moose[, c("object", "Latitude", "Longitude", "distance", "Effort", "size", "canopy_height", "canopy_cover", "agb", "vol")]))
+distdata$detected <- 1
+segdata$x <- distdata$x <- sf::st_coordinates(moose)[, 1]
+segdata$y <- distdata$y <- sf::st_coordinates(moose)[, 2]
+obsdata <- as.data.frame(sf::st_drop_geometry(moose[, c("object", "distance", "Effort", "Sample.Label", "size")]))
+```
+
+## Density surface template
+Create simgple density object to retrieve coordinates from and fill later with predicted abundance values
+```{r}
+# Create the survey region
+region <- make.region(
+  region.name = "study area",
+  shape = wmu
+)
+plot(region)
+
+## # Create the density surface
+density <- dsims::make.density(
+  region = region,
+  x.space = GRID_SIZE
+)
+plot(density@density.surface[[1]]['density'])
+coords <- sf::st_drop_geometry(density@density.surface[[1]][, c("x", "y")])
+```
+
+## Exploratory data analysis
+Segmentation data
+```{r}
+head(segdata)
+```
+
+Observation data
+```{r}
+head(obsdata)
+```
+### Distance data
+Data frame
+```{r}
+head(distdata)
+```
+Histogram
+```{r}
+hist(distdata$distance,main="Distance",xlab="Distance (km)")
+hist(distdata$canopy_height,main="Canopy Height",xlab="Height (m)")
+hist(distdata$canopy_cover,main="Canopy Cover",xlab="Cover")
+hist(distdata$agb,main="AGB",xlab="Biomass")
+hist(distdata$vol,main="Volume",xlab="Volume (m3)")
+```
+
+# Estimating the detection function
+The summary gives us information about parameter estimates, probability of detection, AIC. The plots show the fitted detection function and quantile-quantile plot.
+Left: Fitted detection function
+Right: Goodness of fit for the hazard-rate model
+
+Null model
+```{r}
+detfc.hr.null <- ds(distdata, max(distdata$distance), key = "hr", adjustment = NULL)
+summary(detfc.hr.null)
+par(mfrow = c(1, 2))
+plot(detfc.hr.null, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Null model")
+ddf.gof(detfc.hr.null$ddf)
+```
+
+Adding covariates in the detection function is common. The AIC should idealy be lower then the null model and goodnes of fit should be better
+Canopy height model
+```{r}
+detfc.hr.height <- ds(distdata, max(distdata$distance),
+  formula = ~ as.factor(canopy_height),
+  key = "hr", adjustment = NULL
+)
+summary(detfc.hr.height)
+par(mfrow = c(1, 2))
+plot(detfc.hr.height, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Height model")
+ddf.gof(detfc.hr.height$ddf)
+```
+
+Canopy cover model
+```{r}
+detfc.hr.cover <- ds(distdata, max(distdata$distance),
+  formula = ~ as.factor(canopy_cover),
+  key = "hr", adjustment = NULL
+)
+summary(detfc.hr.cover)
+par(mfrow = c(1, 2))
+plot(detfc.hr.cover, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Cover model")
+ddf.gof(detfc.hr.cover$ddf)
+```
+
+AGB model
+```{r}
+detfc.hr.agb <- ds(distdata, max(distdata$distance),
+  formula = ~ as.factor(agb),
+  key = "hr", adjustment = NULL
+)
+summary(detfc.hr.agb)
+par(mfrow = c(1, 2))
+plot(detfc.hr.agb, showpoints = FALSE, pl.den = 0, lwd = 2, main = "AGB model")
+ddf.gof(detfc.hr.agb$ddf)
+```
+
+Volume model
+```{r}
+detfc.hr.vol <- ds(distdata, max(distdata$distance),
+  formula = ~ as.factor(vol),
+  key = "hr", adjustment = NULL
+)
+summary(detfc.hr.vol)
+par(mfrow = c(1, 2))
+plot(detfc.hr.vol, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Volume model")
+ddf.gof(detfc.hr.vol$ddf)
+```
+
+# Fit a DSM
+Fitting a simple model. The summary gives use the deviance explained which can be used to compare between models. Furthermore, the model can be plotted the show the spatial distrubution of the density.
+
+Null model
+```{r}
+dsm.xy <- dsm(count ~ s(x, y), detfc.hr.null, segdata, obsdata, method = "REML")
+summary(dsm.xy)
+plot(dsm.xy, select = 2)
+vis.gam(dsm.xy, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+```
+Canopy height
+```{r}
+dsm.xy.height <- dsm(count ~ s(x, y, k = 10) + s(canopy_height, k = 10), detfc.hr.null, segdata, obsdata, method = "REML")
+summary(dsm.xy.height)
+plot(dsm.xy.height, select = 2)
+vis.gam(dsm.xy.height, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+```
+Canopy cover
+```{r}
+dsm.xy.cover <- dsm(count ~ s(x, y, k = 10) + s(canopy_cover, k = 10), detfc.hr.null, segdata, obsdata, method = "REML")
+summary(dsm.xy.cover)
+plot(dsm.xy.cover, select = 2)
+vis.gam(dsm.xy.cover, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+```
+AGB
+```{r}
+dsm.xy.agb <- dsm(count ~ s(x, y, k = 10) + s(agb, k = 10), detfc.hr.null, segdata, obsdata, method = "REML")
+summary(dsm.xy.agb)
+plot(dsm.xy.agb, select = 2)
+vis.gam(dsm.xy.agb, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+```
+Volumne
+```{r}
+dsm.xy.vol <- dsm(count ~ s(x, y, k = 10) + s(vol, k = 10), detfc.hr.null, segdata, obsdata, method = "REML")
+summary(dsm.xy.vol)
+plot(dsm.xy.vol, select = 2)
+vis.gam(dsm.xy.vol, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+```
+
+# Spatial models when there are covariates in the detection function
+Canopy height
+```{r}
+dsm.est.xy_height <- dsm(abundance.est ~ s(x, y), detfc.hr.height, segdata, obsdata, method = "REML")
+vis.gam(dsm.est.xy_height, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+```
+Canopy cover
+```{r}
+dsm.est.xy_cover <- dsm(abundance.est ~ s(x, y), detfc.hr.cover, segdata, obsdata, method = "REML")
+vis.gam(dsm.est.xy_cover, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+```
+AGB
+```{r}
+dsm.est.xy_agb <- dsm(abundance.est ~ s(x, y), detfc.hr.agb, segdata, obsdata, method = "REML")
+vis.gam(dsm.est.xy_agb, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+```
+Volume
+```{r}
+dsm.est.xy_vol <- dsm(abundance.est ~ s(x, y), detfc.hr.vol, segdata, obsdata, method = "REML")
+vis.gam(dsm.est.xy_vol, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+```
+
+Tweedie
+```{r}
+dsm.xy.tweedie <- dsm(count ~ s(x, y), detfc.hr.null, segdata, obsdata, family = tw(), method = "REML")
+summary(dsm.xy.tweedie)
+vis.gam(dsm.xy.tweedie, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+```
+
+# Model checking
+Checking goodness of fit
+The Q-Q plot should show a straight line for good fit
+```{r}
+par(mfrow = c(2, 2))
+gam.check(dsm.xy)
+gam.check(dsm.xy.height)
+gam.check(dsm.xy.cover)
+gam.check(dsm.xy.agb)
+gam.check(dsm.xy.vol)
+gam.check(dsm.est.xy_height)
+gam.check(dsm.est.xy_cover)
+gam.check(dsm.est.xy_agb)
+gam.check(dsm.est.xy_vol)
+```
+
+Randomised quantile residuals
+same as `gam.check` but removes the 0's in the data which can cause distracting artefacts in the plots such as lines.
+```{r}
+rqgam_check(dsm.xy.tweedie)
+```
+Check for autocorrelation
+
+```{r}
+dsm_cor(dsm.xy, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.xy.height, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.xy.cover, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.xy.agb, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.xy.vol, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.est.xy_height, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.est.xy_cover, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.est.xy_agb, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.est.xy_vol, max.lag = 10, Segment.Label = "Sample.Label")
+```
+
+# Model selection
+make a data.frame to print out
+```{r}
+mod_results <- data.frame(
+  "Model name" = c(
+    "`dsm.xy`", "`dsm.xy.tweedie`", "`dsm.xy.height`", "`dsm.xy.cover`", "`dsm.xy.agb`", "`dsm.xy.vol`",
+    "`dsm.est.xy_height`", "`dsm.est.xy_cover`", "`dsm.est.xy_agb`", "`dsm.est.xy_vol`"
+  ),
+  "Description" = c(
+    "Bivariate smooth of location, quasipoisson",
+    "Bivariate smooth of location, Tweedie, quasipoisson",
+    "Bivariate smooth of location, smooth of height, quasipoisson",
+    "Bivariate smooth of location, smooth of cover, quasipoisson",
+    "Bivariate smooth of location, smooth of AGB, quasipoisson",
+    "Bivariate smooth of location, smooth of Volume, quasipoisson",
+    "Bivariate smooth of location, Tweedie, height covariate in detection function",
+    "Bivariate smooth of location, Tweedie, cover covariate in detection function",
+    "Bivariate smooth of location, Tweedie, AGB covariate in detection function",
+    "Bivariate smooth of location, Tweedie, Volume covariate in detection function"
+  ),
+  "Deviance explained" = c(unlist(lapply(
+    list(
+      dsm.xy,
+      dsm.xy.tweedie,
+      dsm.xy.height,
+      dsm.xy.cover,
+      dsm.xy.agb,
+      dsm.xy.vol,
+      dsm.est.xy_height,
+      dsm.est.xy_cover,
+      dsm.est.xy_agb,
+      dsm.est.xy_vol
+    ),
+    function(x) {
+      paste0(round(summary(x)$dev.expl * 100, 2), "%")
+    }
+  )))
+)
+
+library(knitr)
+print(mod_results, col.names = c("Model name", "Description", "Deviance explained"))
+```
+
+# Abundance estimation
+```{r}
+dsm.xy.pred <- predict(dsm.xy, coords, dsm.xy$offset[1])
+# Calculate total abundance over the survey area
+sum(dsm.xy.pred)
+
+# fill density object with predeicted values
+density@density.surface[[1]]$density <- dsm.xy.pred
+
+# plot density
+plot(density@density.surface[[1]]['density'])
+save(density, file = "density_501.RData")
+```
+# Drone survey simulation
+Simulation based on example by Laura Marshall [here](https://examples.distancesampling.org/dsims-truncation/dsims-examples.html)
+
+### Create population
+based on estimate density from above
+```{r}
+# Create the population description, with a population size N = 200
+pop.desc <- make.population.description(
+  region = region,
+  density = density,
+  N = sum(dsm.xy.pred),
+  fixed.N = TRUE
+)
+```
+
+### Detection function
+Make a simple half normal detection function with a scale parameter of 200
+```{r}
+detect.hn <- make.detectability(
+  key.function = "hn",
+  scale.param = 200,
+  truncation = IMAGE_WIDTH
+)
+# We can now visualise these detection functions
+plot(detect.hn, pop.desc)
+```
+
+### Survey design
+Define the `systematic` design
+```{r}
+design <- make.design(
+  region = region,
+  transect.type = "line",
+  design = "systematic",
+  spacing = 1000,
+  truncation = IMAGE_WIDTH
+)
+```
+Define the `parallel` design
+```{r}
+parallel.design <- make.design(
+  region = region,
+  design = "systematic",
+  spacing = 2500,
+  edge.protocol = "minus",
+  design.angle = 90,
+  truncation = IMAGE_WIDTH
+)
+```
+Define `zigzag` designed
+```{r}
+zigzag.design <- make.design(
+  region = region,
+  design = "eszigzag",
+  spacing = 1000,
+  edge.protocol = "minus",
+  design.angle = 0,
+  bounding.shape = "convex.hull",
+  truncation = IMAGE_WIDTH
+)
+```
+
+### Create transects in survey `region`
+```{r}
+transects <- generate.transects(design)
+parallel.transects <- generate.transects(parallel.design)
+zigzag.transects <- generate.transects(zigzag.design)
+plot(region, transects)
+plot(region, parallel.transects)
+plot(region, zigzag.transects)
+```
+
+### Analysis
+```{r}
+ddf.analyses <- make.ds.analysis(
+  dfmodel = list(~1, ~1),
+  key = c("hn", "hr"),
+  criteria = "AIC",
+  truncation = 600
+)
+```
+
+### Simulation
+define simulation
+```{r}
+sim <- make.simulation(
+  reps = 33,
+  design = zigzag.design,
+  population.description = pop.desc,
+  detectability = detect.hn,
+  ds.analysis = ddf.analyses
+)
+```
+#### Run survey simluation and plot it
+```{r}
+survey <- run.survey(sim)
+par(mfrow = c(2, 2))
+plot(survey, region)
+```
+```{r}
+plot(survey@transect@cov.area.polys)
+# Display a histogram of the estimates of abundance```
+`run.simulation` is an iteration of `run.survey` 
+```{r}
+sim <- run.simulation(simulation = sim, run.parallel = F)
+# Display a summary of the simulation
+summary(sim)
+# Display a histogram of the estimates of abundance
+histogram.N.ests(sim)
+```

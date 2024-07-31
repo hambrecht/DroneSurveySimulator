@@ -10,26 +10,21 @@
 
 library(devtools)
 library(terra)
-library(dssd)
 library(dsims)
+library(dssd)
 library(sf)
 library(lwgeom)
 
 # Define the height and field of view
-altitude <- 100 # height in meters
+altitude <- 700 # height in meters
 fov <- 60 # field of view in degrees
 
 # Calculate the width using the tangent function in meters
-image_wdith <- 2 * altitude * tan((fov * (pi / 180)) / 2)
+image_wdith <- altitude * tan((fov * (pi / 180)) / 2)
 print(image_wdith)
 
-# https://distancesampling.org/R/vignettes/mexico-analysis.html
-
-
-
-
 # Distance example using dsims
-# https://examples.distancesampling.org/dsims-truncation/dsims-examples.html
+# 
 # load shapefile
 wum_strata <- sf::st_read("D:\\WMU\\base_data\\WMU\\wmu_501_3400.shp")
 strata <- sf::st_read(wum_strata)
@@ -68,8 +63,7 @@ plot(region)
 density <- make.density(
   region = region,
   x.space = 600,
-  constant = 1,
-  density.surface = dsm.xy
+  constant = 1
 )
 
 
@@ -125,7 +119,7 @@ covariate.list$size <- list(list(distribution = "poisson", lambda = 35))
 # Make a simple half normal detection function with a scale parameter of 200
 detect.hn <- make.detectability(
   key.function = "hn",
-  scale.param = 200,
+  scale.param = 100,
   truncation = image_wdith
 )
 # We can now visualise these detection functions
@@ -209,7 +203,7 @@ ddf.analyses <- make.ds.analysis(
 ## check.sim.setup(sim)
 
 sim <- make.simulation(
-  reps = 999,
+  reps = 9,
   design = design,
   population.description = pop.desc,
   detectability = detect.hn,

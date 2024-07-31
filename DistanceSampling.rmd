@@ -14,7 +14,7 @@ This approach is based on the example provided by David L. Miller [here](https:/
 # Preamble
 ### Load packages
 Load necessary libraries for analysis and visualization
-```{r}
+```{r, warning=FALSE}
 library(dsm)
 library(ggplot2)
 library(terra)
@@ -24,13 +24,20 @@ library(dplyr)
 library(tidyr)
 library(units)
 library(purrr)
+library(dssd)
+library(lwgeom)
 library(dsims)
 ```
 
 ### Set variables
-Set size of grid cells in metre
 ```{r}
+# Set size of grid cells in metre
 GRID_SIZE <- 500
+# Define the height and field of view
+ALTITUDE <- 700 # height in meters
+FOV <- 60 # field of view in degrees
+# Calculate the width using the tangent function in meters
+IMAGE_WIDTH <- 2 * ALTITUDE * tan((FOV * (pi / 180)) / 2)
 ```
 
 ### Define functions
@@ -199,18 +206,16 @@ wmu <- wmu[, "OBJECTID"]
 
 # Perform spatial join to get the polygon attributes for each point
 joined <- st_join(moose, sbfi)
-result <- joined[, c("STRUCTURE_CANOPY_HEIGHT_MEDIAN", "STRUCTURE_CANOPY_COVER_MEDIAN", "STRUCTURE_AGB_MEDIAN", "STRUCTURE_AGB_TOTAL", "STRUCTURE_VOLUME_MEDIAN", "STRUCTURE_VOLUME_TOTAL")]
+result <- joined[, c("STRUCTURE_CANOPY_HEIGHT_MEDIAN", "STRUCTURE_CANOPY_COVER_MEDIAN", "STRUCTURE_AGB_MEDIAN", "STRUCTURE_VOLUME_MEDIAN")]
 
 # Replace NA values with 0
-result <- result %>% replace_na(list(STRUCTURE_CANOPY_HEIGHT_MEDIAN = 0, STRUCTURE_CANOPY_COVER_MEDIAN = 0, STRUCTURE_AGB_MEDIAN = 0, STRUCTURE_AGB_TOTAL = 0 , STRUCTURE_VOLUME_MEDIAN = 0, STRUCTURE_VOLUME_TOTAL = 0))
+result <- result %>% replace_na(list(STRUCTURE_CANOPY_HEIGHT_MEDIAN = 0, STRUCTURE_CANOPY_COVER_MEDIAN = 0, STRUCTURE_AGB_MEDIAN = 0, STRUCTURE_VOLUME_MEDIAN = 0))
 
 # Add the results to the original points sf object
 moose$canopy_height <- round(result$STRUCTURE_CANOPY_HEIGHT_MEDIAN,0) # round values to group similar values together and speed up the computation of the detection function
 moose$canopy_cover <- round(result$STRUCTURE_CANOPY_COVER_MEDIAN,0)
 moose$agb <- round(result$STRUCTURE_AGB_MEDIAN,-1)
-moose$agb_total <- round(result$STRUCTURE_AGB_TOTAL,-2)
 moose$vol <- round(result$STRUCTURE_VOLUME_MEDIAN,-1)
-moose$vol_total <- round(result$STRUCTURE_VOLUME_TOTAL,-2)
 
 # Split transects into segments
 transects_segments <- transects %>%
@@ -249,8 +254,8 @@ moose$Effort <- 10
 moose$distance <- moose$distance / 1000
 
 # Prepare data for density surface modelling
-segdata <- as.data.frame(sf::st_drop_geometry(moose[, c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label", "canopy_height", "canopy_cover", "agb", "agb_total", "vol", "vol_total")]))
-distdata <- as.data.frame(sf::st_drop_geometry(moose[, c("object", "Latitude", "Longitude", "distance", "Effort", "size", "canopy_height", "canopy_cover", "agb", "agb_total", "vol", "vol_total")]))
+segdata <- as.data.frame(sf::st_drop_geometry(moose[, c("Latitude", "Longitude", "Effort", "Transect.Label", "Sample.Label", "canopy_height", "canopy_cover", "agb", "vol")]))
+distdata <- as.data.frame(sf::st_drop_geometry(moose[, c("object", "Latitude", "Longitude", "distance", "Effort", "size", "canopy_height", "canopy_cover", "agb", "vol")]))
 distdata$detected <- 1
 segdata$x <- distdata$x <- sf::st_coordinates(moose)[, 1]
 segdata$y <- distdata$y <- sf::st_coordinates(moose)[, 2]
@@ -272,6 +277,7 @@ density <- dsims::make.density(
   region = region,
   x.space = GRID_SIZE
 )
+plot(density@density.surface[[1]]['density'])
 coords <- sf::st_drop_geometry(density@density.surface[[1]][, c("x", "y")])
 ```
 
@@ -292,19 +298,12 @@ head(distdata)
 ```
 Histogram
 ```{r}
-hist(distdata$distance,main="",xlab="Distance (m)")
+hist(distdata$distance,main="Distance",xlab="Distance (km)")
+hist(distdata$canopy_height,main="Canopy Height",xlab="Height (m)")
+hist(distdata$canopy_cover,main="Canopy Cover",xlab="Cover")
+hist(distdata$agb,main="AGB",xlab="Biomass")
+hist(distdata$vol,main="Volume",xlab="Volume (m3)")
 ```
-### Spatial data
-Canopy height
-```{r}
-p <- ggplot() + grid_plot_obj(distdata$canopy_height, "Height", coords) + coord_equal()
-p <- p + labs(fill="Height",x="x",y="y",size="Distance")
-p <- p + geom_line(aes(x, y, group=Transect.Label), data=segdata)
-p <- p + geom_point(aes(x, y, size=distance), data=distdata, colour="red",alpha=I(0.7))
-p <- p + gg.opts
-print(p)
-```
-
 
 # Estimating the detection function
 The summary gives us information about parameter estimates, probability of detection, AIC. The plots show the fitted detection function and quantile-quantile plot.
@@ -316,7 +315,7 @@ Null model
 detfc.hr.null <- ds(distdata, max(distdata$distance), key = "hr", adjustment = NULL)
 summary(detfc.hr.null)
 par(mfrow = c(1, 2))
-plot(detfc.hr.null, showpoints = FALSE, pl.den = 0, lwd = 2)
+plot(detfc.hr.null, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Null model")
 ddf.gof(detfc.hr.null$ddf)
 ```
 
@@ -328,7 +327,8 @@ detfc.hr.height <- ds(distdata, max(distdata$distance),
   key = "hr", adjustment = NULL
 )
 summary(detfc.hr.height)
-plot(detfc.hr.height, showpoints = FALSE, pl.den = 0, lwd = 2)
+par(mfrow = c(1, 2))
+plot(detfc.hr.height, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Height model")
 ddf.gof(detfc.hr.height$ddf)
 ```
 
@@ -339,7 +339,8 @@ detfc.hr.cover <- ds(distdata, max(distdata$distance),
   key = "hr", adjustment = NULL
 )
 summary(detfc.hr.cover)
-plot(detfc.hr.cover, showpoints = FALSE, pl.den = 0, lwd = 2)
+par(mfrow = c(1, 2))
+plot(detfc.hr.cover, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Cover model")
 ddf.gof(detfc.hr.cover$ddf)
 ```
 
@@ -350,19 +351,9 @@ detfc.hr.agb <- ds(distdata, max(distdata$distance),
   key = "hr", adjustment = NULL
 )
 summary(detfc.hr.agb)
-plot(detfc.hr.agb, showpoints = FALSE, pl.den = 0, lwd = 2)
+par(mfrow = c(1, 2))
+plot(detfc.hr.agb, showpoints = FALSE, pl.den = 0, lwd = 2, main = "AGB model")
 ddf.gof(detfc.hr.agb$ddf)
-```
-
-AGB total model
-```{r}
-detfc.hr.agb_total <- ds(distdata, max(distdata$distance),
-  formula = ~ as.factor(agb_total),
-  key = "hr", adjustment = NULL
-)
-summary(detfc.hr.agb_total)
-plot(detfc.hr.agb_total, showpoints = FALSE, pl.den = 0, lwd = 2)
-ddf.gof(detfc.hr.agb_total$ddf)
 ```
 
 Volume model
@@ -372,21 +363,9 @@ detfc.hr.vol <- ds(distdata, max(distdata$distance),
   key = "hr", adjustment = NULL
 )
 summary(detfc.hr.vol)
-plot(detfc.hr.vol, showpoints = FALSE, pl.den = 0, lwd = 2)
+par(mfrow = c(1, 2))
+plot(detfc.hr.vol, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Volume model")
 ddf.gof(detfc.hr.vol$ddf)
-```
-
-Volume total model
-```{r}
-detfc.hr.vol_total <- ds(distdata, max(distdata$distance),
-  formula = ~ as.factor(vol_total),
-  key = "hr", adjustment = NULL
-)
-summary(detfc.hr.vol_total)
-plot(detfc.hr.vol_total, showpoints = FALSE, pl.den = 0, lwd = 2)
-ddf.gof(detfc.hr.vol_total$ddf)
-
-par(mfrow = c(1, 1))
 ```
 
 # Fit a DSM
@@ -400,46 +379,32 @@ plot(dsm.xy, select = 2)
 vis.gam(dsm.xy, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 ```
 Canopy height
-```
-dsm.xy.height <- dsm(count ~ s(x, y, k = 10) + s(canopy_height, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
+```{r}
+dsm.xy.height <- dsm(count ~ s(x, y, k = 10) + s(canopy_height, k = 10), detfc.hr.null, segdata, obsdata, method = "REML")
 summary(dsm.xy.height)
 plot(dsm.xy.height, select = 2)
 vis.gam(dsm.xy.height, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 ```
 Canopy cover
 ```{r}
-dsm.xy.cover <- dsm(count ~ s(x, y, k = 10) + s(canopy_cover, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
+dsm.xy.cover <- dsm(count ~ s(x, y, k = 10) + s(canopy_cover, k = 10), detfc.hr.null, segdata, obsdata, method = "REML")
 summary(dsm.xy.cover)
 plot(dsm.xy.cover, select = 2)
 vis.gam(dsm.xy.cover, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 ```
 AGB
 ```{r}
-dsm.xy.agb <- dsm(count ~ s(x, y, k = 10) + s(agb, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
+dsm.xy.agb <- dsm(count ~ s(x, y, k = 10) + s(agb, k = 10), detfc.hr.null, segdata, obsdata, method = "REML")
 summary(dsm.xy.agb)
 plot(dsm.xy.agb, select = 2)
 vis.gam(dsm.xy.agb, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 ```
-AGB total
-```{r}
-dsm.xy.agb_total <- dsm(count ~ s(x, y, k = 10) + s(agb_total, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
-summary(dsm.xy.agb_total)
-plot(dsm.xy.agb_total, select = 2)
-vis.gam(dsm.xy.agb_total, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
-```
 Volumne
 ```{r}
-dsm.xy.vol <- dsm(count ~ s(x, y, k = 10) + s(vol, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
+dsm.xy.vol <- dsm(count ~ s(x, y, k = 10) + s(vol, k = 10), detfc.hr.null, segdata, obsdata, method = "REML")
 summary(dsm.xy.vol)
 plot(dsm.xy.vol, select = 2)
 vis.gam(dsm.xy.vol, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
-```
-Volume total
-```{r}
-dsm.xy.vol_total <- dsm(count ~ s(x, y, k = 10) + s(vol_total, k = 20), detfc.hr.null, segdata, obsdata, method = "REML")
-summary(dsm.xy.vol_total)
-plot(dsm.xy.vol_total, select = 2)
-vis.gam(dsm.xy.vol_total, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 ```
 
 # Spatial models when there are covariates in the detection function
@@ -458,20 +423,10 @@ AGB
 dsm.est.xy_agb <- dsm(abundance.est ~ s(x, y), detfc.hr.agb, segdata, obsdata, method = "REML")
 vis.gam(dsm.est.xy_agb, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 ```
-AGB total
-```{r}
-dsm.est.xy_agb_total <- dsm(abundance.est ~ s(x, y), detfc.hr.agb_total, segdata, obsdata, method = "REML")
-vis.gam(dsm.est.xy_agb_total, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
-```
 Volume
 ```{r}
 dsm.est.xy_vol <- dsm(abundance.est ~ s(x, y), detfc.hr.vol, segdata, obsdata, method = "REML")
 vis.gam(dsm.est.xy_vol, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
-```
-Volume total
-```{r}
-dsm.est.xy_vol_total <- dsm(abundance.est ~ s(x, y), detfc.hr.vol_total, segdata, obsdata, method = "REML")
-vis.gam(dsm.est.xy_vol_total, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 ```
 
 Tweedie
@@ -485,19 +440,16 @@ vis.gam(dsm.xy.tweedie, plot.type = "contour", view = c("x", "y"), asp = 1, type
 Checking goodness of fit
 The Q-Q plot should show a straight line for good fit
 ```{r}
+par(mfrow = c(2, 2))
 gam.check(dsm.xy)
 gam.check(dsm.xy.height)
 gam.check(dsm.xy.cover)
-gam.check(dsm.xy_agb)
-gam.check(dsm.xy_agb_total)
-gam.check(dsm.xy_vol)
-gam.check(dsm.xy_vol_total)
+gam.check(dsm.xy.agb)
+gam.check(dsm.xy.vol)
 gam.check(dsm.est.xy_height)
 gam.check(dsm.est.xy_cover)
 gam.check(dsm.est.xy_agb)
-gam.check(dsm.est.xy_agb_total)
 gam.check(dsm.est.xy_vol)
-gam.check(dsm.est.xy_vol_total)
 ```
 
 Randomised quantile residuals
@@ -511,16 +463,12 @@ Check for autocorrelation
 dsm_cor(dsm.xy, max.lag = 10, Segment.Label = "Sample.Label")
 dsm_cor(dsm.xy.height, max.lag = 10, Segment.Label = "Sample.Label")
 dsm_cor(dsm.xy.cover, max.lag = 10, Segment.Label = "Sample.Label")
-dsm_cor(dsm.xy_agb, max.lag = 10, Segment.Label = "Sample.Label")
-dsm_cor(dsm.xy_agb_total, max.lag = 10, Segment.Label = "Sample.Label")
-dsm_cor(dsm.xy_vol, max.lag = 10, Segment.Label = "Sample.Label")
-dsm_cor(dsm.xy_vol_total, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.xy.agb, max.lag = 10, Segment.Label = "Sample.Label")
+dsm_cor(dsm.xy.vol, max.lag = 10, Segment.Label = "Sample.Label")
 dsm_cor(dsm.est.xy_height, max.lag = 10, Segment.Label = "Sample.Label")
 dsm_cor(dsm.est.xy_cover, max.lag = 10, Segment.Label = "Sample.Label")
 dsm_cor(dsm.est.xy_agb, max.lag = 10, Segment.Label = "Sample.Label")
-dsm_cor(dsm.est.xy_agb_total, max.lag = 10, Segment.Label = "Sample.Label")
 dsm_cor(dsm.est.xy_vol, max.lag = 10, Segment.Label = "Sample.Label")
-dsm_cor(dsm.est.xy_vol_total, max.lag = 10, Segment.Label = "Sample.Label")
 ```
 
 # Model selection
@@ -528,9 +476,8 @@ make a data.frame to print out
 ```{r}
 mod_results <- data.frame(
   "Model name" = c(
-    "`dsm.xy`", "`dsm.xy.tweedie`", "`dsm.xy.height`", "`dsm.xy.cover`", "`dsm.xy_agb`", "`dsm.xy_agb_total`", "`dsm.xy_vol`", "`dsm.xy_vol_total`",
-    "`dsm.est.xy_height`", "`dsm.est.xy_cover`", "`dsm.est.xy_agb`", "`dsm.est.xy_agb_total`", "`dsm.est.xy_vol`",
-    "`dsm.est.xy_vol_total`"
+    "`dsm.xy`", "`dsm.xy.tweedie`", "`dsm.xy.height`", "`dsm.xy.cover`", "`dsm.xy.agb`", "`dsm.xy.vol`",
+    "`dsm.est.xy_height`", "`dsm.est.xy_cover`", "`dsm.est.xy_agb`", "`dsm.est.xy_vol`"
   ),
   "Description" = c(
     "Bivariate smooth of location, quasipoisson",
@@ -538,15 +485,11 @@ mod_results <- data.frame(
     "Bivariate smooth of location, smooth of height, quasipoisson",
     "Bivariate smooth of location, smooth of cover, quasipoisson",
     "Bivariate smooth of location, smooth of AGB, quasipoisson",
-    "Bivariate smooth of location, smooth of AGB total, quasipoisson",
     "Bivariate smooth of location, smooth of Volume, quasipoisson",
-    "Bivariate smooth of location, smooth of Volume total, quasipoisson",
     "Bivariate smooth of location, Tweedie, height covariate in detection function",
     "Bivariate smooth of location, Tweedie, cover covariate in detection function",
     "Bivariate smooth of location, Tweedie, AGB covariate in detection function",
-    "Bivariate smooth of location, Tweedie, AGB total covariate in detection function",
-    "Bivariate smooth of location, Tweedie, Volume covariate in detection function",
-    "Bivariate smooth of location, Tweedie, Volume total covariate in detection function"
+    "Bivariate smooth of location, Tweedie, Volume covariate in detection function"
   ),
   "Deviance explained" = c(unlist(lapply(
     list(
@@ -554,16 +497,12 @@ mod_results <- data.frame(
       dsm.xy.tweedie,
       dsm.xy.height,
       dsm.xy.cover,
-      dsm.xy_agb,
-      dsm.xy_agb_total,
-      dsm.xy_vol,
-      dsm.xy_vol_total
+      dsm.xy.agb,
+      dsm.xy.vol,
       dsm.est.xy_height,
       dsm.est.xy_cover,
       dsm.est.xy_agb,
-      dsm.est.xy_agb_total,
-      dsm.est.xy_vol,
-      dsm.est.xy_vol_total
+      dsm.est.xy_vol
     ),
     function(x) {
       paste0(round(summary(x)$dev.expl * 100, 2), "%")
@@ -572,7 +511,7 @@ mod_results <- data.frame(
 )
 
 library(knitr)
-kable(mod_results, col.names = c("Model name", "Description", "Deviance explained"))
+print(mod_results, col.names = c("Model name", "Description", "Deviance explained"))
 ```
 
 # Abundance estimation
@@ -585,5 +524,116 @@ sum(dsm.xy.pred)
 density@density.surface[[1]]$density <- dsm.xy.pred
 
 # plot density
-plot(density)
+plot(density@density.surface[[1]]['density'])
+save(density, file = "density_501.RData")
+```
+# Drone survey simulation
+Simulation based on example by Laura Marshall [here](https://examples.distancesampling.org/dsims-truncation/dsims-examples.html)
+
+### Create population
+based on estimate density from above
+```{r}
+# Create the population description, with a population size N = 200
+pop.desc <- make.population.description(
+  region = region,
+  density = density,
+  N = sum(dsm.xy.pred),
+  fixed.N = TRUE
+)
+```
+
+### Detection function
+Make a simple half normal detection function with a scale parameter of 200
+```{r}
+detect.hn <- make.detectability(
+  key.function = "hn",
+  scale.param = 200,
+  truncation = IMAGE_WIDTH
+)
+# We can now visualise these detection functions
+plot(detect.hn, pop.desc)
+```
+
+### Survey design
+Define the `systematic` design
+```{r}
+design <- make.design(
+  region = region,
+  transect.type = "line",
+  design = "systematic",
+  spacing = 1000,
+  truncation = IMAGE_WIDTH
+)
+```
+Define the `parallel` design
+```{r}
+parallel.design <- make.design(
+  region = region,
+  design = "systematic",
+  spacing = 2500,
+  edge.protocol = "minus",
+  design.angle = 90,
+  truncation = IMAGE_WIDTH
+)
+```
+Define `zigzag` designed
+```{r}
+zigzag.design <- make.design(
+  region = region,
+  design = "eszigzag",
+  spacing = 1000,
+  edge.protocol = "minus",
+  design.angle = 0,
+  bounding.shape = "convex.hull",
+  truncation = IMAGE_WIDTH
+)
+```
+
+### Create transects in survey `region`
+```{r}
+transects <- generate.transects(design)
+parallel.transects <- generate.transects(parallel.design)
+zigzag.transects <- generate.transects(zigzag.design)
+plot(region, transects)
+plot(region, parallel.transects)
+plot(region, zigzag.transects)
+```
+
+### Analysis
+```{r}
+ddf.analyses <- make.ds.analysis(
+  dfmodel = list(~1, ~1),
+  key = c("hn", "hr"),
+  criteria = "AIC",
+  truncation = 600
+)
+```
+
+### Simulation
+define simulation
+```{r}
+sim <- make.simulation(
+  reps = 33,
+  design = zigzag.design,
+  population.description = pop.desc,
+  detectability = detect.hn,
+  ds.analysis = ddf.analyses
+)
+```
+#### Run survey simluation and plot it
+```{r}
+survey <- run.survey(sim)
+par(mfrow = c(2, 2))
+plot(survey, region)
+```
+```{r}
+plot(survey@transect@cov.area.polys)
+# Display a histogram of the estimates of abundance```
+`run.simulation` is an iteration of `run.survey` 
+```{r}
+sim <- run.simulation(simulation = sim, run.parallel = F)
+# Display a summary of the simulation
+summary(sim)
+# Display a histogram of the estimates of abundance
+histogram.N.ests(sim)
 ```

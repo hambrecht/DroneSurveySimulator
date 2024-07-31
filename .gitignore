@@ -32,6 +32,7 @@ vignettes/*.pdf
 .Renviron
 # R Environment folder
 renv/
+.Rprofile
 # pkgdown site
 docs/
 # translation temp files

@@ -4,17 +4,18 @@ This project analyses aerial survey data of moose populations using distance sam
 ## Project Structure
 
  README.md # Project overview and instructions
-├── Ruserdata/ # Directory for raw and processed data
+├── Data/ # Directory for example data
 ├── Scripts/ # R scripts for different stages of the analysis
 │ ├── data_preparation.R # Scripts for data cleaning and preparation
 │ ├── density_analysis.R # Scripts for statistical analysis and modelling
 │ ├── simulation.R # Script for running simulations
-│ ├── visualisation.R # Script for visualisations and reporting
+│ ├── visualisation/ # Scripts for visualisations and reporting
+|   └── DistanceSampling.rmd # Markdown file demonstrating whole workflow
 └── Output/ # intermediate files, plots, and reports
 
 ## Description of Files and Directories
 
-- **Ruserdata/**: Contains raw data (`raw/`) and processed data (`processed/`).
+- **Data/**: Contains raw data (`raw/`) and processed data (`processed/`).
 - **scripts/**: Organised by functionality:
   - **data_processing/**: Includes scripts for cleaning and preparing the raw data (`data_cleaning.R`).
   - **analysis/**: Contains scripts for deriving population density using distance sampling (`density_analysis.R`).

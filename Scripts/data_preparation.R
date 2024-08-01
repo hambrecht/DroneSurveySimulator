@@ -24,10 +24,12 @@ library(purrr)   # Functional programming tools
 #'   data.
 #' @param crs A numeric or character string specifying the CRS to transform
 #'   the data to.
+#' @param transects2_path Optional. A character string specifying the file path to 
+#'   a second transect dataset. If provided, it will be joined with the first transect.
 #' @return A named list containing the transformed spatial data frames for moose,
 #'   transects, sbfi, and wmu.
 #' @export
-load_spatial_data <- function(moose_path, transects_path, sbfi_path, wmu_path, crs) {
+load_spatial_data <- function(moose_path, transects_path, sbfi_path, wmu_path, crs, transects2_path = NULL) {
   # Helper function to safely read spatial data
   safe_st_read <- function(path, layer = NULL) {
     if (file.exists(path)) {
@@ -43,11 +45,18 @@ load_spatial_data <- function(moose_path, transects_path, sbfi_path, wmu_path, c
   
   moose <- safe_st_read(moose_path) %>%
     st_transform(crs = crs) %>%
-    select(Latitude, Longitude, date, name)
+    select(Latitude, Longitude, name)
   
   transects <- safe_st_read(transects_path, layer = "tracks") %>%
     st_transform(crs = crs) %>%
     select(1)
+  
+  if (!is.null(transects2_path)) {
+    transects2 <- safe_st_read(transects2_path, layer = "tracks") %>%
+      st_transform(crs = crs) %>%
+      select(1)
+    transects <- rbind(transects, transects2)
+  }
   
   sbfi <- safe_st_read(sbfi_path) %>%
     st_transform(crs = crs)
@@ -57,6 +66,7 @@ load_spatial_data <- function(moose_path, transects_path, sbfi_path, wmu_path, c
   
   list(moose = moose, transects = transects, sbfi = sbfi, wmu = wmu)
 }
+
 
 #' Split LINESTRING into Equal-Length Segments
 #'
@@ -88,10 +98,11 @@ split_into_segments <- function(linestring) {
 
 # Define file paths
 data_paths <- list(
-  moose_path = "D:\\WMU\\survey_data\\501_moose_locations.shp",
-  transects_path = "D:\\WMU\\survey_data\\WMU 501 (2018-2019)\\WMU501_transects_2018.gpx",
-  sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_501.shp",
-  wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_501_3400.shp"
+  moose_path = "D:\\WMU\\survey_data\\528_moose_locations.shp",
+  transects_path = "D:\\WMU\\survey_data\\WMU 528 (2018-2019)\\WMU528_Transects_D4.gpx",
+  sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_528.shp",
+  wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_528_3400.shp",
+  transects2_path = "D:\\WMU\\survey_data\\WMU 528 (2018-2019)\\WMU528_Transects_D123.gpx"
 )
 
 # Load data
@@ -224,5 +235,5 @@ obsdata <- moose %>%
 
 
 # Save the processed data
-output_path <- here("Output", "PrepData", "prepared.RData")
+output_path <- here("Output", "PrepData", "prepared528.RData")
 save(segdata, distdata, obsdata, wmu, file = output_path)

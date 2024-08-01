@@ -40,11 +40,12 @@ check_columns_present <- function(df, required_cols) {
 
 # Define grid cell size (in meters)
 GRID_SIZE <- 500
+wum_number <-'512'
 
 ## Load and Check Data
 
 # Load processed data
-input_path <- here("Output", "PrepData", "prepared503.RData")
+input_path <- here("Output", "PrepData", paste0("prepared",wum_number,".RData"))
 load(file = input_path)
 
 # Define required columns for dataframes
@@ -210,6 +211,10 @@ mod_results <- data.frame(
 
 knitr::kable(mod_results, col.names = c("Model name", "Description", "Deviance explained"))
 
+# save DSM list
+output_path <- here("Output", "DSM", paste0("dsm",wum_number,".RData"))
+save(dsm_list, detfc_list, file = output_path)
+
 ## Abundance Estimation
 
 # Predict abundance using the null model
@@ -225,5 +230,5 @@ density@density.surface[[1]]$density <- dsm.xy.pred
 plot(density@density.surface[[1]]['density'])
 
 # Save processed data
-output_path <- here("Output", "PrepData", "density.RData")
+output_path <- here("Output", "Density", paste0("density",wum_number,".RData"))
 save(density, total_abundance, region, file = output_path)

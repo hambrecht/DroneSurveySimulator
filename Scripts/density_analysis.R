@@ -44,7 +44,7 @@ GRID_SIZE <- 500
 ## Load and Check Data
 
 # Load processed data
-input_path <- here("Output", "PrepData", "prepared.RData")
+input_path <- here("Output", "PrepData", "prepared503.RData")
 load(file = input_path)
 
 # Define required columns for dataframes
@@ -105,46 +105,71 @@ ddf.gof(detfc.hr.null$ddf)
 
 # Detection function models with covariates
 models <- list(
-  height = ~ as.factor(canopy_height),
-  cover = ~ as.factor(canopy_cover),
+  canopy_height = ~ as.factor(canopy_height),
+  canopy_cover = ~ as.factor(canopy_cover),
   agb = ~ as.factor(agb),
   vol = ~ as.factor(vol)
 )
+
+# Store detection functions
+detfc_list <- list()
 
 for (model_name in names(models)) {
   detfc <- Distance::ds(distdata, max(distdata$distance),
                         formula = models[[model_name]],
                         key = "hr", adjustment = NULL)
+  detfc_list[[model_name]] <- detfc
+}
+
+# Call summary and plot for each detection function after the loop
+for (model_name in names(detfc_list)) {
+  detfc <- detfc_list[[model_name]]
   summary(detfc)
   plot(detfc, showpoints = FALSE, pl.den = 0, lwd = 2, main = paste(model_name, "model"))
   ddf.gof(detfc$ddf)
 }
 
 ## Fit and Analyse Distance Sampling Models
+dsm_list <- list()
 
 # Null model
 dsm.xy <- dsm::dsm(count ~ s(x, y), detfc.hr.null, segdata, obsdata, method = "REML")
-summary(dsm.xy)
-vis.gam(dsm.xy, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+#summary(dsm.xy)
+#vis.gam(dsm.xy, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+dsm_list[["null"]] <- dsm.xy
+
+# Tweedie model
+dsm.xy.tweedie <- dsm(count ~ s(x, y), detfc.hr.null, segdata, obsdata, family = tw(), method = "REML")
+#summary(dsm.xy.tweedie)
+#vis.gam(dsm.xy.tweedie, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+dsm_list[["dsm.xy.tweedie"]] <- dsm.xy.tweedie
 
 # Models with covariates
 for (model_name in names(models)) {
   dsm_model <- dsm(count ~ s(x, y, k = 10) + s(get(model_name), k = 10), detfc.hr.null, segdata, obsdata, method = "REML")
+  dsm_list[[paste0('dsm.xy.', model_name)]] <- dsm_model 
+}
+
+# Models with covariates in the detection function
+for (model_name in names(models)) {
+  dsm_est_model <- dsm(abundance.est ~ s(x, y), detfc_list[[model_name]], segdata, obsdata, method = "REML")
+  dsm_list[[paste0('dsm.est.xy.',model_name)]] <- dsm_est_model
+}
+
+
+## Model Checking
+
+# Call summary and plot for each detection function after the loop
+for (model_name in names(dsm_list)) {
+  dsm_model <- dsm_list[[model_name]]
   summary(dsm_model)
   plot(dsm_model, select = 2)
   vis.gam(dsm_model, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
 }
 
-# Tweedie model
-dsm.xy.tweedie <- dsm(count ~ s(x, y), detfc.hr.null, segdata, obsdata, family = tw(), method = "REML")
-summary(dsm.xy.tweedie)
-vis.gam(dsm.xy.tweedie, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
-
-## Model Checking
-
 # Check goodness of fit with Q-Q plots
 par(mfrow = c(2, 2))
-for (model in list(dsm.xy, dsm.xy.height, dsm.xy.cover, dsm.xy.agb, dsm.xy.vol, dsm.est.xy_height, dsm.est.xy_cover, dsm.est.xy_agb, dsm.est.xy_vol)) {
+for (model in dsm_list) {
   gam.check(model)
 }
 par(mfrow = c(1, 1))
@@ -153,7 +178,7 @@ par(mfrow = c(1, 1))
 rqgam_check(dsm.xy.tweedie)
 
 # Check for autocorrelation
-for (model in list(dsm.xy, dsm.xy.height, dsm.xy.cover, dsm.xy.agb, dsm.xy.vol, dsm.est.xy_height, dsm.est.xy_cover, dsm.est.xy_agb, dsm.est.xy_vol)) {
+for (model in dsm_list) {
   dsm_cor(model, max.lag = 10, Segment.Label = "Sample.Label")
 }
 
@@ -163,7 +188,7 @@ for (model in list(dsm.xy, dsm.xy.height, dsm.xy.cover, dsm.xy.agb, dsm.xy.vol, 
 mod_results <- data.frame(
   "Model name" = c(
     "`dsm.xy`", "`dsm.xy.tweedie`", "`dsm.xy.height`", "`dsm.xy.cover`", "`dsm.xy.agb`", "`dsm.xy.vol`",
-    "`dsm.est.xy_height`", "`dsm.est.xy_cover`", "`dsm.est.xy_agb`", "`dsm.est.xy_vol`"
+    "`dsm.est.xy.height`", "`dsm.est.xy.cover`", "`dsm.est.xy.agb`", "`dsm.est.xy.vol`"
   ),
   "Description" = c(
     "Bivariate smooth of location, quasipoisson",
@@ -178,7 +203,7 @@ mod_results <- data.frame(
     "Bivariate smooth of location, Tweedie, Volume covariate in detection function"
   ),
   "Deviance explained" = sapply(
-    list(dsm.xy, dsm.xy.tweedie, dsm.xy.height, dsm.xy.cover, dsm.xy.agb, dsm.xy.vol, dsm.est.xy_height, dsm.est.xy_cover, dsm.est.xy_agb, dsm.est.xy_vol),
+    dsm_list,
     function(x) paste0(round(summary(x)$dev.expl * 100, 2), "%")
   )
 )

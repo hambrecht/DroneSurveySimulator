@@ -40,7 +40,7 @@ check_columns_present <- function(df, required_cols) {
 
 # Define grid cell size (in meters)
 GRID_SIZE <- 500
-wum_number <-'512'
+wum_number <-'501' # 501, 503, 512 517, 528
 
 ## Load and Check Data
 
@@ -66,7 +66,6 @@ region <- make.region(
   region.name = "study area",
   shape = wmu
 )
-plot(region)
 
 # Create density surface
 density <- dsims::make.density(
@@ -77,32 +76,16 @@ density <- dsims::make.density(
 # Extract coordinates
 coords <- sf::st_drop_geometry(density@density.surface[[1]][, c("x", "y")])
 
-## Exploratory Data Analysis
-
-# Segmentation data
-head(segdata)
-
-# Observation data
-head(obsdata)
-
-# Distance data
-head(distdata)
-
-# Plot histograms for distance data
-hist(distdata$distance, main = "Distance", xlab = "Distance (km)")
-hist(distdata$canopy_height, main = "Canopy Height", xlab = "Height (m)")
-hist(distdata$canopy_cover, main = "Canopy Cover", xlab = "Cover")
-hist(distdata$agb, main = "AGB", xlab = "Biomass")
-hist(distdata$vol, main = "Volume", xlab = "Volume (m³)")
-
 ## Estimate Detection Functions
-
+# Store detection functions
+detfc_list <- list()
+detfc_list[["null"]] <- detfc.hr.null
 # Null model (Hazard-rate)
 detfc.hr.null <- Distance::ds(distdata, max(distdata$distance), key = "hr", adjustment = NULL)
-summary(detfc.hr.null)
-par(mfrow = c(1, 2))
-plot(detfc.hr.null, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Null model")
-ddf.gof(detfc.hr.null$ddf)
+#summary(detfc.hr.null)
+#par(mfrow = c(1, 2))
+#plot(detfc.hr.null, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Null model")
+#ddf.gof(detfc.hr.null$ddf)
 
 # Detection function models with covariates
 models <- list(
@@ -112,8 +95,7 @@ models <- list(
   vol = ~ as.factor(vol)
 )
 
-# Store detection functions
-detfc_list <- list()
+
 
 for (model_name in names(models)) {
   detfc <- Distance::ds(distdata, max(distdata$distance),
@@ -123,12 +105,12 @@ for (model_name in names(models)) {
 }
 
 # Call summary and plot for each detection function after the loop
-for (model_name in names(detfc_list)) {
-  detfc <- detfc_list[[model_name]]
-  summary(detfc)
-  plot(detfc, showpoints = FALSE, pl.den = 0, lwd = 2, main = paste(model_name, "model"))
-  ddf.gof(detfc$ddf)
-}
+#for (model_name in names(detfc_list)) {
+ # detfc <- detfc_list[[model_name]]
+#  summary(detfc)
+#  plot(detfc, showpoints = FALSE, pl.den = 0, lwd = 2, main = paste(model_name, "model"))
+#  ddf.gof(detfc$ddf)
+#}
 
 ## Fit and Analyse Distance Sampling Models
 dsm_list <- list()
@@ -157,31 +139,30 @@ for (model_name in names(models)) {
   dsm_list[[paste0('dsm.est.xy.',model_name)]] <- dsm_est_model
 }
 
-
 ## Model Checking
 
 # Call summary and plot for each detection function after the loop
-for (model_name in names(dsm_list)) {
-  dsm_model <- dsm_list[[model_name]]
-  summary(dsm_model)
-  plot(dsm_model, select = 2)
-  vis.gam(dsm_model, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
-}
+#for (model_name in names(dsm_list)) {
+#  dsm_model <- dsm_list[[model_name]]
+#  summary(dsm_model)
+#  plot(dsm_model, select = 2)
+#  vis.gam(dsm_model, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
+#}
 
 # Check goodness of fit with Q-Q plots
-par(mfrow = c(2, 2))
-for (model in dsm_list) {
-  gam.check(model)
-}
-par(mfrow = c(1, 1))
+#par(mfrow = c(2, 2))
+#for (model in dsm_list) {
+#  gam.check(model)
+#}
+#par(mfrow = c(1, 1))
 
 # Randomised quantile residuals for Tweedie model
-rqgam_check(dsm.xy.tweedie)
+#rqgam_check(dsm.xy.tweedie)
 
 # Check for autocorrelation
-for (model in dsm_list) {
-  dsm_cor(model, max.lag = 10, Segment.Label = "Sample.Label")
-}
+#for (model in dsm_list) {
+#  dsm_cor(model, max.lag = 10, Segment.Label = "Sample.Label")
+#}
 
 ## Model Selection
 
@@ -232,3 +213,4 @@ plot(density@density.surface[[1]]['density'])
 # Save processed data
 output_path <- here("Output", "Density", paste0("density",wum_number,".RData"))
 save(density, total_abundance, region, file = output_path)
+

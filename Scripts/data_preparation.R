@@ -29,7 +29,7 @@ library(purrr)   # Functional programming tools
 #' @return A named list containing the transformed spatial data frames for moose,
 #'   transects, sbfi, and wmu.
 #' @export
-load_spatial_data <- function(moose_path, transects_path, sbfi_path, wmu_path, crs, transects2_path = NULL) {
+load_spatial_data <- function(moose_path, sbfi_path, wmu_path, crs, transects_path, transects2_path = NULL) {
   # Helper function to safely read spatial data
   safe_st_read <- function(path, layer = NULL) {
     if (file.exists(path)) {
@@ -47,6 +47,12 @@ load_spatial_data <- function(moose_path, transects_path, sbfi_path, wmu_path, c
     st_transform(crs = crs) %>%
     select(Latitude, Longitude, name)
   
+  sbfi <- safe_st_read(sbfi_path) %>%
+    st_transform(crs = crs)
+  
+  wmu <- safe_st_read(wmu_path) %>%
+    st_transform(crs = crs)
+  
   transects <- safe_st_read(transects_path, layer = "tracks") %>%
     st_transform(crs = crs) %>%
     select(1)
@@ -57,12 +63,6 @@ load_spatial_data <- function(moose_path, transects_path, sbfi_path, wmu_path, c
       select(1)
     transects <- rbind(transects, transects2)
   }
-  
-  sbfi <- safe_st_read(sbfi_path) %>%
-    st_transform(crs = crs)
-  
-  wmu <- safe_st_read(wmu_path) %>%
-    st_transform(crs = crs)
   
   list(moose = moose, transects = transects, sbfi = sbfi, wmu = wmu)
 }
@@ -96,21 +96,63 @@ split_into_segments <- function(linestring) {
   do.call(rbind, segments)
 }
 
-# Define file paths
+# Define WMU numbers and file paths
+wmu_number_list <- c('501', '503', '512', '517', '528')
+wmu_number <- wmu_number_list[5]
+
 data_paths <- list(
-  moose_path = "D:\\WMU\\survey_data\\528_moose_locations.shp",
-  transects_path = "D:\\WMU\\survey_data\\WMU 528 (2018-2019)\\WMU528_Transects_D4.gpx",
-  sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_528.shp",
-  wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_528_3400.shp",
-  transects2_path = "D:\\WMU\\survey_data\\WMU 528 (2018-2019)\\WMU528_Transects_D123.gpx"
+  "501" = list(
+    moose_path = "D:\\WMU\\survey_data\\501_moose_locations.shp",
+    sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_501.shp",
+    wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_501_3400.shp",
+    transects_path = "D:\\WMU\\survey_data\\WMU 501 (2018-2019)\\WMU501_transects_2018.gpx",
+    transects2_path = NULL
+  ),
+  "503" = list(
+    moose_path = "D:\\WMU\\survey_data\\503_moose_locations.shp",
+    sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_503.shp",
+    wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_503_3400.shp",
+    transects_path = "D:\\WMU\\survey_data\\WMU 503 (2021-2022)\\wmu503_transects_ph1.gpx",
+    transects2_path = NULL
+  ),
+  "512" = list(
+    moose_path = "D:\\WMU\\survey_data\\512_moose_locations.shp",
+    sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_512.shp",
+    wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_512_3400.shp",
+    transects_path = "D:\\WMU\\survey_data\\WMU 512 (2019-2020)\\WMU512_transects_EW_block1.gpx",
+    transects2_path = "D:\\WMU\\survey_data\\WMU 512 (2019-2020)\\WMU512_transects_EW_block2.gpx"
+  ),
+  "517" = list(
+    moose_path = "D:\\WMU\\survey_data\\517_moose_locations.shp",
+    sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_517.shp",
+    wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_517_3400.shp",
+    transects_path = "D:\\WMU\\survey_data\\WMU 517 (2018-2019)\\WMU517_Transects_D4.gpx",
+    transects2_path = "D:\\WMU\\survey_data\\WMU 517 (2018-2019)\\WMU517_Transects_D123.gpx"
+  ),
+  "528" = list(
+    moose_path = "D:\\WMU\\survey_data\\528_moose_locations.shp",
+    sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_528.shp",
+    wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_528_3400.shp",
+    transects_path = "D:\\WMU\\survey_data\\WMU 528 (2018-2019)\\WMU528_Transects_D4.gpx",
+    transects2_path = "D:\\WMU\\survey_data\\WMU 528 (2018-2019)\\WMU528_Transects_D123.gpx"
+  )
 )
 
 # Load data
-data <- load_spatial_data(data_paths$moose_path, data_paths$transects_path, data_paths$sbfi_path, data_paths$wmu_path, crs = 3400)
+data <- load_spatial_data(
+  moose_path = data_paths[[wmu_number]]$moose_path,
+  sbfi_path = data_paths[[wmu_number]]$sbfi_path,
+  wmu_path = data_paths[[wmu_number]]$wmu_path,
+  crs = 3400,
+  transects_path = data_paths[[wmu_number]]$transects_path,
+  transects2_path = data_paths[[wmu_number]]$transects2_path
+)
+
 moose <- data$moose
 transects <- data$transects
 sbfi <- data$sbfi
 wmu <- data$wmu
+
 
 # Rename columns in sbfi for consistency
 colnames(sbfi) <- c(
@@ -162,8 +204,16 @@ colnames(sbfi) <- c(
 wmu <- wmu[, "OBJECTID"]
 
 # Perform spatial join between moose points and sbfi polygons
+#
+# This step joins the moose points with the sbfi polygons to enrich the moose data
+# with vegetation structure metrics from sbfi. Missing values are replaced with zero.
 joined <- st_join(moose, sbfi) %>%
-  select(STRUCTURE_CANOPY_HEIGHT_MEDIAN, STRUCTURE_CANOPY_COVER_MEDIAN, STRUCTURE_AGB_MEDIAN, STRUCTURE_VOLUME_MEDIAN) %>%
+  select(
+    STRUCTURE_CANOPY_HEIGHT_MEDIAN,
+    STRUCTURE_CANOPY_COVER_MEDIAN,
+    STRUCTURE_AGB_MEDIAN,
+    STRUCTURE_VOLUME_MEDIAN
+  ) %>%
   replace_na(list(
     STRUCTURE_CANOPY_HEIGHT_MEDIAN = 0,
     STRUCTURE_CANOPY_COVER_MEDIAN = 0,
@@ -171,16 +221,23 @@ joined <- st_join(moose, sbfi) %>%
     STRUCTURE_VOLUME_MEDIAN = 0
   ))
 
-# Add results to moose data
+# Add vegetation structure metrics to the moose data
+#
+# The metrics from the joined data are added to the moose dataset, with some rounding
+# for efficiency and consistency.
 moose <- moose %>%
   mutate(
-    canopy_height = round(joined$STRUCTURE_CANOPY_HEIGHT_MEDIAN, 0), # round to improve efficiency
+    canopy_height = round(joined$STRUCTURE_CANOPY_HEIGHT_MEDIAN, 0),
     canopy_cover = round(joined$STRUCTURE_CANOPY_COVER_MEDIAN, 0),
     agb = round(joined$STRUCTURE_AGB_MEDIAN, -1),
     vol = round(joined$STRUCTURE_VOLUME_MEDIAN, -1)
   )
 
-# Split transects into segments
+# Split transects into equal-length segments
+#
+# Transects are converted to LINESTRING geometries and split into segments using
+# the `split_into_segments` function. The segments are then combined into a single
+# sf object.
 transects_segments <- transects %>%
   st_cast("LINESTRING") %>%
   st_geometry() %>%
@@ -188,20 +245,29 @@ transects_segments <- transects %>%
   bind_rows() %>%
   st_sf()
 
+# Set CRS for the segments
 st_crs(transects_segments) <- st_crs(transects)
+
+# Add sample labels to the segments
 transects_segments$Sample.Label <- row_number(transects_segments)
 
 # Calculate distances between moose points and transect segments
-distances <- st_distance(moose, transects_segments, tolerance = set_units(600, "m"))
+#
+# Compute the distance between each moose point and each segment of the transects.
+distances <- st_distance(moose, transects_segments)
 
-# Find closest segment for each moose point
+# Identify the closest segment for each moose point
+#
+# For each moose point, find the nearest transect segment and the distance to it.
 closest_segments <- tibble(
   moose_id = seq_len(nrow(moose)),
-  Sample.Label = map_int(seq_len(nrow(moose)), ~ which.min(distances[., ])),
+  Sample_Label = map_int(seq_len(nrow(moose)), ~ which.min(distances[., ])),
   distance = map_dbl(seq_len(nrow(moose)), ~ min(distances[., ]))
 )
 
-# Merge closest segments with moose data
+# Merge closest segment information with the moose data
+#
+# Append the closest segment and distance information to the moose dataset.
 moose <- moose %>%
   mutate(
     object = row_number(),
@@ -210,30 +276,62 @@ moose <- moose %>%
     distance = closest_segments$distance / 1000
   ) %>%
   left_join(closest_segments, by = c("object" = "moose_id")) %>%
-  rename(Transect.Label = name, distance = distance.x) %>%
+  rename(
+    Transect.Label = name,
+    Sample.Label = Sample_Label,
+    distance = distance.x
+  ) %>%
   select(-distance.y)
+
+# Filter out moose points with distance greater than 600 meters
+#
+# Remove moose points that are more than 600 meters from the nearest transect segment.
+moose <- moose %>%
+  filter(distance <= 0.6)
 
 # Extract x and y coordinates from the moose sf object
 coords <- st_coordinates(moose)
 
 # Prepare data for density surface modelling
+#
+# Convert moose data to a dataframe for modelling, including x and y coordinates.
 segdata <- moose %>%
-  select(Latitude, Longitude, Effort, Transect.Label, Sample.Label, canopy_height, canopy_cover, agb, vol) %>%
+  select(
+    Latitude, Longitude, Effort, Transect.Label, Sample.Label, 
+    canopy_height, canopy_cover, agb, vol
+  ) %>%
   st_drop_geometry() %>%
   as.data.frame() %>%
-  mutate(x = coords[, 1], y = coords[, 2])  # Add x and y coordinates
+  mutate(
+    x = coords[, 1],
+    y = coords[, 2]
+  )
 
+# Prepare distance data for density surface modelling
+#
+# Create a dataframe for distance data, including x and y coordinates.
 distdata <- moose %>%
-  select(object, Latitude, Longitude, distance, Effort, size, canopy_height, canopy_cover, agb, vol) %>%
+  select(
+    object, Latitude, Longitude, distance, Effort, size, 
+    canopy_height, canopy_cover, agb, vol
+  ) %>%
   st_drop_geometry() %>%
-  mutate(detected = 1, x = coords[, 1], y = coords[, 2])  # Add x and y coordinates
+  mutate(
+    detected = 1,
+    x = coords[, 1],
+    y = coords[, 2]
+  )
 
+# Prepare observation data
+#
+# Create a dataframe with observation data.
 obsdata <- moose %>%
   select(object, distance, Effort, Sample.Label, size) %>%
   st_drop_geometry() %>%
   as.data.frame()
 
-
 # Save the processed data
-output_path <- here("Output", "PrepData", "prepared528.RData")
+#
+# Save the prepared datasets to a file for further use.
+output_path <- here("Output", "PrepData", paste0("prepared_", wmu_number, ".RData"))
 save(segdata, distdata, obsdata, wmu, file = output_path)

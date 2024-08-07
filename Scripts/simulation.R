@@ -12,7 +12,7 @@ if (!requireNamespace("pbapply", quietly = TRUE)) {
 }
 
 # Load density data
-input_path <- here::here("Output", "PrepData", "density.RData")
+input_path <- here::here("Output", "Density", "density501.RData")
 load(file = input_path)
 
 # Define functions
@@ -91,7 +91,7 @@ ddf.analyses <- make.ds.analysis(
 
 # Create and run the simulation
 sim <- make.simulation(
-  reps = 3,
+  reps = 99,
   design = design,
   population.description = pop.desc,
   detectability = detect.hn,
@@ -100,6 +100,8 @@ sim <- make.simulation(
 
 survey <- run.survey(sim)
 plot(survey, region)
+plot(survey@population)
+hist(survey@dist.data$distance)
 
 # Run the full simulation
 sim <- run.simulation(simulation = sim, run.parallel = TRUE)

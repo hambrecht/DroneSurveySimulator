@@ -166,6 +166,8 @@ for (model_name in names(models)) {
 
 ## Model Selection
 
+
+
 # Summarise model results
 mod_results <- data.frame(
   "Model name" = c(
@@ -185,11 +187,13 @@ mod_results <- data.frame(
     "Bivariate smooth of location, Tweedie, Volume covariate in detection function"
   ),
   "Deviance explained" = sapply(
-    dsm_list,
+    dsm_list528,
     function(x) paste0(round(summary(x)$dev.expl * 100, 2), "%")
   )
 )
-
+wum_number <-'528' # 501, 503, 512 517, 528
+input_path <- here::here("Output", "DSM", paste0("dsm",wum_number,".RData"))
+load(file = input_path)
 knitr::kable(mod_results, col.names = c("Model name", "Description", "Deviance explained"))
 
 # save DSM list

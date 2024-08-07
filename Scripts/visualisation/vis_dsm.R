@@ -1,4 +1,5 @@
 library(here)
+library(mrds)
 library(ggplot2)
 library(RColorBrewer)
 
@@ -23,10 +24,12 @@ for(wmu_number in wmu_number_list){
   rm(dsm_list, detfc_list)
 }
 
-summary(detfc.hr.null)
+detfc_list501$canopy_cover$ddf
+
+summary(detfc_list501$canopy_cover)
 par(mfrow = c(1, 2))
-plot(detfc.hr.null, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Null model")
-ddf.gof(detfc.hr.null$ddf)
+plot(detfc_list501$canopy_cover, showpoints = FALSE, pl.den = 0, lwd = 2, main = "Canopy cover model")
+ddf.gof(detfc_list501$canopy_cover$ddf)
 
 # Detection function models with covariates
 models <- list(

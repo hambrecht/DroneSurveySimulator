@@ -30,9 +30,6 @@ vignettes/*.pdf
 */figure-html/*
 # R Environment Variables
 .Renviron
-# R Environment folder
-renv/
-.Rprofile
 # pkgdown site
 docs/
 # translation temp files

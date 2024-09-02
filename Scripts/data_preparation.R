@@ -264,7 +264,7 @@ for (wmu_number in wmu_number_list){
   st_crs(transects_segments) <- st_crs(transects)
 
   # Add sample labels to the segments
-  transects_segments$Sample.Label <- row_number(transects_segments)
+  transects_segments$Sample_Label <- row_number(transects_segments)
 
   # Calculate distances between moose points and transect segments
   #
@@ -292,8 +292,8 @@ for (wmu_number in wmu_number_list){
     ) %>%
     left_join(closest_segments, by = c("object" = "moose_id")) %>%
     rename(
-      Transect.Label = name,
-      Sample.Label = Sample_Label,
+      Transect_Label = name,
+      Sample_Label = Sample_Label,
       distance = distance.x
     ) %>%
     select(-distance.y)
@@ -312,7 +312,7 @@ for (wmu_number in wmu_number_list){
   # Convert moose data to a dataframe for modelling, including x and y coordinates.
   segdata <- moose %>%
     select(
-      Latitude, Longitude, Effort, Transect.Label, Sample.Label,
+      Latitude, Longitude, Effort, Transect_Label, Sample_Label,
       canopy_height, canopy_cover, agb, vol
     ) %>%
     st_drop_geometry() %>%
@@ -341,7 +341,7 @@ for (wmu_number in wmu_number_list){
   #
   # Create a dataframe with observation data.
   obsdata <- moose %>%
-    select(object, distance, Effort, Sample.Label, size) %>%
+    select(object, distance, Effort, Sample_Label, size) %>%
     st_drop_geometry() %>%
     as.data.frame()
 

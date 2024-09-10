@@ -100,29 +100,20 @@ truncation_distance_list <- c(max_truncation_distance, max_truncation_distance*.
 detfc_list <- list()
 detfc_list_bin <- list()
 
-
+# Loop through truncation distances
 for (truncation_distance in truncation_distance_list) {
-  assign(paste0("detfc_hr_null_trunc_",truncation_distance), possDS(distdata, truncation_distance, key = "hr", adjustment = NULL))
-  assign(paste0("detfc_hn_null_trunc_",truncation_distance), possDS(distdata, truncation_distance, key = "hn", adjustment = NULL))
-  assign(paste0("detfc_hn_cos_trunc_",truncation_distance), possDS(distdata, truncation_distance, key = "hn", adjustment = "cos"))
-  detfc_list <- list(
-    paste0("detfc_hr_null_trunc_",truncation_distance),
-    paste0("detfc_hn_null_trunc_",truncation_distance),
-    paste0("detfc_hn_cos_trunc_",truncation_distance)
-  )
+  # Create detection function models
+  detfc_list[[paste0("detfc_hr_null_trunc_", truncation_distance)]] <- possDS(distdata, truncation_distance, key = "hr", adjustment = NULL)
+  detfc_list[[paste0("detfc_hn_null_trunc_", truncation_distance)]] <- possDS(distdata, truncation_distance, key = "hn", adjustment = NULL)
+  detfc_list[[paste0("detfc_hn_cos_trunc_", truncation_distance)]] <- possDS(distdata, truncation_distance, key = "hn", adjustment = "cos")
 
-  for ( i in seq(from = 0.08, to = 0.15, by = 0.01)){
-    assign(paste0("detfc_hr_null_trunc_",truncation_distance,"bin_",i), possDS(distdata, truncation_distance, key = "hr", adjustment = NULL, cutpoints = seq(from = 0, to = truncation_distance, by = i)))
-    assign(paste0("detfc_hn_null_trunc_",truncation_distance,"bin_",i), possDS(distdata, truncation_distance, key = "hn", adjustment = NULL, cutpoints = seq(from = 0, to = truncation_distance, by = i)))
-    assign(paste0("detfc_hn_cos_trunc_",truncation_distance,"bin_",i), possDS(distdata, truncation_distance, key = "hn", adjustment = "cos", cutpoints = seq(from = 0, to = truncation_distance, by = i)))
-    detfc_list_bin <- list(
-      paste0("detfc_hr_null_trunc_",truncation_distance,"bin_",i),
-      paste0("detfc_hn_null_trunc_",truncation_distance,"bin_",i),
-      paste0("detfc_hn_cos_trunc_",truncation_distance,"bin_",i)
-    )
+  # Loop through bin sizes
+  for (i in seq(from = 0.08, to = 0.15, by = 0.01)) {
+    # Create detection function models with bins
+    detfc_list_bin[[paste0("detfc_hr_null_trunc_", truncation_distance, "_bin_", i)]] <- possDS(distdata, truncation_distance, key = "hr", adjustment = NULL, cutpoints = seq(from = 0, to = truncation_distance, by = i))
+    detfc_list_bin[[paste0("detfc_hn_null_trunc_", truncation_distance, "_bin_", i)]] <- possDS(distdata, truncation_distance, key = "hn", adjustment = NULL, cutpoints = seq(from = 0, to = truncation_distance, by = i))
+    detfc_list_bin[[paste0("detfc_hn_cos_trunc_", truncation_distance, "_bin_", i)]] <- possDS(distdata, truncation_distance, key = "hn", adjustment = "cos", cutpoints = seq(from = 0, to = truncation_distance, by = i))
   }
-
-  
 }
 
 

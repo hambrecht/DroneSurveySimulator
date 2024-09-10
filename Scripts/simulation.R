@@ -47,7 +47,7 @@ IMAGE_WIDTH <- calculate_image_width(ALTITUDE)
 pop_desc <- make.population.description(
   region = region,
   density = density,
-  N = total_abundance,
+  N = unlist(abudance_strata_list),
   fixed.N = TRUE
 )
 
@@ -62,10 +62,15 @@ plot(detect_hn, pop_desc)
 # Define and visualise uniform detection function
 detect_uf <- make.detectability(
   key.function = "uf",
-  scale.param = 1,
+  scale.param = 0.8, # accounting for canopy cover
   truncation = IMAGE_WIDTH
 )
 plot(detect_uf, pop_desc)
+
+# create coverage grid
+cover <- make.coverage(region,
+                       n.grid.points = 1000)
+plot(region, cover)
 
 # Define survey design
 design <- make.design(
@@ -84,6 +89,52 @@ design <- make.design(
   truncation = IMAGE_WIDTH,
   coverage.grid = NULL
 )
+default.design <- make.design(region = region,
+                              transect.type = "line",
+                              design = "systematic",
+                              samplers = 20,
+                              design.angle = c(155, 90),
+                              edge.protocol = "minus",
+                              truncation = 2000, 
+                              coverage.grid = cover)
+transects <- generate.transects(default.design)
+plot(region, transects, lwd = 1.5, col = 4)
+
+design <- make.design(region = region,
+                      transect.type = "line",
+                      design = c("eszigzag", "systematic"),
+                      line.length = 1200000,
+                      design.angle = c(65, 90),
+                      bounding.shape = c("convex.hull", NA),
+                      edge.protocol = "minus",
+                      truncation = 2000,
+                      coverage.grid = cover)
+transects <- generate.transects(design)
+plot(region, transects, lwd = 1.5, col = 4)
+
+# You can re-run the coverage simulation using the following code. Note, your
+# results should vary slightly from mine, make sure you haven't set a seed!
+design <- run.coverage(design, reps = 1000)
+plot(design)
+
+design <- make.design(region = region,
+                      transect.type = "line",
+                      design = "segmentedgrid",
+                      spacing = c(1200, 1200, 1200), # segments seperated by 1.2km
+                      seg.length = c(10000,10000, 10000), # segements of 10km
+                      design.angle = c(0, 0, 0),
+                      seg.threshold = c(10 ,10 ,10), # any segments less than 10% of the segment length (i.e. 1km) will be discarded.
+                      edge.protocol = "minus",
+                      truncation = 600,
+                      coverage.grid = cover)
+transects <- generate.transects(design)
+plot(region, transects, lwd = 0.5, col = 4)
+
+design <- run.coverage(design, reps = 1000)
+plot(design)
+
+
+
 
 # Visualise the survey design
 transects <- generate.transects(design)
@@ -102,7 +153,7 @@ sim <- make.simulation(
   reps = 99,
   design = design,
   population.description = pop_desc,
-  detectability = detect_hn,
+  detectability = detect_uf,
   ds.analysis = ddf_analyses
 )
 

@@ -1,0 +1,11 @@
+body {
+    background-image: url('C:\Users\lhambrec\Sync\3_Resources\templates\images\moose_drone-background+logos.png');
+    background-size: cover; /* Adjusts the image to cover the entire background */
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Optional: Adjust text color for better readability */
+h1, h2, h3, p {
+    color: black; /* Change this to whatever color suits your design */
+}

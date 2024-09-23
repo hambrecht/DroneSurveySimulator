@@ -1,0 +1,360 @@
+---
+title: "My Quarto Presentation"
+author: "Your Name"
+format: revealjs
+    css: styles.css
+    incremental: true 
+    theme: dark
+---
+
+# Moose Research Initiative
+## Theme 4 - progress update
+### FRI Research / UBC / FRIAA
+### In collaboration with Alberta Environment and Protected Areas
+
+Nicholas Coops & Leonard Hambrecht (UBC)
+Gordon Stenhouse (FRI Research)
+
+October 2024
+
+---
+
+## Overview
+
+- **Introduction**
+- **Overview Theme 4**
+- **Simulation**
+- **Prelimary results**
+- **Next step**
+
+
+## Leonard (Lenny) Hambrecht
+
+- Germany
+- B.Sc. **Wildlife Management**, Applied University Van Hall Larenstein, NL
+- M.Sc. **Wildlife Conservation & UAV Technology**, Liverpool John Moores University, UK
+- Ph.D. **Geomatic Engineering**, University of Tasmania, AU
+- June 2024, **Postdoc**toral Fellow, IRSS, UBC
+
+
+# Moose project - Theme 4
+## Moose project - Theme 4
+
+Examining the current practicality and potential of Copter and Fixed Wing Remotely Piloted Airborne Systems (RPAS, or drones) for wildlife surveys, with comparisons of currently employed survey methods.
+
+::: {.incremental}
+- Assess statistical validity of Drone acquisitions.
+  ::: {.fragment .highlight-red}
+  - Simulation drone surveys
+  :::    
+- Validate winter detection of moose using thermal cameras 
+- Full scale proof of concept
+- Best practice guide
+:::
+
+# Drone simulation
+## Simulation
+
+**Simulating drone surveys** based on **historical datasets** collected on wildlife numbers from traditional Alberta ungulate surveys
+
+graph LR;
+    data1[/Hisorical data/]-->process1[A. Distance analysis];
+    process1-->data2[/DSM/];
+    process1-->ab1[/Est. Abundance/];
+    data2-->process2[B. Simulation];
+    ab1-->process2;
+    process2-->ab2[/Sim. Abundane]/;
+    ab1<-->ab2
+
+
+## A. Analysing historic data sets
+
+Analyzing historical data sets using a **distance sampling** approach
+1. Modelling **detection functions**
+    - **Statically testing** detection functions and **selecting the best one**
+    - Incoperating **covariates** e.g. canopy cover
+2. Computing **density surface model**
+3. Estimating **abundance**
+
+
+## B. Simulating drone surveys
+
+1. Create different potential **detection function**
+2. Create a vararity of **survey designs**
+3. Using **estimate abundances** and **density surface models** derived from historical data as basis to run simulations
+4. **Run multiple (100) simulations** to test robustness of survey
+5. **Compare** simulated **population estimates** with input variables.
+
+
+# Prelimirary results
+
+```{r, include=FALSE}
+# Load required packages
+library(here)       # For relative paths
+library(purrr)      # For functional programming
+library(dplyr)      # For data manipulation
+library(dsims)      # For density surface modelling
+library(Distance)   # For distance sampling functions
+library(dsm)        # For distance sampling models
+
+possDS <- possibly(.f = Distance::ds, otherwise = NULL)
+
+### Set Variables
+# Define grid cell size (in meters)
+GRID_SIZE <- 500
+wmu_number <- 501
+
+  # Load processed data
+  input_path <- here("Output", "PrepData", paste0("prepared_",wmu_number,".RData"))
+  load(file = input_path)
+
+  
+  # Define survey region with strata
+  region <- make.region(
+    region.name = "study area with strata",
+    shape = wmu
+  )
+
+  # Create density surface
+  density <- dsims::make.density(
+    region = region,
+    x.space = GRID_SIZE
+  )
+
+  # Extract coordinates
+  coords <- sf::st_drop_geometry(density@density.surface[[1]][, c("x", "y")])
+```
+```{r}
+plot(region, main = 'WMU 501')
+```
+
+
+
+## A. historic data sets
+<video width="1920" height="1080" controls autoplay muted>
+  <source src="C:\Users\lhambrec\Sync\1_Projects\Simulator\media\animated-helicopter_flight-timelaps.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+
+## Plotting data
+
+```{r}
+hist(distdata$distance, main = "Moose line transects", xlab = "Distance (km)", breaks = break_bins)
+```
+
+## Selecting best detection function
+
+```{r}
+input_path <- here("Output", "DSM", paste0("detfc",wmu_number,".RData"))
+load(input_path)
+par(mfrow = c(2, 3))
+for (i in length(detfc_list_bin_compact)) {
+  model <- detfc_list_bin_compact[[i]]
+  plot(model, showpoints = FALSE, pl.den = 0, lwd = 2, xlim = c(0,0.6), ylim = c(0,1), main = paste(names(detfc_list_bin_compact[i]), "AIC:", round(model$ddf$criterion,2)))
+  # ddf.gof(model$ddf, qq = TRUE, main = model_name)
+}
+# par(mfrow = c(1, 1))
+```
+
+![6 modelled detection function with different bin and trunction distances](C:\Users\lhambrec\Sync\1_Projects\Simulator\media\example-detection_functions.png)
+
+---
+
+## Density surface model
+
+```{r}
+dsm_xy <- dsm::dsm(count ~ s(x, y), detfc_list_bin_compact[[1]], segdata, obsdata, method = "REML")
+dsm_xy_pred <- predict(dsm_xy, coords, dsm_xy$offset)
+  # Calculate total abundance over the survey area
+  total_abundance <- sum(dsm_xy_pred)
+
+  # Update density object with predicted values
+  density@density.surface[[1]]$density <- dsm_xy_pred
+
+  # Plot density surface
+  plot(density, main = paste0("Estimated abundance: ", total_abundance))
+```
+
+![Example density surface model](C:\Users\lhambrec\Sync\1_Projects\Simulator\media\dsm.png)
+
+
+## Superwake
+
+:::: {.columns}
+
+::: {.column width="50%"}
+<iframe width="1280" height="720" src="https://www.youtube.com/watch?v=UXNtjTMOsGw" frameborder="0" allow="autoplay" allowfullscreen></iframe>
+:::
+
+::: {.column width="50%"}
+<iframe width="1280" height="720" src="https://www.youtube.com/watch?v=Za9FoWIQ4vg" frameborder="0" allow="autoplay" allowfullscreen></iframe>
+:::
+
+::::
+**SW-117 RPAS**
+- 6-9h flight time in -15C
+- 120m altitude
+- 45-60 km/h
+- Unlimited command and control range due to satellite communication
+
+
+## Superwake
+
+:::: {.columns}
+
+::: {.column width="70%"}
+**NightHawk2-UZ**
+- RGB + Thermal camera
+- 1280x720 (thermal)
+- Zoom 4x
+- HFOV: 25°
+    - At 120m  equals a swath width of 100m
+:::
+
+::: {.column width="30%"}
+![NightHawk2 UZ](C:\Users\lhambrec\Sync\1_Projects\Simulator\media\nighthawk2.png)
+:::
+
+::::
+
+
+## Simulated detection functions
+
+```{r, include=FALSE}
+# Create population description
+pop_desc <- make.population.description(
+  region = region,
+  density = density,
+  N = 9462,
+  fixed.N = TRUE
+)
+
+# Define and visualise uniform detection function
+detect_uf <- make.detectability(
+  key.function = "uf",
+  scale.param = 0.9, # accounting for canopy cover
+  truncation = 50
+)
+```
+<div class="row"> <div class="column" style="width: 50%;">
+```{r, echo=FALSE}
+plot(detect_uf, pop_desc)
+```
+</div> <div class="column" style="width: 50%;">
+![Superwake detection function for white-tailed deer in open habitat](C:\Users\lhambrec\Sync\1_Projects\Simulator\media\superwake-detection_function-whitetailed_deer-open_field.png)
+</div> </div>
+
+## Simulated detection functions
+
+```{r, include=FALSE}
+# Define survey design
+design <- make.design(
+  region = region,
+  transect.type = "line",
+  design = "eszigzag",
+  samplers = numeric(0),
+  line.length = numeric(0),
+  seg.length = numeric(0),
+  effort.allocation = numeric(0),
+  design.angle = 90,
+  spacing = 1000,
+  edge.protocol = "minus",
+  seg.threshold = numeric(0),
+  bounding.shape = "convex.hull",
+  truncation = IMAGE_WIDTH,
+  coverage.grid = NULL
+)
+transects <- generate.transects(design)
+```
+:::: {.columns}
+
+::: {.column width="50%"}
+```{r, echo=FALSE}
+plot(region, transects, lwd = 1.5, col = 4)
+```
+:::
+
+::: {.column width="50%"}
+<figure> ![Example transect design in the shape of a flower](C:\Users\lhambrec\Sync\1_Projects\Simulator\media\Frust_Loop-transect-flower.png) <figcaption>Fust, P., & Loos, J. (2023). Increasing the accuracy and efficiency of wildlife census with unmanned aerial vehicles: A simulation study. Wildlife Research, 50(12), 1008–1020. https://doi.org/10.1071/WR22074
+</figcaption> </figure>
+:::
+
+::::
+
+
+## Simulated estimated abundance
+
+
+
+## Next steps
+
+Run a lot of simulations to test different variables
+- Detection functions
+- Survey design
+- Altitude
+- Transect design
+  - Parallel lines vs zig zag lines
+  - Total distance/area covered
+    - Time spend
+
+
+## AI-based detection
+
+Master student Hiroto starting in January 2025
+- Deep-learning approach
+- Collection of training data required
+  - Employ livestock to quickly build a data set
+- Long-term expert knowledge required to label images
+- As more data is collected the model accuracy will improve
+  - Detection of point of interest &rarr predict species &rarr predict sex(?)
+
+
+:::: {.columns}
+
+::: {.column width="50%"}
+### What we can not test with the simulation
+
+To determine a realistic detection function we need to test in the field!
+- We do not know the impact of the thermal camera on the detection
+- Impact of vegetation cover on thermal camera
+- Performance of deep-learning algorithms for detection
+
+:::
+
+::: {.column width="60%"}
+### How will we address these?
+
+Collection of pilot data
+::: {.incremental}
+- Surrogate data collect with DJI M300 + XT over horse/dogs/...
+- Placing surregots in open and forested areas
+- Creating a traning and validating datasets
+
+:::
+
+:::
+
+::::
+
+## The promise of thermal drones
+
+- Drones will lead to a reduced need for helicopter flight, therefore safer for pilots and observers
+- Thermal cameras will allow for surveys early in the season because no snow cover is required and only cold temperate
+- Thermal cameras work best at night, as long as it is legal to fly
+
+
+---
+
+## Questions
+
+[Leonard@Hambrecht.phd](mailto:leonard@hambrecht.phd)
+[Nicholas.Coops@ubc.ca](mailto:nicholas.coops@ubc.ca)
+
+
+
+
+
+
+
+

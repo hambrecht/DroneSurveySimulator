@@ -41,11 +41,11 @@ check_columns_present <- function(df, required_cols) {
 possDS <- possibly(.f = Distance::ds, otherwise = NULL)
 
 ### Set Variables
-# Define grid cell size (in meters)
-GRID_SIZE <- 500
+
 wmu_number_list <- c('501', '503', '512', '517', '528')
-# wmu_number <- wmu_number_list[1]
-for (wmu_number in wmu_number_list){
+wmu_number <- wmu_number_list[1]
+# for (wmu_number in wmu_number_list){
+  print(paste0("Processing WMU: ", wmu_number))
 
   ## Load and Check Data
 
@@ -64,29 +64,8 @@ for (wmu_number in wmu_number_list){
   check_columns_present(distdata, distdata_required)
   check_columns_present(obsdata, obsdata_required)
 
-  ## Density Surface Template
+  
 
-  # Create a density object for coordinate retrieval and abundance prediction
-  # Define survey region
-  # region <- make.region(
-  #   region.name = "study area",
-  #   shape = wmu
-  # )
-
-  # Define survey region with strata
-  region <- make.region(
-    region.name = "study area with strata",
-    shape = wmu
-  )
-
-  # Create density surface
-  density <- dsims::make.density(
-    region = region,
-    x.space = GRID_SIZE
-  )
-
-  # Extract coordinates
-  coords <- sf::st_drop_geometry(density@density.surface[[1]][, c("x", "y")])
 
   ## Distance Sampling Models
   truncation_distance_list <- c(round(max(distdata$distance),1), round(quantile(distdata$distance, 0.995),2))
@@ -111,11 +90,6 @@ for (wmu_number in wmu_number_list){
   # clean lists
   # detfc_list_compact <- compact(detfc_list)
   detfc_list_bin_compact <- compact(detfc_list_bin)
-
-# output_path <- here("Output", "DSM", paste0("detfc",wmu_number,".RData"))
-# save(detfc_list_bin_compact, file = output_path)
-# input_path <- here("Output", "DSM", paste0("detfc",wmu_number,".RData"))
-# load(input_path)
 
   aic_values_bin <- purrr::map_dbl(detfc_list_bin_compact, ~ .x$ddf$criterion)
   # Extract CV values for each model
@@ -194,105 +168,8 @@ for (wmu_number in wmu_number_list){
 
   # save DSM list
   output_path <- here("Output", "DSM", paste0("dsm",wmu_number,".RData"))
-  save(dsm_list, detfc_list_bin_compact, best_model_list, file = output_path)
-}
-
-# Plot distance data
-par(mfrow = c(1, 1))
-break_bins <- seq(from = 0, to = 0.6, by = 0.05)
-hist(distdata$distance, main = "Moose line transects", xlab = "Distance (km)", breaks = break_bins)
-quantile(distdata$distance, 0.995)
-max(distdata$distance)
-
-# Plot the models
-par(mfrow = c(2, 3))
-for (model_name in model_metrics$Model) {
-  model <- detfc_list_bin_compact[[model_name]]
-  plot(model, showpoints = FALSE, pl.den = 0, lwd = 2, xlim = c(0,0.6), ylim = c(0,1), main = paste(model_name, "AIC:", round(model$ddf$criterion,2)))
-  # ddf.gof(model$ddf, qq = TRUE, main = model_name)
-}
-par(mfrow = c(1, 1))
-
-par(mfrow = c(1, 2))
-plot(best_model, showpoints = FALSE, pl.den = 0, lwd = 2, ylim = c(0,1), main = names(sorted_aic_diff)[1])
-test <- ddf.gof(best_model$ddf, asp=1, qq = TRUE)
-test$chisquare$chi1$p
-qqplot.ddf(best_model$ddf)
-par(mfrow = c(1, 1))
+  save(dsm_list, detfc_list_bin_compact, best_model_list, wmu, file = output_path)
+# }
 
 
-  ## Model Checking
-
-  # Call summary and plot for each detection function after the loop
-  #for (model_name in names(dsm_list)) {
-  #  dsm_model <- dsm_list[[model_name]]
-  #  summary(dsm_model)
-  #  plot(dsm_model, select = 2)
-  #  vis.gam(dsm_model, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
-  #}
-
-
-  # Check goodness of fit with Q-Q plots
-  par(mfrow = c(2, 2), oma = c(0, 0, 2, 0))
-  for (model in dsm_list) {
-   gam.check(model)
-    # Add a title to the entire plotting area
-    print(model$name)
-    mtext(model$name, outer = TRUE, cex = 1.5)
-  }
-  par(mfrow = c(1, 1))
-
-
-  # Summarise model results
-  mod_results <- data.frame(
-    "Model name" = names(dsm_list),
-    # "Description" = c(
-    #   "Bivariate smooth of location, hazard-rate, quasipoisson",
-    #   "Bivariate smooth of location, half-normal, quasipoisson",
-    #   "Bivariate smooth of location, half-normal cos, quasipoisson",
-    #   "Bivariate smooth of location, hazard-rate, quasipoisson, canopy height covariate in detection function",
-    #   "Bivariate smooth of location, half-normal, quasipoisson, canopy height covariate in detection function",
-    #   "Bivariate smooth of location, half-normal cos, quasipoisson, canopy height covariate in detection function"
-    # ),
-    "Deviance explained" = sapply(
-      dsm_list,
-      function(x) paste0(round(summary(x)$dev.expl * 100, 2), "%")
-    )
-  )
-  # wmu_number <-'528' # 501, 503, 512 517, 528
-  # input_path <- here::here("Output", "DSM", paste0("dsm",wmu_number,".RData"))
-  # load(file = input_path)
-  knitr::kable(mod_results, col.names = c("Model name", "Description", "Deviance explained"))
-
-
-  ## Abundance Estimation
-
-  # Predict abundance using the null model
-  # Find the index of the sublist with name "Second"
-index <- which(sapply(dsm_list, function(x) x$name) == "dsm_xy_detfc_hn_null_trunc_0.43_bin_0.1")
-
-# Access the sublist
-
-  sel_model <- dsm_list[[index]]
-  dsm_xy_pred <- predict(sel_model, coords, sel_model$offset)
-
-  # Calculate total abundance over the survey area
-  total_abundance <- sum(dsm_xy_pred)
-
-  # Update density object with predicted values
-  density@density.surface[[1]]$density <- dsm_xy_pred
-
-  # Plot density surface
-  plot(density)
-  # plot(density@density.surface[[1]]['density'])
-
-  abudance_strata_list <- list()
-  for (strata_name in density@strata.name){
-    density_strata <- subset(density@density.surface[[1]], strata == strata_name)
-    abudance_strata_list[[strata_name]] <- as.numeric(sum(density_strata$density))
-  }
-
-  # Save processed data
-  output_path <- here("Output", "Density", paste0("density",wmu_number,".RData"))
-  save(density, total_abundance, region, file = output_path)
 

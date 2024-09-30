@@ -1,5 +1,7 @@
 library(here)
 library(mrds)
+library(mgcv)
+library(dplyr)      # For data manipulation
 library(ggplot2)
 library(RColorBrewer)
 
@@ -11,76 +13,147 @@ colour_palette <- brewer.pal(5, "RdBu")
 
 # define list with WUM numbers
 wmu_number_list <- c('501','503', '512', '517', '528')
-
+wmu_number <- wmu_number_list[1]
 # loop through WUM numbers
-for(wmu_number in wmu_number_list){
+# for(wmu_number in wmu_number_list){
+
   # Load processed data
   input_path <- here("Output", "DSM", paste0("dsm",wmu_number,".RData"))
   load(file = input_path)
 
   # Assign individal names to data frames
-  assign(paste0("dsm_list_",wmu_number), dsm_list)
-  assign(paste0("detfc_list_",wmu_number), detfc_list)
-  rm(dsm_list, detfc_list)
-}
+  # assign(paste0("dsm_list_",wmu_number), dsm_list)
+  # assign(paste0("detfc_list_bin_compact",wmu_number), detfc_list_bin_compact)
+  # rm(dsm_list, detfc_list_bin_compact)
+# }
 
-par(mfrow = c(2, 3))
-for (wmu_number in wmu_number_list){
-  for (i in length(paste0("detfc_list_",wmu_number))){
-    plot(paste0("detfc_list_",wmu_number)[[i]] , showpoints = FALSE, pl.den = 0, lwd = 2, main = detfc_list501[[i]]$name)
-    ddf.gof(paste0("detfc_list_",wmu_number)[[i]]$ddf)
-  }
+  # Plot distance data
+  
+  length(detfc_list_bin_compact)
+
+aic_values_bin <- purrr::map_dbl(detfc_list_bin_compact, ~ .x$ddf$criterion)
+# Extract CV values for each model
+cv_values_bin <- purrr::map_dbl(detfc_list_bin_compact, function(model) {
+  model_summary <- summary(model)
+  cv_value <- model_summary$ds$Nhat.se[1] / model_summary$ds$Nhat
+  return(cv_value)
+})
+
+# Extract Chi-Square values for each model
+chi_square_values_bin <- purrr::map_dbl(detfc_list_bin_compact, function(model) {
+  gof_test <- ddf.gof(model$ddf)
+  chi_square_value <- gof_test$chisquare$chi1$chisq
+  return(chi_square_value)
+})
+
+# Combine AIC and CV values into a dataframe
+model_metrics <- data.frame(
+  Model = names(detfc_list_bin_compact),
+  AIC = round(aic_values_bin,0),
+  CV = round(cv_values_bin,3),
+  Chi_Square = round(chi_square_values_bin,1)
+)
+
+# Normalise AIC and CV (assuming lower values are better)
+model_metrics <- model_metrics %>%
+  mutate(
+    AIC_normalised = (AIC - min(AIC)) / (max(AIC) - min(AIC)),
+    CV_normalised = (CV - min(CV)) / (max(CV) - min(CV)),
+    Chi_Square_normalised = (Chi_Square - min(Chi_Square)) / (max(Chi_Square) - min(Chi_Square))
+  )
+
+# Define weights for AIC, CV and Chi-Square (adjust these weights according to your preference)
+weight_AIC <- 1
+weight_CV <- 0.5
+weight_Chi_Square <- 0.5
+
+# Combine the normalized values using the weights
+model_metrics <- model_metrics %>%
+  mutate(
+    combined_score = weight_AIC * AIC_normalised + weight_CV * CV_normalised + weight_Chi_Square * Chi_Square_normalised
+  ) %>%
+  arrange(combined_score)
+
+row.names(model_metrics) <- NULL
+
+print(model_metrics)
+
+
+
+
+
+
+
+# for (wmu_number in wmu_number_list){
+  table_ds_models_trunc_0.6 <- do.call(summarize_ds_models, detfc_list_bin_compact[1:4])
+  table_ds_models_trunc_0.4 <- do.call(summarize_ds_models, detfc_list_bin_compact[5:8])
+  print(table_ds_models_trunc_0.6)
+  print(table_ds_models_trunc_0.4)
+# }
+
+
+
+
+### DF
+
+# Plot the models
+par(mfrow = c(3, 3))
+break_bins <- seq(from = 0, to = 0.6, by = 0.05)
+hist(distdata$distance, main = "Moose distance from line transects", xlab = "Distance (km)", breaks = break_bins)
+for (model_name in model_metrics$Model) {
+  model <- detfc_list_bin_compact[[model_name]]
+  plot(model, showpoints = FALSE, pl.den = 0, lwd = 2, xlim = c(0,0.6), ylim = c(0,1), main = paste(model_name, "AIC:", round(model$ddf$criterion,2)))
+  # ddf.gof(model$ddf, qq = TRUE, main = model_name)
 }
 par(mfrow = c(1, 1))
 
-for (wmu_number in wmu_number_list){
-  table_ds_models <- do.call(summarize_ds_models, paste0("detfc_list_",wmu_number)[[i]])
-  print(table_ds_models)
-  print(paste('Best model', table_ds_models[1,1]))
-}
+# select best model
+best_model <- detfc_list_bin_compact[[model_metrics$Model[1]]]
+print(paste0("The best model is: ", model_metrics$Model[1]))
 
 
-## Model Checking
+par(mfrow = c(1, 2))
+plot(best_model, showpoints = FALSE, pl.den = 0, lwd = 2, ylim = c(0,1), main = model_metrics$Model[1])
+qqplot.ddf(best_model$ddf)
+par(mfrow = c(1, 1))
+
+
+## DSM
 
 # Call summary and plot for each detection function after the loop
+par(mfrow = c(2, 4))
 for (model_name in names(dsm_list)) {
-  dsm_model <- dsm_list[[model_name]]
-  summary(dsm_model)
-  plot(dsm_model, select = 2)
-  vis.gam(dsm_model, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = GRID_SIZE)
-}
-
-# Check goodness of fit with Q-Q plots
-par(mfrow = c(2, 2))
-for (model in dsm_list) {
-  gam.check(model)
+ dsm_model <- dsm_list[[model_name]]
+ vis.gam(dsm_model, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = 500, main = model_name)
 }
 par(mfrow = c(1, 1))
 
-# Randomised quantile residuals for Tweedie model
-rqgam_check(dsm.xy.tweedie)
-
 # Check for autocorrelation
-for (model in dsm_list) {
-  dsm_cor(model, max.lag = 10, Segment.Label = "Sample.Label")
+par(mfrow = c(2, 4))
+for (i in 1:length(dsm_list)) {
+  dsm_cor(dsm_list[[i]], max.lag = 6, Segment.Label = "Sample.Label", main = names(dsm_list)[[i]])
 }
+par(mfrow = c(1, 1))
 
-## Model Selection
+# Check goodness of fit with Q-Q plots
+par(mfrow = c(2, 2), oma = c(0, 0, 2, 0))
+  model <- dsm_list[[7]]
+  gam.check(model)
+  # Add a title to the entire plotting area
+  print(model$name)
+  mtext(model$name, outer = TRUE, cex = 1.5)
+
+par(mfrow = c(1, 1))
+
+
+
 
 # Summarise model results
 mod_results <- data.frame(
-  "Model name" = names(dsm_list),
-  "Description" = c(
-    "Bivariate smooth of location, hazard-rate, quasipoisson",
-    "Bivariate smooth of location, half-normal, quasipoisson",
-    "Bivariate smooth of location, half-normal cos, quasipoisson",
-    "Bivariate smooth of location, hazard-rate, quasipoisson, canopy height covariate in detection function",
-    "Bivariate smooth of location, half-normal, quasipoisson, canopy height covariate in detection function",
-    "Bivariate smooth of location, half-normal cos, quasipoisson, canopy height covariate in detection function"
-  ),
   "Deviance explained" = sapply(
     dsm_list,
     function(x) paste0(round(summary(x)$dev.expl * 100, 2), "%")
   )
 )
-knitr::kable(mod_results, col.names = c("Model name", "Description", "Deviance explained"))
+
+knitr::kable(mod_results, col.names = c("Model name", "Deviance explained"))

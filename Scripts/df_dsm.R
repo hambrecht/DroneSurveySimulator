@@ -168,7 +168,7 @@ wmu_number <- wmu_number_list[1]
 
   # save DSM list
   output_path <- here("Output", "DSM", paste0("dsm",wmu_number,".RData"))
-  save(dsm_list, detfc_list_bin_compact, best_model_list, wmu, file = output_path)
+  save(dsm_list, detfc_list_bin_compact, best_model_list, wmu, distdata, file = output_path)
 # }
 
 

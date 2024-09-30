@@ -11,10 +11,6 @@ if (!requireNamespace("pbapply", quietly = TRUE)) {
   message("The 'pbapply' package is already installed.")
 }
 
-# Load density data
-input_path <- here::here("Output", "Density", "density501.RData")
-load(file = input_path)
-
 # Define functions
 
 #' Calculate Image Width Based on Altitude
@@ -32,29 +28,36 @@ load(file = input_path)
 #' calculate_image_width(ALTITUDE = 150, FOV = 75)
 #'
 #' @export
-calculate_image_width <- function(ALTITUDE, FOV = 60) {
+calculate_image_width <- function(ALTITUDE, FOV = 25) {
   if (ALTITUDE <= 0 || FOV <= 0) stop("ALTITUDE and FOV must be positive numbers.")
   
   # Calculate and round the image width
   round(2 * ALTITUDE * tan((FOV * pi / 180) / 2), -1)
 }
 
+# Load density data
+input_path <- here::here("Output", "Density", "density501.RData")
+load(file = input_path)
+
 # Define constants
-ALTITUDE <- 700          # Height in meters
-IMAGE_WIDTH <- calculate_image_width(ALTITUDE)
+ALTITUDE <- 120          # Height in meters
+HFOV <- 25             # Horizontal FOV in degrees
+IMAGE_WIDTH <- calculate_image_width(ALTITUDE, HFOV)
+print(paste0("Half swath width is: ",IMAGE_WIDTH,"m"))
+
 
 # Create population description
 pop_desc <- make.population.description(
   region = region,
   density = density,
-  N = unlist(abudance_strata_list),
+  N = total_abundance,
   fixed.N = TRUE
 )
 
 # Define and visualise detection function
 detect_hn <- make.detectability(
   key.function = "hn",
-  scale.param = 200,
+  scale.param = 100,
   truncation = IMAGE_WIDTH
 )
 plot(detect_hn, pop_desc)
@@ -62,7 +65,7 @@ plot(detect_hn, pop_desc)
 # Define and visualise uniform detection function
 detect_uf <- make.detectability(
   key.function = "uf",
-  scale.param = 0.8, # accounting for canopy cover
+  scale.param = 0.9, # accounting for canopy cover
   truncation = IMAGE_WIDTH
 )
 plot(detect_uf, pop_desc)
@@ -81,7 +84,7 @@ design <- make.design(
   line.length = numeric(0),
   seg.length = numeric(0),
   effort.allocation = numeric(0),
-  design.angle = 0,
+  design.angle = 90,
   spacing = 1000,
   edge.protocol = "minus",
   seg.threshold = numeric(0),
@@ -100,16 +103,7 @@ default.design <- make.design(region = region,
 transects <- generate.transects(default.design)
 plot(region, transects, lwd = 1.5, col = 4)
 
-design <- make.design(region = region,
-                      transect.type = "line",
-                      design = c("eszigzag", "systematic"),
-                      line.length = 1200000,
-                      design.angle = c(65, 90),
-                      bounding.shape = c("convex.hull", NA),
-                      edge.protocol = "minus",
-                      truncation = 2000,
-                      coverage.grid = cover)
-transects <- generate.transects(design)
+
 plot(region, transects, lwd = 1.5, col = 4)
 
 # You can re-run the coverage simulation using the following code. Note, your
@@ -142,6 +136,12 @@ plot(region, transects)
 
 # Define analysis models
 ddf_analyses <- make.ds.analysis(
+  dfmodel = ~1,
+  key = "hn",
+  criteria = "AIC",
+  truncation = 600
+)
+ddf_analyses <- make.ds.analysis(
   dfmodel = list(~1, ~1),
   key = c("hn", "hr"),
   criteria = "AIC",
@@ -161,12 +161,15 @@ survey <- run.survey(sim)
 plot(survey, region)
 
 # Run the full simulation
-sim <- run.simulation(simulation = sim, run.parallel = T)
+sim <- run.simulation(simulation = sim, run.parallel = F)
 
 # Display results
 summary(sim)
-histogram.N.ests(sim)
+histogram.N.ests(sim, xlim=c(7500,9500))
 
+
+
+## Testing truncation distances. Required with drone???
 # Investigate truncation distances
 truncation_distances <- c(
   calculate_image_width(100), calculate_image_width(200),

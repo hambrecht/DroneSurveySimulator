@@ -29,7 +29,7 @@ library(purrr)   # Functional programming tools
 #' @return A named list containing the transformed spatial data frames for moose,
 #'   transects, sbfi, and wmu.
 #' @export
-load_spatial_data <- function(moose_path, sbfi_path, wmu_path, wmu_strata_path, crs, transects_path, transects2_path = NULL) {
+load_spatial_data <- function(moose_path, sbfi_path, wmu_path, crs, transects_path, transects2_path = NULL) {
   # Helper function to safely read spatial data
   safe_st_read <- function(path, layer = NULL) {
     if (file.exists(path)) {
@@ -52,10 +52,7 @@ load_spatial_data <- function(moose_path, sbfi_path, wmu_path, wmu_strata_path, 
   
   wmu <- safe_st_read(wmu_path) %>%
     st_transform(crs = crs)
-
-  wmu_strata <- safe_st_read(wmu_strata_path) %>%
-    st_transform(crs = crs)
-  
+ 
   transects <- safe_st_read(transects_path, layer = "tracks") %>%
     st_transform(crs = crs) %>%
     select(1)
@@ -67,7 +64,7 @@ load_spatial_data <- function(moose_path, sbfi_path, wmu_path, wmu_strata_path, 
     transects <- rbind(transects, transects2)
   }
   
-  list(moose = moose, transects = transects, sbfi = sbfi, wmu = wmu, wmu_strata = wmu_strata)
+  list(moose = moose, transects = transects, sbfi = sbfi, wmu = wmu)
 }
 
 
@@ -106,7 +103,6 @@ data_paths <- list(
     moose_path = "D:\\WMU\\survey_data\\501_moose_locations.shp",
     sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_501.shp",
     wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_501_3400.shp",
-    wmu_strata_path = "D:\\WMU\\survey_data\\501_strata.shp",
     transects_path = "D:\\WMU\\survey_data\\WMU 501 (2018-2019)\\WMU501_transects_2018.gpx",
     transects2_path = NULL
   ),
@@ -114,7 +110,6 @@ data_paths <- list(
     moose_path = "D:\\WMU\\survey_data\\503_moose_locations.shp",
     sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_503.shp",
     wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_503_3400.shp",
-    wmu_strata_path = "D:\\WMU\\survey_data\\503_strata.shp",
     transects_path = "D:\\WMU\\survey_data\\WMU 503 (2021-2022)\\wmu503_transects_ph1.gpx",
     transects2_path = NULL
   ),
@@ -122,7 +117,6 @@ data_paths <- list(
     moose_path = "D:\\WMU\\survey_data\\512_moose_locations.shp",
     sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_512.shp",
     wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_512_3400.shp",
-    wmu_strata_path = "D:\\WMU\\survey_data\\512_strata.shp",
     transects_path = "D:\\WMU\\survey_data\\WMU 512 (2019-2020)\\WMU512_transects_EW_block1.gpx",
     transects2_path = "D:\\WMU\\survey_data\\WMU 512 (2019-2020)\\WMU512_transects_EW_block2.gpx"
   ),
@@ -130,7 +124,6 @@ data_paths <- list(
     moose_path = "D:\\WMU\\survey_data\\517_moose_locations.shp",
     sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_517.shp",
     wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_517_3400.shp",
-    wmu_strata_path = "D:\\WMU\\survey_data\\517_strata.shp",
     transects_path = "D:\\WMU\\survey_data\\WMU 517 (2018-2019)\\WMU517_Transects_D4.gpx",
     transects2_path = "D:\\WMU\\survey_data\\WMU 517 (2018-2019)\\WMU517_Transects_D123.gpx"
   ),
@@ -138,7 +131,6 @@ data_paths <- list(
     moose_path = "D:\\WMU\\survey_data\\528_moose_locations.shp",
     sbfi_path = "D:\\WMU\\base_data\\CA_Forest_Satellite_Based_Inventory_2020\\clipped\\sbfi_528.shp",
     wmu_path = "D:\\WMU\\base_data\\WMU\\wmu_528_3400.shp",
-    wmu_strata_path = "D:\\WMU\\survey_data\\528_strata.shp",
     transects_path = "D:\\WMU\\survey_data\\WMU 528 (2018-2019)\\WMU528_Transects_D4.gpx",
     transects2_path = "D:\\WMU\\survey_data\\WMU 528 (2018-2019)\\WMU528_Transects_D123.gpx"
   )
@@ -156,7 +148,6 @@ for (wmu_number in wmu_number_list){
     moose_path = data_paths[[wmu_number]]$moose_path,
     sbfi_path = data_paths[[wmu_number]]$sbfi_path,
     wmu_path = data_paths[[wmu_number]]$wmu_path,
-    wmu_strata_path = data_paths[[wmu_number]]$wmu_strata_path,
     crs = 3400,
     transects_path = data_paths[[wmu_number]]$transects_path,
     transects2_path = data_paths[[wmu_number]]$transects2_path
@@ -166,7 +157,6 @@ for (wmu_number in wmu_number_list){
   transects <- data$transects
   sbfi <- data$sbfi
   wmu <- data$wmu
-  wmu_strata <- data$wmu_strata
 
 
   # Rename columns in sbfi for consistency
@@ -349,5 +339,5 @@ for (wmu_number in wmu_number_list){
   #
   # Save the prepared datasets to a file for further use.
   output_path <- here("Output", "PrepData", paste0("prepared_", wmu_number, ".RData"))
-  save(segdata, distdata, obsdata, wmu, wmu_strata, file = output_path)
+  save(segdata, distdata, obsdata, wmu, file = output_path)
 }

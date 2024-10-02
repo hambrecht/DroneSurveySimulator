@@ -1,4 +1,6 @@
 library(here)
+library(Distance) # for summarize_ds_models function
+library(dsm) # for dsm_cor function
 library(mrds)
 library(mgcv)
 library(dplyr)      # For data manipulation
@@ -7,13 +9,13 @@ library(RColorBrewer)
 
 # Ensure the output directory exists
 dir.create(here("Data", "Plot"), showWarnings = FALSE)
-
+output_dir <- here("Data", "Plot")
 # Define a colour palette
 colour_palette <- brewer.pal(5, "RdBu")
 
 # define list with WUM numbers
 wmu_number_list <- c('501','503', '512', '517', '528')
-wmu_number <- wmu_number_list[1]
+wmu_number <- wmu_number_list[2]
 # loop through WUM numbers
 # for(wmu_number in wmu_number_list){
 
@@ -76,40 +78,58 @@ model_metrics <- model_metrics %>%
 
 row.names(model_metrics) <- NULL
 
-print(model_metrics)
+knitr::kable(model_metrics, digits = 3, escape = FALSE, caption = "Model comparison metrics") # %>%
+  # kable_styling(full_width = FALSE, position = "center")
 
 
 
 
 
+# Select items containing 'trunc_0.6'
+detfc_list_trunc_0.6 <- grep("trunc_0.6", detfc_list_bin_compact)
+
+# Select items not containing 'trunc_0.6'
+detfc_list_trunc_99 <- grep("trunc_0.6", detfc_list_bin_compact, invert = TRUE)
 
 
 # for (wmu_number in wmu_number_list){
-  table_ds_models_trunc_0.6 <- do.call(summarize_ds_models, detfc_list_bin_compact[1:4])
-  table_ds_models_trunc_0.4 <- do.call(summarize_ds_models, detfc_list_bin_compact[5:8])
-  print(table_ds_models_trunc_0.6)
-  print(table_ds_models_trunc_0.4)
-# }
+  table_ds_models_trunc_0.6 <- do.call(summarize_ds_models, detfc_list_bin_compact[detfc_list_trunc_0.6])
+  table_ds_models_trunc_99 <- do.call(summarize_ds_models, detfc_list_bin_compact[detfc_list_trunc_99])
+  knitr::kable(table_ds_models_trunc_0.6[, -1], digits=3, escape=FALSE,
+             caption="Model selection summary of the 600m truncation models") # %>%
+  # kable_styling(full_width = FALSE, position = "center")
+  knitr::kable(table_ds_models_trunc_99[, -1], digits=3, escape=FALSE,
+              caption="Model selection summary of the 99.5 percentile truncation models") # %>%
+  # kable_styling(full_width = FALSE, position = "center")
+  # }
 
 
 
 
 ### DF
-
+# select best model
+best_model <- detfc_list_bin_compact[[model_metrics$Model[1]]]
+print(paste0("The best model is: ", model_metrics$Model[1]))
 # Plot the models
-par(mfrow = c(3, 3))
+par(mfrow = c(4, 3)) # adjust based on the number of models +1
 break_bins <- seq(from = 0, to = 0.6, by = 0.05)
 hist(distdata$distance, main = "Moose distance from line transects", xlab = "Distance (km)", breaks = break_bins)
 for (model_name in model_metrics$Model) {
   model <- detfc_list_bin_compact[[model_name]]
-  plot(model, showpoints = FALSE, pl.den = 0, lwd = 2, xlim = c(0,0.6), ylim = c(0,1), main = paste(model_name, "AIC:", round(model$ddf$criterion,2)))
+  # Check if the current model is the best model
+  if (model_name == model_metrics$Model[1]) {
+    ggplot(model, showpoints = FALSE, pl.den = 0, lwd =2, xlim = c(0,0.6), ylim = c(0,1), main = paste(model_name, "AIC:", round(model$ddf$criterion,2)))
+    # Draw a red box around the plot
+    usr <- par("usr")
+    rect(usr[1], usr[3], usr[2], usr[4], border = "red", lwd = 2)
+  } else {
+    ggplot(model, showpoints = FALSE, pl.den = 0, lwd = 2, xlim = c(0,0.6), ylim = c(0,1), main = paste(model_name, "AIC:", round(model$ddf$criterion,2)))
+  }
   # ddf.gof(model$ddf, qq = TRUE, main = model_name)
 }
 par(mfrow = c(1, 1))
 
-# select best model
-best_model <- detfc_list_bin_compact[[model_metrics$Model[1]]]
-print(paste0("The best model is: ", model_metrics$Model[1]))
+
 
 
 par(mfrow = c(1, 2))
@@ -121,7 +141,7 @@ par(mfrow = c(1, 1))
 ## DSM
 
 # Call summary and plot for each detection function after the loop
-par(mfrow = c(2, 4))
+par(mfrow = c(4, 3))
 for (model_name in names(dsm_list)) {
  dsm_model <- dsm_list[[model_name]]
  vis.gam(dsm_model, plot.type = "contour", view = c("x", "y"), asp = 1, type = "response", contour.col = "black", n.grid = 500, main = model_name)
@@ -129,7 +149,7 @@ for (model_name in names(dsm_list)) {
 par(mfrow = c(1, 1))
 
 # Check for autocorrelation
-par(mfrow = c(2, 4))
+par(mfrow = c(4, 3))
 for (i in 1:length(dsm_list)) {
   dsm_cor(dsm_list[[i]], max.lag = 6, Segment.Label = "Sample.Label", main = names(dsm_list)[[i]])
 }

@@ -82,7 +82,7 @@ wmu_number <- wmu_number_list[1]
       detfc_list_bin[[paste0("detfc_hn_cos_trunc_", truncation_distance, "_bin_", bin_size)]] <- possDS(distdata, truncation_distance, key = "hn", adjustment = "cos", max_adjustments = 2,  monotonicity = 'strict', cutpoints = seq(from = 0, to = truncation_distance, by = bin_size))
       detfc_list_bin[[paste0("detfc_cc_hr_null_trunc_", truncation_distance, "_bin_", bin_size)]] <- possDS(distdata, truncation_distance, formula = ~as.factor(canopy_cover), key = "hr", adjustment = NULL, cutpoints = seq(from = 0, to = truncation_distance, by = bin_size))
       detfc_list_bin[[paste0("detfc_cc_hn_null_trunc_", truncation_distance, "_bin_", bin_size)]] <- possDS(distdata, truncation_distance, formula = ~as.factor(canopy_cover), key = "hn", adjustment = NULL, cutpoints = seq(from = 0, to = truncation_distance, by = bin_size))
-      detfc_list_bin[[paste0("detfc_cc_hn_cos_trunc_", truncation_distance, "_bin_", bin_size)]] <- possDS(distdata, truncation_distance, formula = ~as.factor(canopy_cover), key = "hn", adjustment = "cos", max_adjustments = 2,  monotonicity = 'strict', cutpoints = seq(from = 0, to = truncation_distance, by = bin_size))
+      # detfc_list_bin[[paste0("detfc_cc_hn_cos_trunc_", truncation_distance, "_bin_", bin_size)]] <- possDS(distdata, truncation_distance, formula = ~as.factor(canopy_cover), key = "hn", adjustment = "cos", max_adjustments = 2,  monotonicity = 'strict', cutpoints = seq(from = 0, to = truncation_distance, by = bin_size))
   }
 
 

@@ -1,0 +1,31 @@
+---
+title: "Visualisation of Detection functions and Density Surface Models"
+author: "Leonard Hambrecht"
+date: "02/10/2024"
+format: 
+  html:
+    code-fold: true
+execute:
+  echo: false
+---
+```{r}
+library(here)
+```
+
+```{r}
+wmu_number_list <- c('501', '503', '512', '517', '528')
+wmu_number <- wmu_number_list[5]
+# save DSM list
+input_path <-  here("Output", "Density", paste0("density",wmu_number,".RData"))
+load(file = input_path)
+```
+## Plot density surface
+```{r}
+
+# plot(density)
+plot(density@density.surface[[1]]['density'])
+
+```
+```{r}
+print(model_variance)
+```

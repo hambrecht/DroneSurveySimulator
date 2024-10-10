@@ -1,7 +1,8 @@
 ---
 title: "Visualisation of Detection functions and Density Surface Models"
 author: "Leonard Hambrecht"
-date: "02/10/2024"
+date: today
+date-format: D MMM YYYY
 format: 
   html:
     code-fold: true
@@ -9,7 +10,7 @@ execute:
   echo: false
 ---
 ```{r}
-#| include: false
+#| output: false
 library(here)
 library(Distance) # for summarize_ds_models function
 library(dsm) # for dsm_cor function
@@ -30,7 +31,7 @@ colour_palette <- brewer.pal(5, "RdBu")
 #| include: false
 # define list with WUM numbers
 wmu_number_list <- c('501','503', '512', '517', '528')
-wmu_number <- wmu_number_list[2]
+wmu_number <- wmu_number_list[1]
 # loop through WUM numbers
 # for(wmu_number in wmu_number_list){
 

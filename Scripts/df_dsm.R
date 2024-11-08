@@ -43,7 +43,7 @@ possDS <- possibly(.f = Distance::ds, otherwise = NULL)
 ### Set Variables
 
 wmu_number_list <- c('501', '503', '512', '517', '528')
-wmu_number <- wmu_number_list[1]
+wmu_number <- wmu_number_list[4]
 # for (wmu_number in wmu_number_list){
   print(paste0("Processing WMU: ", wmu_number))
 
@@ -73,7 +73,7 @@ wmu_number <- wmu_number_list[1]
   detfc_list_bin <- list()
 
   # Fixed bin size
-  bin_size <- 0.1
+  bin_size <- 0.05
 
   # Loop through truncation distances
   for (truncation_distance in truncation_distance_list) {

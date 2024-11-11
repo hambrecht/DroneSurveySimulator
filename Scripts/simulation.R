@@ -236,18 +236,18 @@ pop_desc <- make.population.description(
 # Define and visualise detection function
 detect_hr_overview <- make.detectability(
   key.function = "hr",
-  scale.param = rep(50, 10),
-  shape.param = seq(0.1, 1, 0.1),
-  truncation = IMAGE_WIDTH
+  scale.param = rep(150, 10),
+  shape.param = seq(0.1, 2, 0.2),
+  truncation = 600
 )
 COLORS <- brewer.pal(10, "Paired")
 plot(detect_hr_overview, pop_desc, col = COLORS)
-legend(x = "topright", legend = seq(0.1, 1, 0.1), col = COLORS, lty = 1, cex = 0.8)
+legend(x = "topright", legend = seq(0.1, 2, 0.2), col = COLORS, lty = 1, cex = 0.8)
 
 detect_hr <- make.detectability(
   key.function = "hr",
-  scale.param = 100,
-  shape.param = 1.2,
+  scale.param = 150,
+  shape.param = 1.9,
   truncation = 600
 )
 plot(detect_hr, pop_desc)
@@ -267,7 +267,7 @@ cover <- make.coverage(region,
 )
 plot(region, cover)
 
-detectF <- detect_uf
+detectF <- detect_hr
 
 # Define survey design
 ## Helicopter design
@@ -284,17 +284,12 @@ heli_design <- make.design(
   coverage.grid = cover
 )
 heli_transects <- generate.transects(heli_design)
-plot(region, heli_transects, lwd = 0.5, col = 4)
+# plot(region, heli_transects, lwd = 0.5, col = 4)
 ### Coverage
 #### You can re-run the coverage simulation using the following code. Note, your
 #### results should vary slightly from mine, make sure you haven't set a seed!
 heli_design <- run.coverage(heli_design, reps = 10)
-plot(heli_design)
-
-heli_transects@trackline
-heli_transects@seg.length
-heli_transects@line.length
-slotNames(heli_transects)
+# plot(heli_design)
 
 ## Systematic design
 sys_design <- make.design(
@@ -310,9 +305,9 @@ sys_design <- make.design(
   coverage.grid = cover
 )
 sys_transects <- generate.transects(sys_design)
-plot(region, sys_transects, lwd = 0.5, col = 4)
+# plot(region, sys_transects, lwd = 0.5, col = 4)
 sys_design <- run.coverage(sys_design, reps = 10)
-plot(sys_design)
+# plot(sys_design)
 
 
 ## Zigzag design
@@ -330,10 +325,10 @@ zigzag_design <- make.design(
   coverage.grid = cover
 )
 zigzag_transects <- generate.transects(zigzag_design)
-plot(region, zigzag_transects, lwd = 0.5, col = 4)
+# plot(region, zigzag_transects, lwd = 0.5, col = 4)
 ### Coverage
 zigzag_design <- run.coverage(zigzag_design, reps = 10)
-plot(zigzag_design)
+# plot(zigzag_design)
 
 ## Zigzag with complementary line
 zigzagcom_design <- make.design(
@@ -350,10 +345,10 @@ zigzagcom_design <- make.design(
   coverage.grid = cover
 )
 zigzagcom_transects <- generate.transects(zigzagcom_design)
-plot(region, zigzagcom_transects, lwd = 0.5, col = 4)
+# plot(region, zigzagcom_transects, lwd = 0.5, col = 4)
 ### Coverage
 zigzagcom_design <- run.coverage(zigzagcom_design, reps = 10)
-plot(zigzagcom_design)
+# plot(zigzagcom_design)
 
 
 
@@ -369,7 +364,7 @@ ddf_analyses <- make.ds.analysis(
   dfmodel = list(~1, ~1),
   key = c("hn", "hr"),
   criteria = "AIC",
-  truncation = IMAGE_WIDTH
+  truncation = 600
 )
 
 
@@ -410,10 +405,10 @@ sys_survey <- run.survey(sim_sys)
 zig_survey <- run.survey(sim_zig)
 zagcom_survey <- run.survey(sim_zagcom)
 
-plot(heli_survey, region)
-plot(sys_survey, region)
-plot(zig_survey, region)
-plot(zagcom_survey, region)
+# plot(heli_survey, region)
+# plot(sys_survey, region)
+# plot(zig_survey, region)
+# plot(zagcom_survey, region)
 
 
 # Run the full simulation
@@ -423,271 +418,131 @@ sim_zig <- run.simulation(simulation = sim_zig, run.parallel = T)
 sim_zagcom <- run.simulation(simulation = sim_zagcom, run.parallel = T)
 
 # Save simulation data
-output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"-DF", detectF@key.function, ".RData"))
+# output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"-DF", detectF@key.function, ".RData"))
+output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
 save(sim_heli, sim_sys, sim_zig, sim_zagcom, file = output_path)
 
 # output_path <- here("Output", "Simulation")
-# save.sim.results(sim_heli, output_path)
+# # save.sim.results(sim_heli, output_path)
 
-# Display results
-summary(sim_heli, description.summary = FALSE)
-summary(sim_sys, description.summary = FALSE)
-summary(sim_zig, description.summary = FALSE)
-summary(sim_zagcom, description.summary = FALSE)
+# # Display results
+# summary(sim_heli, description.summary = FALSE)
+# summary(sim_sys, description.summary = FALSE)
+# summary(sim_zig, description.summary = FALSE)
+# summary(sim_zagcom, description.summary = FALSE)
 
-par(mfrow = c(2, 2))
-histogram.N.ests(sim_heli, xlim = c(7500, 11000))
-histogram.N.ests(sim_sys, xlim = c(7500, 11000))
-histogram.N.ests(sim_zig, xlim = c(7500, 11000))
-histogram.N.ests(sim_zagcom, xlim = c(7500, 11000))
-
-
-# Extract metrics for each simulation
-metrics_heli <- extract_metrics(sim_heli)
-metrics_sys <- extract_metrics(sim_sys)
-metrics_zig <- extract_metrics(sim_zig)
-metrics_zagcom <- extract_metrics(sim_zagcom)
-
-# Combine metrics into a single dataframe
-comparison_df <- data.frame(
-  Simulation = c("Heli", "Sys", "Zig", "Zagcom"),
-  Mean_Estimate = c(metrics_heli$mean_estimate, metrics_sys$mean_estimate, metrics_zig$mean_estimate, metrics_zagcom$mean_estimate),
-  Percent_Bias = c(metrics_heli$percent_bias, metrics_sys$percent_bias, metrics_zig$percent_bias, metrics_zagcom$percent_bias),
-  RMSE = c(metrics_heli$rmse, metrics_sys$rmse, metrics_zig$rmse, metrics_zagcom$rmse),
-  CI_Coverage_Prob = c(metrics_heli$ci_coverage_prob, metrics_sys$ci_coverage_prob, metrics_zig$ci_coverage_prob, metrics_zagcom$ci_coverage_prob),
-  Mean_SE = c(metrics_heli$mean_se, metrics_sys$mean_se, metrics_zig$mean_se, metrics_zagcom$mean_se),
-  SD_of_Means = c(metrics_heli$sd_of_means, metrics_sys$sd_of_means, metrics_zig$sd_of_means, metrics_zagcom$sd_of_means),
-  Mean_Cover_Area = c(metrics_heli$mean_cover_area, metrics_sys$mean_cover_area, metrics_zig$mean_cover_area, metrics_zagcom$mean_cover_area),
-  Mean_Effort = c(metrics_heli$mean_effort, metrics_sys$mean_effort, metrics_zig$mean_effort, metrics_zagcom$mean_effort),
-  Mean_n = c(metrics_heli$mean_n, metrics_sys$mean_n, metrics_zig$mean_n, metrics_zagcom$mean_n),
-  Mean_k = c(metrics_heli$mean_k, metrics_sys$mean_k, metrics_zig$mean_k, metrics_zagcom$mean_k),
-  Mean_ER = c(metrics_heli$mean_ER, metrics_sys$mean_ER, metrics_zig$mean_ER, metrics_zagcom$mean_ER),
-  Mean_se_ER = c(metrics_heli$mean_se_ER, metrics_sys$mean_se_ER, metrics_zig$mean_se_ER, metrics_zagcom$mean_se_ER)
-)
-
-# Print the comparison dataframe
-# print(comparison_df)
-kable(comparison_df)
+# par(mfrow = c(2, 2))
+# histogram.N.ests(sim_heli, xlim = c(7500, 11000))
+# histogram.N.ests(sim_sys, xlim = c(7500, 11000))
+# histogram.N.ests(sim_zig, xlim = c(7500, 11000))
+# histogram.N.ests(sim_zagcom, xlim = c(7500, 11000))
 
 
+# # Extract metrics for each simulation
+# metrics_heli <- extract_metrics(sim_heli)
+# metrics_sys <- extract_metrics(sim_sys)
+# metrics_zig <- extract_metrics(sim_zig)
+# metrics_zagcom <- extract_metrics(sim_zagcom)
+
+# # Combine metrics into a single dataframe
+# comparison_df <- data.frame(
+#   Simulation = c("Heli", "Sys", "Zig", "Zagcom"),
+#   Mean_Estimate = c(metrics_heli$mean_estimate, metrics_sys$mean_estimate, metrics_zig$mean_estimate, metrics_zagcom$mean_estimate),
+#   Percent_Bias = c(metrics_heli$percent_bias, metrics_sys$percent_bias, metrics_zig$percent_bias, metrics_zagcom$percent_bias),
+#   RMSE = c(metrics_heli$rmse, metrics_sys$rmse, metrics_zig$rmse, metrics_zagcom$rmse),
+#   CI_Coverage_Prob = c(metrics_heli$ci_coverage_prob, metrics_sys$ci_coverage_prob, metrics_zig$ci_coverage_prob, metrics_zagcom$ci_coverage_prob),
+#   Mean_SE = c(metrics_heli$mean_se, metrics_sys$mean_se, metrics_zig$mean_se, metrics_zagcom$mean_se),
+#   SD_of_Means = c(metrics_heli$sd_of_means, metrics_sys$sd_of_means, metrics_zig$sd_of_means, metrics_zagcom$sd_of_means),
+#   Mean_Cover_Area = c(metrics_heli$mean_cover_area, metrics_sys$mean_cover_area, metrics_zig$mean_cover_area, metrics_zagcom$mean_cover_area),
+#   Mean_Effort = c(metrics_heli$mean_effort, metrics_sys$mean_effort, metrics_zig$mean_effort, metrics_zagcom$mean_effort),
+#   Mean_n = c(metrics_heli$mean_n, metrics_sys$mean_n, metrics_zig$mean_n, metrics_zagcom$mean_n),
+#   Mean_k = c(metrics_heli$mean_k, metrics_sys$mean_k, metrics_zig$mean_k, metrics_zagcom$mean_k),
+#   Mean_ER = c(metrics_heli$mean_ER, metrics_sys$mean_ER, metrics_zig$mean_ER, metrics_zagcom$mean_ER),
+#   Mean_se_ER = c(metrics_heli$mean_se_ER, metrics_sys$mean_se_ER, metrics_zig$mean_se_ER, metrics_zagcom$mean_se_ER)
+# )
+
+# # Print the comparison dataframe
+# # print(comparison_df)
+# kable(comparison_df)
 
 
 
 
 
-# subsample design
 
-# example design
-example_design <- make.design(
-  region = region,
-  transect.type = "line",
-  design = "systematic",
-  samplers = numeric(0), # OR
-  line.length = numeric(0), # OR
-  spacing = 1200,
-  design.angle = correct_degrees(0),
-  edge.protocol = "minus",
-  truncation = 600 # IMAGE_WIDTH
-)
-example_transects <- generate.transects(example_design)
-# retrieve individuals from helisurvey within suplots to det
-# Define parameters
-total_length <- example_transects@trackline/2
-number_blocks <- 2
-spacing <- 500
+# ## Testing truncation distances. Required with drone???
+# # Investigate truncation distances
+# truncation_distances <- c(
+#   calculate_image_width(100), calculate_image_width(200),
+#   calculate_image_width(300), calculate_image_width(400),
+#   calculate_image_width(500)
+# )
 
-best_block_dim <- find_best_block_dim(total_length, number_blocks, spacing)
-print(best_block_dim)
-polygons <- place_polygons(number_blocks, best_block_dim$x_length, best_block_dim$y_length, wmu, buffer_distance = 100)
-plot(st_geometry(wmu))
-plot(polygons[1], add = TRUE, col = "red")
+# results_list <- vector("list", length(truncation_distances))
+# summary_list <- vector("list", length(truncation_distances))
 
-subplots <- make.region(
-  region.name = "study area",
-  shape = polygons,
-  strata.name = polygons$id
-)
+# for (i in seq_along(truncation_distances)) {
+#   cat(sprintf("\nRunning for truncation = %d", truncation_distances[i]))
 
-plot(subplots)
+#   new_ds_analyses <- make.ds.analysis(
+#     dfmodel = list(~1, ~1),
+#     key = c("hn", "hr"),
+#     criteria = "AIC",
+#     truncation = truncation_distances[i]
+#   )
 
-ddf_analyses <- make.ds.analysis(
-  dfmodel = list(~1, ~1),
-  key = c("hn", "hr"),
-  criteria = "AIC",
-  truncation = IMAGE_WIDTH
-)
+#   sim@ds.analysis <- new_ds_analyses
+#   results_list[[i]] <- run.simulation(sim, run.parallel = F)
+#   summary_list[[i]] <- summary(results_list[[i]], description.summary = FALSE)
+# }
 
-
-
-example_sim <- make.simulation(
-  reps = 999,
-  design = example_design,
-  population.description = pop_desc,
-  detectability = detect_uf,
-  ds.analysis = ddf_analyses
-)
-
-
-example_survey <- run.survey(example_sim)
-
-# termine abundance in each subplot
-# Convert points dataframe to sf object
-points_sf <- st_as_sf(example_survey@population@population, coords = c("x", "y"), crs = st_crs(polygons))
-
-# Perform spatial join to count points within each polygon
-points_within_polygons <- st_join(points_sf, polygons, join = st_within)
-
-# Count the number of points in each polygon
-points_count <- points_within_polygons %>%
-  group_by(id) %>%  # Replace `id` with the actual column name identifying polygons
-  summarise(count = n()) %>%
-  filter(!is.na(id))  # Remove rows with NA in the id column
-
-# View the result
-print(points_count)
-points_count$count
-
-
-
-# Create subpopulation description
-sub_pop_desc <- make.population.description(
-  region = subplots,
-  density = density,
-  N = points_count$count/2,
-  fixed.N = TRUE
-)
-
-# create coverage grid
-sub_cover <- make.coverage(subplots,
-  spacing = 1000
-  # n.grid.points = 1000
-)
-plot(subplots, sub_cover)
-
-## Systematic subplot design
-subplots_design <- make.design(
-  region = subplots,
-  transect.type = "line",
-  design = "systematic",
-  samplers = numeric(0), # OR
-  line.length = numeric(0), # OR
-  spacing = spacing,
-  design.angle = c(0,0), #correct_degrees(polygons$angle)
-  edge.protocol = "minus",
-  truncation = IMAGE_WIDTH, # IMAGE_WIDTH
-  # coverage.grid = sub_cover
-)
-
-subplots_transects <- generate.transects(subplots_design)
-plot(region, subplots_transects, lwd = 0.5, col = 4)
-subplots_design <- run.coverage(subplots_design, reps = 10)
-plot(subplots_design)
-
-ddf_analyses_sub <- make.ds.analysis(
-  dfmodel = list(~1, ~1),
-  key = c("hn", "hr"),
-  criteria = "AIC",
-  truncation =  IMAGE_WIDTH,
-  group.strata = data.frame(design.id = subplots@strata.name, analysis.id = rep("A", length(subplots@strata.name)))
-)
-
-# subplots
-sim_sub <- make.simulation(
-  reps = 99999,
-  design = subplots_design,
-  population.description = sub_pop_desc,
-  detectability = detect_uf,
-  ds.analysis = ddf_analyses_sub
-)
- # survey
-
-summary(sim_sub, use.max.reps = TRUE, description.summary = FALSE)
-sub_survey <- run.survey(sim_sub)
-sub_survey
-plot(sub_survey, subplots)
-
-# Run the full simulation
-sim_sub <- run.simulation(simulation = sim_sub, run.parallel = T)
-
-# Results
-summary(sim_sub)
-histogram.N.ests(sim_sub, xlim = c(7500, 9500))
-
-
-
-## Testing truncation distances. Required with drone???
-# Investigate truncation distances
-truncation_distances <- c(
-  calculate_image_width(100), calculate_image_width(200),
-  calculate_image_width(300), calculate_image_width(400),
-  calculate_image_width(500)
-)
-
-results_list <- vector("list", length(truncation_distances))
-summary_list <- vector("list", length(truncation_distances))
-
-for (i in seq_along(truncation_distances)) {
-  cat(sprintf("\nRunning for truncation = %d", truncation_distances[i]))
-
-  new_ds_analyses <- make.ds.analysis(
-    dfmodel = list(~1, ~1),
-    key = c("hn", "hr"),
-    criteria = "AIC",
-    truncation = truncation_distances[i]
-  )
-
-  sim@ds.analysis <- new_ds_analyses
-  results_list[[i]] <- run.simulation(sim, run.parallel = F)
-  summary_list[[i]] <- summary(results_list[[i]], description.summary = FALSE)
-}
-
-names(results_list) <- paste0("t", truncation_distances)
-names(summary_list) <- paste0("t", truncation_distances)
+# names(results_list) <- paste0("t", truncation_distances)
+# names(summary_list) <- paste0("t", truncation_distances)
 
 
 
 
 
-# Extracting results statistics
+# # Extracting results statistics
 
-N <- unlist(lapply(summary_list, function(x) {
-  x@individuals$N$mean.Estimate
-}))
-n <- unlist(lapply(summary_list, function(x) {
-  x@individuals$summary$mean.n
-}))
-se <- unlist(lapply(summary_list, function(x) {
-  x@individuals$N$mean.se
-}))
-sd_N <- unlist(lapply(summary_list, function(x) {
-  x@individuals$N$sd.of.means
-}))
-bias <- unlist(lapply(summary_list, function(x) {
-  x@individuals$N$percent.bias
-}))
-RMSE <- unlist(lapply(summary_list, function(x) {
-  x@individuals$N$RMSE
-}))
-cov <- unlist(lapply(summary_list, function(x) {
-  x@individuals$N$CI.coverage.prob
-}))
+# N <- unlist(lapply(summary_list, function(x) {
+#   x@individuals$N$mean.Estimate
+# }))
+# n <- unlist(lapply(summary_list, function(x) {
+#   x@individuals$summary$mean.n
+# }))
+# se <- unlist(lapply(summary_list, function(x) {
+#   x@individuals$N$mean.se
+# }))
+# sd_N <- unlist(lapply(summary_list, function(x) {
+#   x@individuals$N$sd.of.means
+# }))
+# bias <- unlist(lapply(summary_list, function(x) {
+#   x@individuals$N$percent.bias
+# }))
+# RMSE <- unlist(lapply(summary_list, function(x) {
+#   x@individuals$N$RMSE
+# }))
+# cov <- unlist(lapply(summary_list, function(x) {
+#   x@individuals$N$CI.coverage.prob
+# }))
 
-sim_data <- data.frame(
-  trunc = truncation_distances,
-  n = round(n),
-  N = round(N),
-  se = round(se, 2),
-  sd.N = round(sd_N, 2),
-  bias = round(bias, 2),
-  RMSE = round(RMSE, 2),
-  cov = round(cov * 100, 1)
-)
+# sim_data <- data.frame(
+#   trunc = truncation_distances,
+#   n = round(n),
+#   N = round(N),
+#   se = round(se, 2),
+#   sd.N = round(sd_N, 2),
+#   bias = round(bias, 2),
+#   RMSE = round(RMSE, 2),
+#   cov = round(cov * 100, 1)
+# )
 
-kable(sim_data,
-  col.names = c("$Truncation$", "$mean\\ n$", "$mean\\ \\hat{N}$", "$mean\\ se$", "$SD(\\hat{N})$", "$\\% Bias$", "$RMSE$", "$\\%\\ CI\\ Coverage$"),
-  row.names = FALSE,
-  align = c("c", "c", "c", "c", "c", "c", "c", "c"),
-  caption = "Simulation Results for the simple half normal detection probability: The truncation distance, mean number of detections, mean estimated population size (N), mean standard error of $\\hat{N}$, the standard deviation of $\\hat{N}$, percentage bias, root mean squared error, percentage of times the true value of N was captured in the confidence intervals.",
-  table.placement = "!h",
-  format = "simple"
-)
+# kable(sim_data,
+#   col.names = c("$Truncation$", "$mean\\ n$", "$mean\\ \\hat{N}$", "$mean\\ se$", "$SD(\\hat{N})$", "$\\% Bias$", "$RMSE$", "$\\%\\ CI\\ Coverage$"),
+#   row.names = FALSE,
+#   align = c("c", "c", "c", "c", "c", "c", "c", "c"),
+#   caption = "Simulation Results for the simple half normal detection probability: The truncation distance, mean number of detections, mean estimated population size (N), mean standard error of $\\hat{N}$, the standard deviation of $\\hat{N}$, percentage bias, root mean squared error, percentage of times the true value of N was captured in the confidence intervals.",
+#   table.placement = "!h",
+#   format = "simple"
+# )

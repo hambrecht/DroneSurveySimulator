@@ -12,6 +12,8 @@ execute:
 
 ```{r}
 # Load necessary library
+library(here)
+library(knitr)
 library(ggplot2)
 
 # Extract key metrics from each simulation summary
@@ -34,9 +36,14 @@ extract_metrics <- function(sim) {
   )
 }
 ```
-
+Load data
 ```{r}
-# Display results
+inputFilePaths <- list.files(path = here("Output", "Simulation"), pattern = "\\.RData$", full.names = TRUE)
+load(file = inputFilePaths[1])
+```
+
+## Display results
+```{r}
 summary(sim_heli, description.summary = FALSE)
 summary(sim_sys, description.summary = FALSE)
 summary(sim_zig, description.summary = FALSE)
@@ -50,6 +57,7 @@ histogram.N.ests(sim_zig, xlim = c(7500, 11000))
 histogram.N.ests(sim_zagcom, xlim = c(7500, 11000))
 par(mfrow = c(1, 1))
 ```
+## comparison dataframe
 ```{r}
 # Extract metrics for each simulation
 metrics_heli <- extract_metrics(sim_heli)

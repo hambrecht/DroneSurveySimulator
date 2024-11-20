@@ -50,6 +50,32 @@ correct_degrees <- function(angle) {
   return(corrected_angle)
 }
 
+## design stats
+## For details see: https://examples.distancesampling.org/dssd-getting-started/GettingStarted-distill.html#appendix-trackline-and-cyclic-trackline-lengths
+## Line lenght = on effort line length
+## The trackline length is the sum of the lengths of the transects plus the off-effort transit time required to complete the survey from the beginning of the first transect to the end of the last transect. The off-effort transit distance is calculated as the crow flies and may be longer in reality if transit is required around lakes, islands or coastlines etc.
+## The cyclic trackline length is the trackline length plus the off-effort transit distance required to return from the end of the last transect to the beginning of the first transect.
+# Extract key metrics from each simulation summary
+extract_design_metrics <- function(design) {
+  list(
+    design_type = design@design,
+    mean_sampler_count = design@design.statistics$sampler.count[2],
+    mean_cover_area = design@design.statistics$cov.area[2],
+    mean_cover_percentage = design@design.statistics$p.cov.area[2],
+    mean_line_length = design@design.statistics$line.length[2],
+    mean_trackline = design@design.statistics$trackline[2],
+    mean_cyclic_trackline = design@design.statistics$cyclictrackline[2],
+    mean_on_effort = design@design.statistics$line.length[2],
+    mean_off_effort = design@design.statistics$trackline[2] - design@design.statistics$line.length[2],
+    mean_return2home = design@design.statistics$cyclictrackline[2] - design@design.statistics$trackline[2],
+    mean_off_effort_return_percentage = design@design.statistics$cyclictrackline[2] - design@design.statistics$line.length[2],
+    on_effort_percentage = (design@design.statistics$line.length[2] / design@design.statistics$cyclictrackline[2]) * 100,
+    off_effort_percentage = ((design@design.statistics$trackline[2] - design@design.statistics$line.length[2]) / design@design.statistics$cyclictrackline[2]) * 100,
+    return2home_percentage = ((design@design.statistics$cyclictrackline[2] - design@design.statistics$trackline[2]) / design@design.statistics$cyclictrackline[2]) * 100,
+    off_effort_return_percentage = ((design@design.statistics$cyclictrackline[2] - design@design.statistics$line.length[2]) / design@design.statistics$cyclictrackline[2]) * 100
+  )
+}
+
 # Function to find optimal polygon dimensions
 find_best_block_dim <- function(total_length, number_blocks, spacing) {
   block_length <- total_length / number_blocks
@@ -215,9 +241,13 @@ load(file = input_path)
 # Define constants
 ALTITUDE <- 120 # Height in meters
 CAMERA_HFOV <- 25 # Horizontal FOV in degrees. Max adjustment of 25 degrees. If more than 25 degrees then a third camera or gimbal would be needed to cover 0. Proposed intervals for adjustments are 0, 10, 20, 25
-CAMERA_ANGLE <- 0 # Adjustment in degrees; max 25 with two fix cameras or 35 with gimbal in forested
+CAMERA_ANGLE <- 35 # Adjustment in degrees; max 25 with two fix cameras or 35 with gimbal in forested
 IMAGE_WIDTH <- calculate_image_width(ALTITUDE, CAMERA_HFOV, CAMERA_ANGLE)
 print(paste0("Half swath width is: ", IMAGE_WIDTH, " m"))
+
+# Define cover grid spacing and repetition
+COV_SPACE = 500
+COV_REPS = 99
 
 # Calculate the angle of longest Dimension of WMU
 COORDS <- st_coordinates(region@region)[, 1:2]
@@ -236,19 +266,19 @@ pop_desc <- make.population.description(
 # Define and visualise detection function
 detect_hr_overview <- make.detectability(
   key.function = "hr",
-  scale.param = rep(150, 10),
-  shape.param = seq(0.1, 2, 0.2),
-  truncation = 600
+  scale.param = rep(200, 10),
+  shape.param = seq(0.1, 4, 0.4),
+  truncation = IMAGE_WIDTH
 )
 COLORS <- brewer.pal(10, "Paired")
 plot(detect_hr_overview, pop_desc, col = COLORS)
-legend(x = "topright", legend = seq(0.1, 2, 0.2), col = COLORS, lty = 1, cex = 0.8)
+legend(x = "topright", legend = seq(0.1, 4, 0.4), col = COLORS, lty = 1, cex = 0.8)
 
 detect_hr <- make.detectability(
   key.function = "hr",
-  scale.param = 150,
-  shape.param = 1.9,
-  truncation = 600
+  scale.param = 200,
+  shape.param = 3,
+  truncation = IMAGE_WIDTH
 )
 plot(detect_hr, pop_desc)
 
@@ -258,14 +288,14 @@ detect_uf <- make.detectability(
   scale.param = 0.9, # accounting for canopy cover
   truncation = IMAGE_WIDTH
 )
-plot(detect_uf, pop_desc)
+# plot(detect_uf, pop_desc)
 
 # create coverage grid
 cover <- make.coverage(region,
-  spacing = 1000
+  spacing = COV_SPACE # OR
   # n.grid.points = 1000
 )
-plot(region, cover)
+# plot(region, cover)
 
 detectF <- detect_hr
 
@@ -280,16 +310,16 @@ heli_design <- make.design(
   design.angle = correct_degrees(0), # align transect with north south
   seg.threshold = 10, # any segments less than 10% of the segment length (i.e. 1km) will be discarded.
   edge.protocol = "minus",
-  truncation = 600, # IMAGE_WIDTH
+  truncation = IMAGE_WIDTH, # IMAGE_WIDTH
   coverage.grid = cover
 )
 heli_transects <- generate.transects(heli_design)
-# plot(region, heli_transects, lwd = 0.5, col = 4)
+
 ### Coverage
 #### You can re-run the coverage simulation using the following code. Note, your
 #### results should vary slightly from mine, make sure you haven't set a seed!
-heli_design <- run.coverage(heli_design, reps = 10)
-# plot(heli_design)
+heli_design <- run.coverage(heli_design, reps = COV_REPS)
+plot(heli_design)
 
 ## Systematic design
 sys_design <- make.design(
@@ -297,17 +327,35 @@ sys_design <- make.design(
   transect.type = "line",
   design = "systematic",
   samplers = numeric(0), # OR
-  line.length = heli_transects@line.length, # OR
+  line.length = heli_design@design.statistics$line.length[2], # OR
   spacing = numeric(0),
   design.angle = correct_degrees(0),
   edge.protocol = "minus",
-  truncation = 600, # IMAGE_WIDTH
+  truncation = IMAGE_WIDTH, # IMAGE_WIDTH
   coverage.grid = cover
 )
 sys_transects <- generate.transects(sys_design)
-# plot(region, sys_transects, lwd = 0.5, col = 4)
-sys_design <- run.coverage(sys_design, reps = 10)
-# plot(sys_design)
+plot(region, sys_transects, lwd = 0.5, col = 4)
+sys_design <- run.coverage(sys_design, reps = COV_REPS)
+plot(sys_design)
+
+## Random design
+rnd_design <- make.design(
+  region = region,
+  transect.type = "line",
+  design = "random",
+  samplers = numeric(0), # OR
+  line.length = heli_design@design.statistics$line.length[2], # OR
+  spacing = numeric(0),
+  design.angle = correct_degrees(0),
+  edge.protocol = "minus",
+  truncation = IMAGE_WIDTH, # IMAGE_WIDTH
+  coverage.grid = cover
+)
+rnd_transects <- generate.transects(rnd_design)
+rnd_design <- run.coverage(rnd_design, reps = COV_REPS)
+plot(region, rnd_transects, lwd = 0.5, col = 4)
+plot(rnd_design)
 
 
 ## Zigzag design
@@ -316,19 +364,19 @@ zigzag_design <- make.design(
   transect.type = "line",
   design = "eszigzag",
   samplers = numeric(0), # OR
-  line.length = numeric(0), # OR
-  spacing = 1200,
+  line.length = heli_design@design.statistics$line.length[2], # OR
+  spacing = numeric(0),
   design.angle = TRANSECT_ANGLE, # The design angle for the zigzag designs refers to the angle of a line which would run through the middle of each zigzag transect if the zigzags were to be generated within a rectangle. The design angle for zigzags should usually run along the longest dimension of the study region.
   edge.protocol = "minus",
   bounding.shape = "convex.hull", # rectangle or convex.hull. convex hull is generally more efficient.
-  truncation = 600, # IMAGE_WIDTH
+  truncation = IMAGE_WIDTH, # IMAGE_WIDTH
   coverage.grid = cover
 )
 zigzag_transects <- generate.transects(zigzag_design)
-# plot(region, zigzag_transects, lwd = 0.5, col = 4)
+plot(region, zigzag_transects, lwd = 0.5, col = 4)
 ### Coverage
-zigzag_design <- run.coverage(zigzag_design, reps = 10)
-# plot(zigzag_design)
+zigzag_design <- run.coverage(zigzag_design, reps = COV_REPS)
+plot(zigzag_design)
 
 ## Zigzag with complementary line
 zigzagcom_design <- make.design(
@@ -336,19 +384,174 @@ zigzagcom_design <- make.design(
   transect.type = "line",
   design = "eszigzagcom", # eszigzag or eszigzagcom
   samplers = numeric(0), # OR
-  line.length = heli_transects@line.length, # OR
+  line.length = heli_design@design.statistics$line.length[2], # OR
   spacing = numeric(0),
   design.angle = TRANSECT_ANGLE,
   edge.protocol = "minus",
   bounding.shape = "convex.hull",
-  truncation = 600, # IMAGE_WIDTH
+  truncation = IMAGE_WIDTH, # IMAGE_WIDTH
   coverage.grid = cover
 )
 zigzagcom_transects <- generate.transects(zigzagcom_design)
-# plot(region, zigzagcom_transects, lwd = 0.5, col = 4)
+plot(region, zigzagcom_transects, lwd = 0.5, col = 4)
 ### Coverage
-zigzagcom_design <- run.coverage(zigzagcom_design, reps = 10)
-# plot(zigzagcom_design)
+zigzagcom_design <- run.coverage(zigzagcom_design, reps = COV_REPS)
+plot(zigzagcom_design)
+
+# Plot desings
+par(mfrow = c(2, 3))
+plot(region, heli_transects, lwd = 0.5, col = 4)
+plot(region, sys_transects, lwd = 0.5, col = 4)
+plot(region, rnd_transects, lwd = 0.5, col = 4)
+plot(region, zigzag_transects, lwd = 0.5, col = 4)
+plot(region, zigzagcom_transects, lwd = 0.5, col = 4)
+par(mfrow = c(1, 1))
+par(mfrow = c(2, 3))
+plot(heli_design)
+plot(sys_design)
+plot(rnd_design)
+plot(zigzag_design)
+plot(zigzagcom_design)
+par(mfrow = c(1, 1))
+
+## design stats
+## For details see: https://examples.distancesampling.org/dssd-getting-started/GettingStarted-distill.html#appendix-trackline-and-cyclic-trackline-lengths
+## Line lenght = on effort line length
+## The trackline length is the sum of the lengths of the transects plus the off-effort transit time required to complete the survey from the beginning of the first transect to the end of the last transect. The off-effort transit distance is calculated as the crow flies and may be longer in reality if transit is required around lakes, islands or coastlines etc.
+## The cyclic trackline length is the trackline length plus the off-effort transit distance required to return from the end of the last transect to the beginning of the first transect.
+# Extract key metrics from each simulation summary
+heli_design_metric <- extract_design_metrics(heli_design)
+sys_design_metric <- extract_design_metrics(sys_design)
+rnd_design_metric <- extract_design_metrics(rnd_design)
+zigzag_design_metric <- extract_design_metrics(zigzag_design)
+zigzagcom_design_metric <- extract_design_metrics(zigzagcom_design)
+
+# Combine metrics into a single dataframe
+design_comparison_df <- data.frame(
+  Simulation = c("Heli", "Sys", "Rnd", "Zig", "Zagcom"),
+  Design = c(
+    heli_design_metric$design_type, 
+    sys_design_metric$design_type, 
+    rnd_design_metric$design_type, 
+    zigzag_design_metric$design_type, 
+    zigzagcom_design_metric$design_type
+  ),
+  Mean_Sampler_Count = c(
+    heli_design_metric$mean_sampler_count, 
+    sys_design_metric$mean_sampler_count, 
+    rnd_design_metric$mean_sampler_count, 
+    zigzag_design_metric$mean_sampler_count, 
+    zigzagcom_design_metric$mean_sampler_count
+  ),
+  Mean_Cover_Area = c(
+    heli_design_metric$mean_cover_area, 
+    sys_design_metric$mean_cover_area, 
+    rnd_design_metric$mean_cover_area, 
+    zigzag_design_metric$mean_cover_area, 
+    zigzagcom_design_metric$mean_cover_area
+  ),
+  Mean_Cover_Percentage = c(
+    heli_design_metric$mean_cover_percentage, 
+    sys_design_metric$mean_cover_percentage, 
+    rnd_design_metric$mean_cover_percentage, 
+    zigzag_design_metric$mean_cover_percentage, 
+    zigzagcom_design_metric$mean_cover_percentage
+  ),
+  Mean_Line_Length = c(
+    heli_design_metric$mean_line_length, 
+    sys_design_metric$mean_line_length, 
+    rnd_design_metric$mean_line_length, 
+    zigzag_design_metric$mean_line_length, 
+    zigzagcom_design_metric$mean_line_length
+  ),
+  Mean_Trackline_Length = c(
+    heli_design_metric$mean_trackline, 
+    sys_design_metric$mean_trackline, 
+    rnd_design_metric$mean_trackline, 
+    zigzag_design_metric$mean_trackline, 
+    zigzagcom_design_metric$mean_trackline
+  ),
+  Mean_Cyclic_Trackline_Length = c(
+    heli_design_metric$mean_cyclic_trackline, 
+    sys_design_metric$mean_cyclic_trackline, 
+    rnd_design_metric$mean_cyclic_trackline, 
+    zigzag_design_metric$mean_cyclic_trackline, 
+    zigzagcom_design_metric$mean_cyclic_trackline
+  ),
+  Mean_On_Effort = c(
+    heli_design_metric$mean_on_effort, 
+    sys_design_metric$mean_on_effort, 
+    rnd_design_metric$mean_on_effort, 
+    zigzag_design_metric$mean_on_effort, 
+    zigzagcom_design_metric$mean_on_effort
+  ),
+  Mean_Off_Effort = c(
+    heli_design_metric$mean_off_effort, 
+    sys_design_metric$mean_off_effort, 
+    rnd_design_metric$mean_off_effort, 
+    zigzag_design_metric$mean_off_effort, 
+    zigzagcom_design_metric$mean_off_effort
+  ),
+  Mean_Return_to_Home = c(
+    heli_design_metric$mean_return2home, 
+    sys_design_metric$mean_return2home, 
+    rnd_design_metric$mean_return2home, 
+    zigzag_design_metric$mean_return2home, 
+    zigzagcom_design_metric$mean_return2home
+  ),
+  Mean_Off_Effort_Return = c(
+    heli_design_metric$mean_off_effort_return, 
+    sys_design_metric$mean_off_effort_return, 
+    rnd_design_metric$mean_off_effort_return, 
+    zigzag_design_metric$mean_off_effort_return, 
+    zigzagcom_design_metric$mean_off_effort_return
+  ),
+  On_Effort_Percentage = c(
+    heli_design_metric$on_effort_percentage, 
+    sys_design_metric$on_effort_percentage, 
+    rnd_design_metric$on_effort_percentage, 
+    zigzag_design_metric$on_effort_percentage, 
+    zigzagcom_design_metric$on_effort_percentage
+  ),
+  Off_Effort_Percentage = c(
+    heli_design_metric$off_effort_percentage, 
+    sys_design_metric$off_effort_percentage, 
+    rnd_design_metric$off_effort_percentage, 
+    zigzag_design_metric$off_effort_percentage, 
+    zigzagcom_design_metric$off_effort_percentage
+  ),
+  Return_to_Home_Percentage = c(
+    heli_design_metric$return2home_percentage, 
+    sys_design_metric$return2home_percentage, 
+    rnd_design_metric$return2home_percentage, 
+    zigzag_design_metric$return2home_percentage, 
+    zigzagcom_design_metric$return2home_percentage
+  ),
+  Off_Effort_Return_Percentage = c(
+    heli_design_metric$off_effort_return_percentage, 
+    sys_design_metric$off_effort_return_percentage, 
+    rnd_design_metric$off_effort_return_percentage, 
+    zigzag_design_metric$off_effort_return_percentage, 
+    zigzagcom_design_metric$off_effort_return_percentage
+  )
+)
+
+# Print the comparison dataframe
+# print(comparison_df)
+kable(design_comparison_df)
+
+# Save simulation data
+output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number,".RData"))
+# output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
+save(heli_design, sys_design, rnd_design, zigzag_design, zigzagcom_design, heli_transects,sys_transects,rnd_transects,zigzag_transects, zigzagcom_transects, design_comparison_df, file = output_path)
+
+
+heli_design
+slotNames(zigzag_design)
+zigzag_design@design
+zigzag_design
+zigzagcom_design
+
 
 
 
@@ -358,13 +561,13 @@ zigzagcom_design <- run.coverage(zigzagcom_design, reps = 10)
 #   dfmodel = ~1,
 #   key = "hn",
 #   criteria = "AIC",
-#   truncation = 600
+#   truncation = IMAGE_WIDTH
 # )
 ddf_analyses <- make.ds.analysis(
   dfmodel = list(~1, ~1),
   key = c("hn", "hr"),
   criteria = "AIC",
-  truncation = 600
+  truncation = IMAGE_WIDTH
 )
 
 
@@ -377,6 +580,8 @@ sim_heli <- make.simulation(
   detectability = detectF,
   ds.analysis = ddf_analyses
 )
+
+sim_heli@design <- subplots_design
 sim_sys <- make.simulation(
   reps = 999,
   design = sys_design,
@@ -418,14 +623,14 @@ sim_zig <- run.simulation(simulation = sim_zig, run.parallel = T)
 sim_zagcom <- run.simulation(simulation = sim_zagcom, run.parallel = T)
 
 # Save simulation data
-# output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"-DF", detectF@key.function, ".RData"))
-output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
+output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"-DF", detectF@key.function, ".RData"))
+# output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
 save(sim_heli, sim_sys, sim_zig, sim_zagcom, file = output_path)
 
 # output_path <- here("Output", "Simulation")
 # # save.sim.results(sim_heli, output_path)
 
-# # Display results
+# Display results
 # summary(sim_heli, description.summary = FALSE)
 # summary(sim_sys, description.summary = FALSE)
 # summary(sim_zig, description.summary = FALSE)

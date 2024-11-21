@@ -17,6 +17,11 @@ Output/*
 /Output
 /Output/
 /Output/*
+libs/
+libs/*
+/libs
+/libs/
+/libs/*
 
 # Example code in package build process
 *-Ex.R

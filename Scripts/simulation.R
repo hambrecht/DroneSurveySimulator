@@ -234,7 +234,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "528") #' 517'
-wmu_number <- wmu_number_list[1]
+wmu_number <- wmu_number_list[4]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 
@@ -544,15 +544,6 @@ kable(design_comparison_df)
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number,".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
 save(heli_design, sys_design, rnd_design, zigzag_design, zigzagcom_design, heli_transects,sys_transects,rnd_transects,zigzag_transects, zigzagcom_transects, design_comparison_df, file = output_path)
-
-
-heli_design
-slotNames(zigzag_design)
-zigzag_design@design
-zigzag_design
-zigzagcom_design
-
-
 
 
 

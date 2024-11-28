@@ -28,6 +28,19 @@ heli_design <- make.design(
 )
 heli_transects <- generate.transects(heli_design)
 
+drone_design <- make.design(
+  region = region,
+  transect.type = "line",
+  design = "segmentedgrid",
+  spacing = 2, # segments seperated by 200m
+  seg.length = 20, # segements of 1km
+  design.angle = 0, # align transect with north south
+  seg.threshold = 10, # any segments less than 10% of the segment length (i.e. 1km) will be discarded.
+  edge.protocol = "minus",
+  truncation = 0.5, # IMAGE_WIDTH
+)
+drone_transects <- generate.transects(drone_design)
+
 ## Systematic design
 sys_design <- make.design(
   region = region,
@@ -95,15 +108,17 @@ zigzagcom_transects <- generate.transects(zigzagcom_design)
 
 
 # Plot desings
-par(mfrow = c(2, 3))
+par(mfrow = c(3, 3))
 plot(region, heli_transects, lwd = 1, col = 4)
+plot(region, drone_transects, lwd = 1, col = 4)
 plot(region, sys_transects, lwd = 1, col = 4)
 plot(region, rnd_transects, lwd = 1, col = 4)
 plot(region, zigzag_transects, lwd = 1, col = 4)
 plot(region, zigzagcom_transects, lwd = 1, col = 4)
 par(mfrow = c(1, 1))
-par(mfrow = c(2, 3))
+par(mfrow = c(3, 3))
 plot(heli_design)
+plot(drone_design)
 plot(sys_design)
 plot(rnd_design)
 plot(zigzag_design)

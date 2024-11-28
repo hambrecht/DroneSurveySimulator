@@ -90,7 +90,19 @@ merged_df <- merged_df %>% arrange(Simulation)
 kable(merged_df)
 
 
+# Calculate statistics for Mean_Cyclic_Trackline_Length grouped by Design
+statistics <- merged_df %>%
+  group_by(Design) %>%
+  summarise(
+    mean_cyclic_trackline_length = mean(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
+    sd_cyclic_trackline_length = sd(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
+    min_cyclic_trackline_length = min(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
+    max_cyclic_trackline_length = max(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
+    n = n()
+  )
 
+# Print the statistics
+kable(statistics)
 
 
 # Select the relevant columns

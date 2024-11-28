@@ -6,6 +6,9 @@ library(RColorBrewer)
 library(dplyr)
 library(sf)
 library(units)
+library(geosphere)
+
+#TODO: try replicate https://github.com/DistanceDevelopment/dsims/issues/76
 
 # # Check if pbapply is installed
 # if (!requireNamespace("pbapply", quietly = TRUE)) {
@@ -147,9 +150,52 @@ place_polygons <- function(N, x, y, area, buffer_distance) {
   sf_polygons
 }
 
-
-
-
+create_sf_polygons <- function(center_points, x_dim, y_dim) {
+  # Extract CRS from the center points
+  crs <- st_crs(center_points)
+  
+  # Function to create a single polygon
+  create_polygon <- function(center, x_dim, y_dim) {
+    x_center <- st_coordinates(center)[1]
+    y_center <- st_coordinates(center)[2]
+    
+    # Define the vertices of the rectangle
+    vertices <- matrix(c(
+      x_center - x_dim / 2, y_center - y_dim / 2,
+      x_center + x_dim / 2, y_center - y_dim / 2,
+      x_center + x_dim / 2, y_center + y_dim / 2,
+      x_center - x_dim / 2, y_center + y_dim / 2,
+      x_center - x_dim / 2, y_center - y_dim / 2
+    ), ncol = 2, byrow = TRUE)
+    
+    # Create the polygon
+    st_polygon(list(vertices))
+  }
+  
+  # Create polygons for each center point
+  polygons <- lapply(1:nrow(center_points), function(i) {
+    create_polygon(center_points[i, ], x_dim, y_dim)
+  })
+  
+   # Generate chess-like IDs
+  generate_id <- function(index) {
+    row <- ceiling(index / 8)
+    col <- index %% 8
+    if (col == 0) col <- 8
+    paste0(LETTERS[row], col)
+  }
+  
+  ids <- sapply(1:nrow(center_points), generate_id)
+  
+  # Combine polygons into an sf object and add IDs
+  sf_polygons <- st_sf(
+    geometry = st_sfc(polygons),
+    crs = crs,
+    ID = ids
+  )
+  
+  sf_polygons
+}
 
 # Function to calculate distance between two points
 distance <- function(p1, p2) {
@@ -208,7 +254,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "528") #' 517'
-wmu_number <- wmu_number_list[1]
+wmu_number <- wmu_number_list[2]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 
@@ -232,6 +278,7 @@ pop_desc <- make.population.description(
   N = total_abundance,
   fixed.N = T
 )
+
 
 # Define and visualise detection function
 detect_hr_overview <- make.detectability(
@@ -260,15 +307,18 @@ detect_uf <- make.detectability(
 )
 plot(detect_uf, pop_desc)
 
+detectF <- detect_uf
+
+# Create example population
+example_population <- generate.population(object = pop_desc, detectability = detect_uf, region = region)
+plot(example_population, region)
+
 # create coverage grid
 cover <- make.coverage(region,
   spacing = 1000
   # n.grid.points = 1000
 )
 plot(region, cover)
-
-detectF <- detect_hr
-
 
 # subsample design
 
@@ -287,77 +337,102 @@ example_design <- make.design(
 example_transects <- generate.transects(example_design)
 # retrieve individuals from helisurvey within suplots to det
 # Define parameters
-total_length <- example_transects@trackline/2
-number_blocks <- 2
-spacing <- 500
+total_length <- example_transects@line.length
+number_blocks <- round(total_length/26000)
+spacing <- 200
 
-best_block_dim <- find_best_block_dim(total_length, number_blocks, spacing)
-print(best_block_dim)
-polygons <- place_polygons(number_blocks, best_block_dim$x_length, best_block_dim$y_length, wmu, buffer_distance = 100)
+
+region@area> (2000*2500*number_blocks)
+# best_block_dim <- find_best_block_dim(total_length, number_blocks, spacing)
+# print(best_block_dim)
+# polygons <- place_polygons(number_blocks, best_block_dim$x_length, best_block_dim$y_length, wmu, buffer_distance = 100)
+# polygons <- place_polygons(number_blocks, 2500, 2000, wmu, buffer_distance = 100)
+# create coverage grid
+grid_center <- make.coverage(region,
+  # spacing = 1000
+  n.grid.points = number_blocks
+)
+plot(region, grid_center)
+grid_center@grid <- grid_center@grid %>% select(-coverage.scores)
+
+
+# Assuming `polygon` is your sf polygon and `points` is your sf points
+
+# Step 1: Create a buffer around the polygon boundary
+buffer_1000m <- st_buffer(region@region, dist = -1001)
+
+rm(points_within_1000m)
+# Step 2: Identify points within 1000 meters of the boundary
+selection_index <- st_disjoint(grid_center@grid, buffer_1000m, sparse = FALSE)
+points_within_1000m <- grid_center@grid[selection_index,]
+
+# Step 3: Find the nearest points on the polygon for each point in the grid
+nearest_lines <- st_nearest_points(points_within_1000m, buffer_1000m)
+nearest_points <- st_cast(nearest_lines, "POINT")
+new_coords <- st_coordinates(nearest_points[seq(2,length(nearest_points),2)])
+
+# Step 3: Replace the coordinates in points1 with the new coordinates
+st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(1:nrow(points_within_1000m), function(i) st_point(new_coords[i, ])))
+
+
+polygons <- create_sf_polygons(grid_center@grid, 2500, 2000)
+
 plot(st_geometry(wmu))
 plot(polygons[1], add = TRUE, col = "red")
 
 subplots <- make.region(
   region.name = "study area",
   shape = polygons,
-  strata.name = polygons$id
+  strata.name = polygons$ID
 )
 
 plot(subplots)
 
-ddf_analyses <- make.ds.analysis(
-  dfmodel = list(~1, ~1),
-  key = c("hn", "hr"),
-  criteria = "AIC",
-  truncation = IMAGE_WIDTH
-)
-
-
-
-example_sim <- make.simulation(
-  reps = 999,
-  design = example_design,
-  population.description = pop_desc,
-  detectability = detect_uf,
-  ds.analysis = ddf_analyses
-)
-
-
-example_survey <- run.survey(example_sim)
 
 # termine abundance in each subplot
 # Convert points dataframe to sf object
-points_sf <- st_as_sf(example_survey@population@population, coords = c("x", "y"), crs = st_crs(polygons))
+points_sf <- st_as_sf(example_population@population, coords = c("x", "y"), crs = st_crs(polygons))
 
 # Perform spatial join to count points within each polygon
 points_within_polygons <- st_join(points_sf, polygons, join = st_within)
 
 # Count the number of points in each polygon
 points_count <- points_within_polygons %>%
-  group_by(id) %>%  # Replace `id` with the actual column name identifying polygons
+  group_by(ID) %>%  # Replace `id` with the actual column name identifying polygons
   summarise(count = n()) %>%
-  filter(!is.na(id))  # Remove rows with NA in the id column
+  filter(!is.na(ID))  # Remove rows with NA in the id column
 
 # View the result
 print(points_count)
 points_count$count
 
+empty_density <- make.density(region = subplots, x.space = 500, constant = 0.001)
+plot(empty_density, region)
 
+sub_density <- density
+sub_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], subplots@region)
+sub_density@region.name <- subplots@region.name
+sub_density@strata.name <- subplots@strata.name
+sub_density@density.surface[[1]] <- sub_density@density.surface[[1]] %>%
+  mutate(strata = ID) %>%
+  select(-ID)
+
+plot(sub_density, region)
 
 # Create subpopulation description
 sub_pop_desc <- make.population.description(
   region = subplots,
-  density = density,
-  N = points_count$count/2,
+  density = sub_density,
+  N = points_count$count,
   fixed.N = TRUE
 )
 
-# create coverage grid
-sub_cover <- make.coverage(subplots,
-  spacing = 1000
-  # n.grid.points = 1000
-)
-plot(subplots, sub_cover)
+# # create coverage grid
+# sub_cover <- make.coverage(subplots,
+#   spacing = 1000
+#   # n.grid.points = 1000
+# )
+# plot(subplots, sub_cover)
 
 ## Systematic subplot design
 subplots_design <- make.design(
@@ -367,19 +442,19 @@ subplots_design <- make.design(
   samplers = numeric(0), # OR
   line.length = numeric(0), # OR
   spacing = spacing,
-  design.angle = c(0,0), #correct_degrees(polygons$angle)
+  design.angle = 0,
   edge.protocol = "minus",
   truncation = IMAGE_WIDTH, # IMAGE_WIDTH
-  # coverage.grid = sub_cover
+  # coverage.grid = cover
 )
 
 subplots_transects <- generate.transects(subplots_design)
 plot(region, subplots_transects, lwd = 0.5, col = 4)
-subplots_design <- run.coverage(subplots_design, reps = 10)
-plot(subplots_design)
+# subplots_design <- run.coverage(subplots_design, reps = 10)
+# plot(subplots_design)
 
 ddf_analyses_sub <- make.ds.analysis(
-  dfmodel = list(~1, ~1),
+  dfmodel = ~1,
   key = c("hn", "hr"),
   criteria = "AIC",
   truncation =  IMAGE_WIDTH,
@@ -388,21 +463,22 @@ ddf_analyses_sub <- make.ds.analysis(
 
 # subplots
 sim_sub <- make.simulation(
-  reps = 99999,
+  reps = 999,
   design = subplots_design,
   population.description = sub_pop_desc,
   detectability = detect_uf,
   ds.analysis = ddf_analyses_sub
 )
  # survey
-
+slotNames(sim_sub)
+sim_sub@design
 summary(sim_sub, use.max.reps = TRUE, description.summary = FALSE)
 sub_survey <- run.survey(sim_sub)
 sub_survey
 plot(sub_survey, subplots)
 
 # Run the full simulation
-sim_sub <- run.simulation(simulation = sim_sub, run.parallel = T)
+sim_sub <- run.simulation(simulation = sim_sub, run.parallel = TRUE)
 
 # Results
 summary(sim_sub)

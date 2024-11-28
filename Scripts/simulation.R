@@ -241,7 +241,7 @@ load(file = input_path)
 # Define constants
 ALTITUDE <- 120 # Height in meters
 CAMERA_HFOV <- 25 # Horizontal FOV in degrees. Max adjustment of 25 degrees. If more than 25 degrees then a third camera or gimbal would be needed to cover 0. Proposed intervals for adjustments are 0, 10, 20, 25
-CAMERA_ANGLE <- 35 # Adjustment in degrees; max 25 with two fix cameras or 35 with gimbal in forested
+CAMERA_ANGLE <- 25 # Adjustment in degrees; max 25 with two fix cameras or 35 with gimbal in forested
 IMAGE_WIDTH <- calculate_image_width(ALTITUDE, CAMERA_HFOV, CAMERA_ANGLE)
 print(paste0("Half swath width is: ", IMAGE_WIDTH, " m"))
 
@@ -276,19 +276,19 @@ legend(x = "topright", legend = seq(0.1, 4, 0.4), col = COLORS, lty = 1, cex = 0
 
 detect_hr <- make.detectability(
   key.function = "hr",
-  scale.param = 200,
-  shape.param = 3,
-  truncation = IMAGE_WIDTH
+  scale.param = 100, # heli:50
+  shape.param = 3, # heli:2
+  truncation = IMAGE_WIDTH # heli:20
 )
-plot(detect_hr, pop_desc)
+plot(detect_hr, pop_desc, legend= FALSE)
 
 # Define and visualise uniform detection function
 detect_uf <- make.detectability(
   key.function = "uf",
-  scale.param = 0.9, # accounting for canopy cover
+  scale.param = 0.8, # accounting for canopy cover
   truncation = IMAGE_WIDTH
 )
-# plot(detect_uf, pop_desc)
+plot(detect_uf, pop_desc)
 
 # create coverage grid
 cover <- make.coverage(region,
@@ -298,7 +298,7 @@ cover <- make.coverage(region,
 # plot(region, cover)
 
 detectF <- detect_hr
-
+COV_REPS <- 10
 # Define survey design
 ## Helicopter design
 heli_design <- make.design(
@@ -315,11 +315,12 @@ heli_design <- make.design(
 )
 heli_transects <- generate.transects(heli_design)
 
+
 ### Coverage
 #### You can re-run the coverage simulation using the following code. Note, your
 #### results should vary slightly from mine, make sure you haven't set a seed!
 heli_design <- run.coverage(heli_design, reps = COV_REPS)
-plot(heli_design)
+
 
 ## Systematic design
 sys_design <- make.design(
@@ -335,9 +336,9 @@ sys_design <- make.design(
   coverage.grid = cover
 )
 sys_transects <- generate.transects(sys_design)
-plot(region, sys_transects, lwd = 0.5, col = 4)
+
 sys_design <- run.coverage(sys_design, reps = COV_REPS)
-plot(sys_design)
+
 
 ## Random design
 rnd_design <- make.design(
@@ -354,8 +355,7 @@ rnd_design <- make.design(
 )
 rnd_transects <- generate.transects(rnd_design)
 rnd_design <- run.coverage(rnd_design, reps = COV_REPS)
-plot(region, rnd_transects, lwd = 0.5, col = 4)
-plot(rnd_design)
+
 
 
 ## Zigzag design
@@ -373,10 +373,10 @@ zigzag_design <- make.design(
   coverage.grid = cover
 )
 zigzag_transects <- generate.transects(zigzag_design)
-plot(region, zigzag_transects, lwd = 0.5, col = 4)
+
 ### Coverage
 zigzag_design <- run.coverage(zigzag_design, reps = COV_REPS)
-plot(zigzag_design)
+
 
 ## Zigzag with complementary line
 zigzagcom_design <- make.design(
@@ -393,10 +393,9 @@ zigzagcom_design <- make.design(
   coverage.grid = cover
 )
 zigzagcom_transects <- generate.transects(zigzagcom_design)
-plot(region, zigzagcom_transects, lwd = 0.5, col = 4)
 ### Coverage
 zigzagcom_design <- run.coverage(zigzagcom_design, reps = COV_REPS)
-plot(zigzagcom_design)
+
 
 # Plot desings
 par(mfrow = c(2, 3))

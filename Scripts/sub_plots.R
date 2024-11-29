@@ -481,6 +481,7 @@ plot(sub_survey, subplots)
 sim_sub <- run.simulation(simulation = sim_sub, run.parallel = TRUE)
 
 # Results
-summary(sim_sub)
+summary(sim_sub, description.summary = FALSE)
 histogram.N.ests(sim_sub, xlim = c(7500, 9500))
-
+histogram.N.ests(sim_sub)
+sum(points_count$count)

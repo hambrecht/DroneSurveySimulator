@@ -8,7 +8,6 @@ library(sf)
 library(units)
 library(geosphere)
 
-#TODO: try replicate https://github.com/DistanceDevelopment/dsims/issues/76
 
 # # Check if pbapply is installed
 # if (!requireNamespace("pbapply", quietly = TRUE)) {
@@ -346,7 +345,6 @@ region@area> (2000*2500*number_blocks)
 # best_block_dim <- find_best_block_dim(total_length, number_blocks, spacing)
 # print(best_block_dim)
 # polygons <- place_polygons(number_blocks, best_block_dim$x_length, best_block_dim$y_length, wmu, buffer_distance = 100)
-# polygons <- place_polygons(number_blocks, 2500, 2000, wmu, buffer_distance = 100)
 # create coverage grid
 grid_center <- make.coverage(region,
   # spacing = 1000
@@ -406,8 +404,6 @@ points_count <- points_within_polygons %>%
 print(points_count)
 points_count$count
 
-empty_density <- make.density(region = subplots, x.space = 500, constant = 0.001)
-plot(empty_density, region)
 
 sub_density <- density
 sub_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], subplots@region)

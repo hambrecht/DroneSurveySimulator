@@ -152,12 +152,18 @@ check_overlap <- function(polygon, existing_polygons) {
 }
 
 # Function to place N polygons within the area
-place_polygons <- function(N, x, y, area, buffer_distance) {
+place_polygons <- function(N, x, y, area, buffer_distance, max_attempts = 1000) {
   polygons <- list()
   angles <- numeric(N)
   crs <- st_crs(area)
   for (i in 1:N) {
+    attempts <- 0
     repeat {
+      attempts <- attempts + 1
+      if (attempts > max_attempts) {
+        warning(paste("Maximum attempts reached for polygon", i))
+        break
+      }
       result <- generate_random_polygon(x, y, crs, area)
       polygon <- result$polygon
       angle <- result$angle
@@ -281,7 +287,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "528") #' 517'
-wmu_number <- wmu_number_list[1]
+wmu_number <- wmu_number_list[2]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 

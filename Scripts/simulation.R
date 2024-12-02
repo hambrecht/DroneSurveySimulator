@@ -170,7 +170,7 @@ place_polygons <- function(N, x, y, area, buffer_distance) {
   }
   sf_polygons <- st_sf(geometry = do.call(c, polygons), crs = crs)
   sf_polygons$angle <- angles
-  sf_polygons$id <- LETTERS[1:N]
+  sf_polygons$ID <- LETTERS[1:N]
   sf_polygons
 }
 
@@ -293,8 +293,8 @@ IMAGE_WIDTH <- calculate_image_width(ALTITUDE, CAMERA_HFOV, CAMERA_ANGLE)
 print(paste0("Half swath width is: ", IMAGE_WIDTH, " m"))
 
 # Define cover grid spacing and repetition
-COV_SPACE = 500
-COV_REPS = 99
+COV_SPACE = 1000
+COV_REPS = 10
 
 # Calculate the angle of longest Dimension of WMU
 COORDS <- st_coordinates(region@region)[, 1:2]
@@ -338,7 +338,7 @@ detect_uf <- make.detectability(
 plot(detect_uf, pop_desc)
 
 # Set detection function for simulation
-detectF <- detect_hr
+detectF <- detect_uf
 
 # create coverage grid
 cover <- make.coverage(region,
@@ -449,16 +449,15 @@ zigzagcom_design <- run.coverage(zigzagcom_design, reps = COV_REPS)
 # Drone survey designs
 ## Fix-wing
 # Compute polygon dimensions
-number_blocks <- round(total_length/367200)
+number_blocks <- round(total_length/367200) # 367.2km is the total distance superwake can fly, assuming a speed of 17m/s and a flight time of 6h.
 spacing <- 500
 poly_dim <- find_best_block_dim(total_length, number_blocks, spacing)
 
 # Checking that blocks fit within region
-region@area> (poly_dim[2]*poly_dim[3]*number_blocks)
-
-# Create polygons
-fixW_poly <- place_polygons(number_blocks, best_block_dim$x_length, best_block_dim$y_length, wmu, buffer_distance = 100)
-
+if(region@area> (poly_dim[2]*poly_dim[3]*number_blocks)){
+  # Create polygons
+  fixW_poly <- place_polygons(number_blocks, poly_dim$x_length, poly_dim$y_length, wmu, buffer_distance = 100)
+}
 # create subplot region
 fixW_plots <- make.region(
   region.name = "study area",
@@ -467,22 +466,40 @@ fixW_plots <- make.region(
 )
 
 # plot(fixW_plots)
-# create flight lines withing fixed wing
-fixW_design <- make.design(
+# create systematic flight lines withing fixed wing
+fixW_sys_design <- make.design(
   region = fixW_plots,
   transect.type = "line",
   design = "systematic",
   samplers = numeric(0), # OR
-  line.length = (total_length/length(fixW_plots@strata.name))*fixW_plots@strata.name, # OR
+  line.length = rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)), # OR
   spacing = numeric(0),
   design.angle = 0,
   edge.protocol = "minus",
   truncation = IMAGE_WIDTH, # IMAGE_WIDTH
   coverage.grid = cover
 )
-fixW_transects <- generate.transects(fixW_design)
+fixW_sys_transects <- generate.transects(fixW_sys_design)
 ### Coverage
-fixW_design <- run.coverage(fixW_design, reps = COV_REPS)
+fixW_sys_design <- run.coverage(fixW_sys_design, reps = COV_REPS)
+
+# Fixed wing zigzag flights
+fixW_zigzag_design <- make.design(
+  region = fixW_plots,
+  transect.type = "line",
+  design = "eszigzag",
+  samplers = numeric(0), # OR
+  line.length = rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)), # OR
+  spacing = numeric(0),
+  design.angle = 0,
+  edge.protocol = "minus",
+  truncation = IMAGE_WIDTH, # IMAGE_WIDTH
+  coverage.grid = cover
+)
+fixW_zigzag_transects <- generate.transects(fixW_zigzag_design)
+### Coverage
+fixW_zigzag_design <- run.coverage(fixW_zigzag_design, reps = COV_REPS)
+
 
 
 ## Quadcopter
@@ -558,7 +575,8 @@ plot(region, sys_transects, lwd = 0.5, col = 4)
 plot(region, rnd_transects, lwd = 0.5, col = 4)
 plot(region, zigzag_transects, lwd = 0.5, col = 4)
 plot(region, zigzagcom_transects, lwd = 0.5, col = 4)
-plot(region, fixW_transects, lwd = 0.5, col = 4)
+plot(region, fixW_sys_transects, lwd = 0.5, col = 4)
+plot(region, fixW_zigzag_transects, lwd = 0.5, col = 4)
 plot(region, quadcopter_transects, lwd = 0.5, col = 4)
 par(mfrow = c(1, 1))
 par(mfrow = c(2, 3))
@@ -567,7 +585,8 @@ plot(sys_design)
 plot(rnd_design)
 plot(zigzag_design)
 plot(zigzagcom_design)
-plot(fixW_design)
+plot(fixW_sys_design)
+plot(fixW_zigzag_design)
 plot(quadcopter_design)
 par(mfrow = c(1, 1))
 
@@ -582,7 +601,8 @@ sys_design_metric <- extract_design_metrics(sys_design)
 rnd_design_metric <- extract_design_metrics(rnd_design)
 zigzag_design_metric <- extract_design_metrics(zigzag_design)
 zigzagcom_design_metric <- extract_design_metrics(zigzagcom_design)
-fixW_design_metric <- extract_design_metrics(fixW_design)
+fixW_sys_design_metric <- extract_design_metrics(fixW_sys_design)
+fixW_zigzag_design_metric <- extract_design_metrics(fixW_zigzag_design)
 quadcopter_design_metric <- extract_design_metrics(quadcopter_design)
 
 # Combine metrics into a single dataframe
@@ -594,7 +614,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$design_type, 
     zigzag_design_metric$design_type, 
     zigzagcom_design_metric$design_type,
-    fixW_design_metric$design_type,
+    fixW_sys_design_metric$design_type,
+    fixW_zigzag_design$design_type,
     quadcopter_design_metric$design_type
   ),
   Mean_Sampler_Count = c(
@@ -603,7 +624,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_sampler_count, 
     zigzag_design_metric$mean_sampler_count, 
     zigzagcom_design_metric$mean_sampler_count,
-    fixW_design_metric$mean_sampler_count,
+    fixW_sys_design_metric$mean_sampler_count,
+    fixW_zigzag_design$mean_sampler_count,
     quadcopter_design_metric$mean_sampler_count
   ),
   Mean_Cover_Area = c(
@@ -612,7 +634,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_cover_area, 
     zigzag_design_metric$mean_cover_area, 
     zigzagcom_design_metric$mean_cover_area,
-    fixW_design_metric$mean_cover_area,
+    fixW_sys_design_metric$mean_cover_area,
+    fixW_zigzag_design$mean_cover_area,
     quadcopter_design_metric$mean_cover_area
   ),
   Mean_Cover_Percentage = c(
@@ -621,7 +644,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_cover_percentage, 
     zigzag_design_metric$mean_cover_percentage, 
     zigzagcom_design_metric$mean_cover_percentage,
-    fixW_design_metric$mean_cover_percentage,
+    fixW_sys_design_metric$mean_cover_percentage,
+    fixW_zigzag_design$mean_cover_percentage,
     quadcopter_design_metric$mean_cover_percentage
   ),
   Mean_Line_Length = c(
@@ -630,7 +654,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_line_length, 
     zigzag_design_metric$mean_line_length, 
     zigzagcom_design_metric$mean_line_length,
-    fixW_design_metric$mean_line_length,
+    fixW_sys_design_metric$mean_line_length,
+    fixW_zigzag_design$mean_line_length,
     quadcopter_design_metric$mean_line_length
   ),
   Mean_Trackline_Length = c(
@@ -639,7 +664,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_trackline, 
     zigzag_design_metric$mean_trackline, 
     zigzagcom_design_metric$mean_trackline,
-    fixW_design_metric$mean_trackline,
+    fixW_sys_design_metric$mean_trackline,
+    fixW_zigzag_design$mean_trackline,
     quadcopter_design_metric$mean_trackline
   ),
   Mean_Cyclic_Trackline_Length = c(
@@ -648,7 +674,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_cyclic_trackline, 
     zigzag_design_metric$mean_cyclic_trackline, 
     zigzagcom_design_metric$mean_cyclic_trackline,
-    fixW_design_metric$mean_cyclic_trackline,
+    fixW_sys_design_metric$mean_cyclic_trackline,
+    fixW_zigzag_design$mean_cyclic_trackline,
     quadcopter_design_metric$mean_cyclic_trackline
   ),
   Mean_On_Effort = c(
@@ -657,8 +684,9 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_on_effort, 
     zigzag_design_metric$mean_on_effort, 
     zigzagcom_design_metric$mean_on_effort,
-    fixW_design_metric$desimean_on_effortgn_type,
-    quadcopter_design_metric$desimean_on_effortgn_type
+    fixW_sys_design_metric$mean_on_effort,
+    fixW_zigzag_design$mean_on_effort,
+    quadcopter_design_metric$mean_on_effort
   ),
   Mean_Off_Effort = c(
     heli_design_metric$mean_off_effort, 
@@ -666,7 +694,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_off_effort, 
     zigzag_design_metric$mean_off_effort, 
     zigzagcom_design_metric$mean_off_effort,
-    fixW_design_metric$mean_off_effort,
+    fixW_sys_design_metric$mean_off_effort,
+    fixW_zigzag_design$mean_off_effort,
     quadcopter_design_metric$mean_off_effort
   ),
   Mean_Return_to_Home = c(
@@ -675,7 +704,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_return2home, 
     zigzag_design_metric$mean_return2home, 
     zigzagcom_design_metric$mean_return2home,
-    fixW_design_metric$mean_return2home,
+    fixW_sys_design_metric$mean_return2home,
+    fixW_zigzag_design$mean_return2home,
     quadcopter_design_metric$mean_return2home
   ),
   Mean_Off_Effort_Return = c(
@@ -684,7 +714,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_off_effort_return, 
     zigzag_design_metric$mean_off_effort_return, 
     zigzagcom_design_metric$mean_off_effort_return,
-    fixW_design_metric$mean_off_effort_return,
+    fixW_sys_design_metric$mean_off_effort_return,
+    fixW_zigzag_design$mean_off_effort_return,
     quadcopter_design_metric$mean_off_effort_return
   ),
   On_Effort_Percentage = c(
@@ -693,7 +724,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$on_effort_percentage, 
     zigzag_design_metric$on_effort_percentage, 
     zigzagcom_design_metric$on_effort_percentage,
-    fixW_design_metric$on_effort_percentage,
+    fixW_sys_design_metric$on_effort_percentage,
+    fixW_zigzag_design$on_effort_percentage,
     quadcopter_design_metric$on_effort_percentage
   ),
   Off_Effort_Percentage = c(
@@ -702,7 +734,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$off_effort_percentage, 
     zigzag_design_metric$off_effort_percentage, 
     zigzagcom_design_metric$off_effort_percentage,
-    fixW_design_metric$off_effort_percentage,
+    fixW_sys_design_metric$off_effort_percentage,
+    fixW_zigzag_design$off_effort_percentage,
     quadcopter_design_metric$off_effort_percentage
   ),
   Return_to_Home_Percentage = c(
@@ -711,7 +744,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$return2home_percentage, 
     zigzag_design_metric$return2home_percentage, 
     zigzagcom_design_metric$return2home_percentage,
-    fixW_design_metric$return2home_percentage,
+    fixW_sys_design_metric$return2home_percentage,
+    fixW_zigzag_design$return2home_percentage,
     quadcopter_design_metric$return2home_percentage
   ),
   Off_Effort_Return_Percentage = c(
@@ -720,7 +754,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$off_effort_return_percentage, 
     zigzag_design_metric$off_effort_return_percentage, 
     zigzagcom_design_metric$off_effort_return_percentage,
-    fixW_design_metric$off_effort_return_percentage,
+    fixW_sys_design_metric$off_effort_return_percentage,
+    fixW_zigzag_design$off_effort_return_percentage,
     quadcopter_design_metric$off_effort_return_percentage
   )
 )
@@ -732,7 +767,7 @@ kable(design_comparison_df)
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number,".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
-save(heli_design, sys_design, rnd_design, zigzag_design, zigzagcom_design, fixW_design, quadcopter_design, heli_transects,sys_transects,rnd_transects,zigzag_transects, zigzagcom_transects, fixW_transects, quadcopter_transects, design_comparison_df, file = output_path)
+save(heli_design, sys_design, rnd_design, zigzag_design, zigzagcom_design, fixW_sys_design, fixW_zigzag_design, quadcopter_design, heli_transects,sys_transects, rnd_transects,zigzag_transects, zigzagcom_transects, fixW_sys_transects, fixW_zigzag_transects, quadcopter_transects, design_comparison_df, file = output_path)
 
 
 
@@ -751,7 +786,6 @@ ddf_analyses <- make.ds.analysis(
 )
 
 
-
 # Create and run the simulation
 sim_heli <- make.simulation(
   reps = 999,
@@ -761,7 +795,6 @@ sim_heli <- make.simulation(
   ds.analysis = ddf_analyses
 )
 
-sim_heli@design <- subplots_design
 sim_sys <- make.simulation(
   reps = 999,
   design = sys_design,
@@ -782,6 +815,103 @@ sim_zagcom <- make.simulation(
   population.description = pop_desc,
   detectability = detectF,
   ds.analysis = ddf_analyses
+)
+
+# Drone sims
+example_population <- generate.population(object = pop_desc, detectability = detect_uf, region = region)
+# plot(example_population, region)
+# termine abundance in each subplot
+# Convert points dataframe to sf object
+points_sf <- st_as_sf(example_population@population, coords = c("x", "y"), crs = st_crs(wmu))
+
+# Perform spatial join to count points within each polygon
+points_within_polygons <- st_join(points_sf, fixW_design, join = st_within)
+
+# Count the number of points in each polygon
+points_count <- points_within_polygons %>%
+  group_by(ID) %>%  # Replace `id` with the actual column name identifying polygons
+  summarise(count = n()) %>%
+  filter(!is.na(ID))  # Remove rows with NA in the id column
+
+# View the result
+print(points_count)
+points_count$count
+
+fixW_density <- density
+fixW_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], fixW_design@region)
+fixW_density@region.name <- fixW_design@region.name
+fixW_density@strata.name <- fixW_design@strata.name
+fixW_density@density.surface[[1]] <- fixW_density@density.surface[[1]] %>%
+  mutate(strata = ID) %>%
+  select(-ID)
+
+pop_desc_fixW <- make.population.description(
+  region = fixW_design,
+  density = fixW_density,
+  N = points_count$count,
+  fixed.N = TRUE
+)
+
+ddf_analyses_fixW <- make.ds.analysis(
+  dfmodel = list(~1, ~1),
+  key = c("hn", "hr"),
+  criteria = "AIC",
+  truncation = IMAGE_WIDTH,
+  group.strata = data.frame(design.id = fixW_design@strata.name, analysis.id = rep("A", length(fixW_design@strata.name)))
+)
+
+sim_fixW <- make.simulation(
+  reps = 999,
+  design = fixW_design,
+  population.description = pop_desc_fixW,
+  detectability = detectF,
+  ds.analysis = ddf_analyses_fixW
+)
+# termine abundance in each subplot
+
+# Perform spatial join to count points within each polygon
+points_within_polygons <- st_join(points_sf, quadcopter_design, join = st_within)
+
+# Count the number of points in each polygon
+points_count <- points_within_polygons %>%
+  group_by(ID) %>%  # Replace `id` with the actual column name identifying polygons
+  summarise(count = n()) %>%
+  filter(!is.na(ID))  # Remove rows with NA in the id column
+
+# View the result
+print(points_count)
+points_count$count
+
+quad_density <- density
+quad_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], quad_design@region)
+quad_density@region.name <- quad_design@region.name
+quad_density@strata.name <- quad_design@strata.name
+quad_density@density.surface[[1]] <- quad_density@density.surface[[1]] %>%
+  mutate(strata = ID) %>%
+  select(-ID)
+
+
+pop_desc_quad make.population.description(
+  region = quad_design,
+  density = quad_density,
+  N = points_count$count,
+  fixed.N = TRUE
+)
+
+ddf_analyses_quad <- make.ds.analysis(
+  dfmodel = list(~1, ~1),
+  key = c("hn", "hr"),
+  criteria = "AIC",
+  truncation =  IMAGE_WIDTH,
+  group.strata = data.frame(design.id = subplots@strata.name, analysis.id = rep("A", length(subplots@strata.name)))
+)
+
+sim_quad <- make.simulation(
+  reps = 999,
+  design = quadcopter_design,
+  population.description = pop_desc_quad,
+  detectability = detectF,
+  ds.analysis = ddf_analyses_quad
 )
 
 

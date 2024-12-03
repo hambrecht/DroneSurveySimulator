@@ -490,7 +490,7 @@ line.length = rep(total_length / length(fixW_plots@strata.name), length(fixW_plo
 spacing = numeric(0),
 design.angle = 0,
 edge.protocol = "minus",
-truncation = 260, # IMAGE_WIDTH
+truncation = 600, # IMAGE_WIDTH
 coverage.grid = cover
 )
 fixW_sys_transects <- generate.transects(fixW_sys_design)
@@ -510,7 +510,7 @@ line.length = rep(total_length / length(fixW_plots@strata.name), length(fixW_plo
 spacing = numeric(0),
 design.angle = 0,
 edge.protocol = "minus",
-truncation = 260, # IMAGE_WIDTH
+truncation = 600, # IMAGE_WIDTH
 coverage.grid = cover
 )
 fixW_zigzag_transects <- generate.transects(fixW_zigzag_design)

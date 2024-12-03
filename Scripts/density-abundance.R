@@ -35,6 +35,7 @@ coords <- sf::st_drop_geometry(density@density.surface[[1]][, c("x", "y")])
 indices_hr_null <- grep("hr_null", dsm_list)
 # Filter out indices that also have 'trunc_0.6' in the name
 indices_final <- indices_hr_null[!grepl("trunc_0.6|cc", dsm_list[indices_hr_null])]
+# indices_final <- indices_hr_null[!grepl("trunc_0.55|cc", dsm_list[indices_hr_null])]
 model_name <- names(dsm_list[indices_final])
 print(paste0("The model that is use is: ",model_name))
 sel_model <- dsm_list[indices_final][[1]]

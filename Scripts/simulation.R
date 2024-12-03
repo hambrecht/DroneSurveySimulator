@@ -35,7 +35,9 @@ library(geosphere)
 #'
 #' @export
 calculate_image_width <- function(ALTITUDE, CAMERA_FOV = 25, CAMERA_ANGLE = 0) {
-  if (ALTITUDE <= 0 || CAMERA_FOV <= 0 || CAMERA_ANGLE < 0) {
+  if (ALTITUDE <= 0 ||
+    CAMERA_FOV <= 0 ||
+    CAMERA_ANGLE < 0) {
     stop("Altitude and camera FOV must be positive numbers, and camera angle must be non-negative")
   }
 
@@ -49,7 +51,7 @@ calculate_image_width <- function(ALTITUDE, CAMERA_FOV = 25, CAMERA_ANGLE = 0) {
 # Extract key metrics from each simulation summary
 extract_metrics <- function(sim) {
   summary_data <- summary(sim, description.summary = FALSE)
-  
+
   list(
     mean_estimate = summary_data@individuals$N$mean.Estimate,
     percent_bias = summary_data@individuals$N$percent.bias,
@@ -106,7 +108,7 @@ detect_hr <- make.detectability(
   shape.param = 3, # heli:2
   truncation = IMAGE_WIDTH # heli:20
 )
-plot(detect_hr, pop_desc, legend= FALSE)
+plot(detect_hr, pop_desc, legend = FALSE)
 
 # Define and visualise uniform detection function
 detect_uf <- make.detectability(
@@ -270,7 +272,7 @@ ddf_analyses_quadcopter <- make.ds.analysis(
   dfmodel = list(~1, ~1),
   key = c("hn", "hr"),
   criteria = "AIC",
-  truncation =  IMAGE_WIDTH,
+  truncation = IMAGE_WIDTH,
   group.strata = data.frame(design.id = quadcopter_design@region@strata.name, analysis.id = rep("A", length(quadcopter_design@region@strata.name)))
 )
 
@@ -313,9 +315,9 @@ sim_fixW_zigzag <- run.simulation(simulation = sim_fixW_zigzag, run.parallel = T
 system.time(sim_quad <- run.simulation(simulation = sim_quad, run.parallel = F))
 
 # Save simulation data
-output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"-DF", detectF@key.function, ".RData"))
+output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, "-T", IMAGE_WIDTH, "-DF", detectF@key.function, ".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
-save(sim_heli, sim_rnd, sim_sys, sim_zig, sim_zagcom, sim_fixW_sys, sim_fixW_zigzag, sim_quad,  file = output_path)
+save(sim_heli, sim_rnd, sim_sys, sim_zig, sim_zagcom, sim_fixW_sys, sim_fixW_zigzag, sim_quad, file = output_path)
 
 output_path <- here("Output", "Simulation")
 save.sim.results(sim_quad, output_path)
@@ -361,10 +363,6 @@ summary(sim_heli, description.summary = FALSE)
 # kable(comparison_df)
 
 
-
-
-
-
 # ## Testing truncation distances. Required with drone???
 # # Investigate truncation distances
 # truncation_distances <- c(
@@ -393,9 +391,6 @@ summary(sim_heli, description.summary = FALSE)
 
 # names(results_list) <- paste0("t", truncation_distances)
 # names(summary_list) <- paste0("t", truncation_distances)
-
-
-
 
 
 # # Extracting results statistics

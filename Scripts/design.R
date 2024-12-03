@@ -1,4 +1,4 @@
-#Load necessary libraries
+# Load necessary libraries
 library(here)
 library(dsims)
 library(knitr)
@@ -35,7 +35,9 @@ library(geosphere)
 #'
 #' @export
 calculate_image_width <- function(ALTITUDE, CAMERA_FOV = 25, CAMERA_ANGLE = 0) {
-  if (ALTITUDE <= 0 || CAMERA_FOV <= 0 || CAMERA_ANGLE < 0) {
+  if (ALTITUDE <= 0 ||
+    CAMERA_FOV <= 0 ||
+    CAMERA_ANGLE < 0) {
     stop("Altitude and camera FOV must be positive numbers, and camera angle must be non-negative")
   }
 
@@ -285,10 +287,10 @@ find_longest_dimension_angle <- function(coords) {
   # Calculate distances between all pairs of vertices
   for (i in 1:(nrow(coords) - 1)) {
     for (j in (i + 1):nrow(coords)) {
-      dist <- distance(coords[i,], coords[j, ])
+      dist <- distance(coords[i,], coords[j,])
       if (dist > max_distance) {
         max_distance <- dist
-        point1 <- coords[i, ]
+        point1 <- coords[i,]
         point2 <- coords[j,]
       }
     }
@@ -354,8 +356,8 @@ TRANSECT_ANGLE <- LONGEST_DIMENSION$angle
 
 # create coverage grid
 cover <- make.coverage(region,
-spacing = COV_SPACE # OR
-# n.grid.points = 1000
+                       spacing = COV_SPACE # OR
+                       # n.grid.points = 1000
 )
 # plot(region, cover)
 
@@ -363,16 +365,16 @@ spacing = COV_SPACE # OR
 # Define survey design
 ## Helicopter design
 heli_design <- make.design(
-region = region,
-transect.type = "line",
-design = "segmentedgrid",
-spacing = 1200, # segments seperated by 1.2km
-seg.length = 10000, # segements of 10km
-design.angle = 0, # align transect with north south
-seg.threshold = 10, # any segments less than 10% of the segment length (i.e. 1km) will be discarded.
-edge.protocol = "minus",
-truncation = 600, # IMAGE_WIDTH
-coverage.grid = cover
+  region = region,
+  transect.type = "line",
+  design = "segmentedgrid",
+  spacing = 1200, # segments seperated by 1.2km
+  seg.length = 10000, # segements of 10km
+  design.angle = 0, # align transect with north south
+  seg.threshold = 10, # any segments less than 10% of the segment length (i.e. 1km) will be discarded.
+  edge.protocol = "minus",
+  truncation = 600, # IMAGE_WIDTH
+  coverage.grid = cover
 )
 heli_transects <- generate.transects(heli_design)
 
@@ -386,16 +388,16 @@ total_length <- heli_design@design.statistics$line.length[2]
 
 ## Systematic design
 sys_design <- make.design(
-region = region,
-transect.type = "line",
-design = "systematic",
-samplers = numeric(0), # OR
-line.length = total_length, # OR
-spacing = numeric(0),
-design.angle = 0,
-edge.protocol = "minus",
-truncation = 600, # IMAGE_WIDTH
-coverage.grid = cover
+  region = region,
+  transect.type = "line",
+  design = "systematic",
+  samplers = numeric(0), # OR
+  line.length = total_length, # OR
+  spacing = numeric(0),
+  design.angle = 0,
+  edge.protocol = "minus",
+  truncation = 600, # IMAGE_WIDTH
+  coverage.grid = cover
 )
 sys_transects <- generate.transects(sys_design)
 
@@ -404,35 +406,34 @@ sys_design <- run.coverage(sys_design, reps = COV_REPS)
 
 ## Random design
 rnd_design <- make.design(
-region = region,
-transect.type = "line",
-design = "random",
-samplers = numeric(0), # OR
-line.length = total_length, # OR
-spacing = numeric(0),
-design.angle = 0,
-edge.protocol = "minus",
-truncation = 600, # IMAGE_WIDTH
-coverage.grid = cover
+  region = region,
+  transect.type = "line",
+  design = "random",
+  samplers = numeric(0), # OR
+  line.length = total_length, # OR
+  spacing = numeric(0),
+  design.angle = 0,
+  edge.protocol = "minus",
+  truncation = 600, # IMAGE_WIDTH
+  coverage.grid = cover
 )
 rnd_transects <- generate.transects(rnd_design)
 rnd_design <- run.coverage(rnd_design, reps = COV_REPS)
 
 
-
 ## Zigzag design
 zigzag_design <- make.design(
-region = region,
-transect.type = "line",
-design = "eszigzag",
-samplers = numeric(0), # OR
-line.length = total_length, # OR
-spacing = numeric(0),
-design.angle = TRANSECT_ANGLE, # The design angle for the zigzag designs refers to the angle of a line which would run through the middle of each zigzag transect if the zigzags were to be generated within a rectangle. The design angle for zigzags should usually run along the longest dimension of the study region.
-edge.protocol = "minus",
-bounding.shape = "convex.hull", # rectangle or convex.hull. convex hull is generally more efficient.
-truncation = 600, # IMAGE_WIDTH
-coverage.grid = cover
+  region = region,
+  transect.type = "line",
+  design = "eszigzag",
+  samplers = numeric(0), # OR
+  line.length = total_length, # OR
+  spacing = numeric(0),
+  design.angle = TRANSECT_ANGLE, # The design angle for the zigzag designs refers to the angle of a line which would run through the middle of each zigzag transect if the zigzags were to be generated within a rectangle. The design angle for zigzags should usually run along the longest dimension of the study region.
+  edge.protocol = "minus",
+  bounding.shape = "convex.hull", # rectangle or convex.hull. convex hull is generally more efficient.
+  truncation = 600, # IMAGE_WIDTH
+  coverage.grid = cover
 )
 zigzag_transects <- generate.transects(zigzag_design)
 
@@ -442,17 +443,17 @@ zigzag_design <- run.coverage(zigzag_design, reps = COV_REPS)
 
 ## Zigzag with complementary line
 zigzagcom_design <- make.design(
-region = region,
-transect.type = "line",
-design = "eszigzagcom", # eszigzag or eszigzagcom
-samplers = numeric(0), # OR
-line.length = total_length, # OR
-spacing = numeric(0),
-design.angle = TRANSECT_ANGLE,
-edge.protocol = "minus",
-bounding.shape = "convex.hull",
-truncation = 600, # IMAGE_WIDTH
-coverage.grid = cover
+  region = region,
+  transect.type = "line",
+  design = "eszigzagcom", # eszigzag or eszigzagcom
+  samplers = numeric(0), # OR
+  line.length = total_length, # OR
+  spacing = numeric(0),
+  design.angle = TRANSECT_ANGLE,
+  edge.protocol = "minus",
+  bounding.shape = "convex.hull",
+  truncation = 600, # IMAGE_WIDTH
+  coverage.grid = cover
 )
 zigzagcom_transects <- generate.transects(zigzagcom_design)
 ### Coverage
@@ -461,57 +462,55 @@ zigzagcom_design <- run.coverage(zigzagcom_design, reps = COV_REPS)
 # Drone survey designs
 ## Fix-wing
 # Compute polygon dimensions
-number_blocks <- round(total_length/367200)# 367.2km is the total distance superwake can fly, assuming a speed of 17m/s and a flight time of 6h.
+number_blocks <- round(total_length / 367200) # 367.2km is the total distance superwake can fly, assuming a speed of 17m/s and a flight time of 6h.
 spacing <- 500
 poly_dim <- find_best_block_dim(total_length, number_blocks, spacing)
 
 # Checking that blocks fit within region
-if(region@area> (poly_dim[2]*poly_dim[3]*number_blocks)){
-# Create polygons
-fixW_poly <- place_polygons(number_blocks, poly_dim$x_length, poly_dim$y_length, wmu, buffer_distance = 100)
+if (region@area > (poly_dim[2] * poly_dim[3] * number_blocks)) {
+  # Create polygons
+  fixW_poly <- place_polygons(number_blocks, poly_dim$x_length, poly_dim$y_length, wmu, buffer_distance = 100)
 
 }
 
 # create subplot region
 fixW_plots <- make.region(
-region.name = "study area",
-shape = fixW_poly,
-strata.name = fixW_poly$ID
+  region.name = "study area",
+  shape = fixW_poly,
+  strata.name = fixW_poly$ID
 )
 
 # plot(fixW_plots)
 # create systematic flight lines withing fixed wing
 fixW_sys_design <- make.design(
-region = fixW_plots,
-transect.type = "line",
-design = "systematic",
-samplers = numeric(0), # OR
-line.length = rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)), # OR
-spacing = numeric(0),
-design.angle = 0,
-edge.protocol = "minus",
-truncation = 600, # IMAGE_WIDTH
-coverage.grid = cover
+  region = fixW_plots,
+  transect.type = "line",
+  design = "systematic",
+  samplers = numeric(0), # OR
+  line.length = rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)), # OR
+  spacing = numeric(0),
+  design.angle = 0,
+  edge.protocol = "minus",
+  truncation = 600, # IMAGE_WIDTH
+  coverage.grid = cover
 )
 fixW_sys_transects <- generate.transects(fixW_sys_design)
 ### Coverage
 fixW_sys_design <- run.coverage(fixW_sys_design, reps = COV_REPS)
 
 
-
-
 # Fixed wing zigzag flights
 fixW_zigzag_design <- make.design(
-region = fixW_plots,
-transect.type = "line",
-design = "eszigzag",
-samplers = numeric(0), # OR
-line.length = rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)), # OR
-spacing = numeric(0),
-design.angle = 0,
-edge.protocol = "minus",
-truncation = 600, # IMAGE_WIDTH
-coverage.grid = cover
+  region = fixW_plots,
+  transect.type = "line",
+  design = "eszigzag",
+  samplers = numeric(0), # OR
+  line.length = rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)), # OR
+  spacing = numeric(0),
+  design.angle = 0,
+  edge.protocol = "minus",
+  truncation = 600, # IMAGE_WIDTH
+  coverage.grid = cover
 )
 fixW_zigzag_transects <- generate.transects(fixW_zigzag_design)
 ### Coverage
@@ -520,67 +519,66 @@ fixW_zigzag_design <- run.coverage(fixW_zigzag_design, reps = COV_REPS)
 
 ## Quadcopter
 ## Systematic subplot design
-number_blocks <- round(total_length/26000)
+number_blocks <- round(total_length / 26000)
 spacing <- 200
 
 # Checking that blocks fit within region
-if(region@area> (2000*2500*number_blocks)){
-# create coverage grid
-grid_center <- make.coverage(region,
-# spacing = 1000
-n.grid.points = number_blocks
-)
-# plot(region, grid_center)
-# remove coverage.scores column
-grid_center@grid <- grid_center@grid %>% select(-coverage.scores)
+if (region@area > (2000 * 2500 * number_blocks)) {
+  # create coverage grid
+  grid_center <- make.coverage(region,
+                               # spacing = 1000
+                               n.grid.points = number_blocks
+  )
+  # plot(region, grid_center)
+  # remove coverage.scores column
+  grid_center@grid <- grid_center@grid %>% select(-coverage.scores)
 
 
-# Create a buffer around the polygon boundary
-buffer_1000m <- st_buffer(region@region, dist = -1001)
+  # Create a buffer around the polygon boundary
+  buffer_1000m <- st_buffer(region@region, dist = -1001)
 
-# Identify points within 1000 meters of the boundary
-selection_index <- st_disjoint(grid_center@grid, buffer_1000m, sparse = FALSE)
-points_within_1000m <- grid_center@grid[selection_index,]
+  # Identify points within 1000 meters of the boundary
+  selection_index <- st_disjoint(grid_center@grid, buffer_1000m, sparse = FALSE)
+  points_within_1000m <- grid_center@grid[selection_index,]
 
-# Find the nearest points on the polygon for each point in the grid
-nearest_lines <- st_nearest_points(points_within_1000m, buffer_1000m)
-nearest_points <- st_cast(nearest_lines, "POINT")
-new_coords <- st_coordinates(nearest_points[seq(2, length(nearest_points), 2)])
+  # Find the nearest points on the polygon for each point in the grid
+  nearest_lines <- st_nearest_points(points_within_1000m, buffer_1000m)
+  nearest_points <- st_cast(nearest_lines, "POINT")
+  new_coords <- st_coordinates(nearest_points[seq(2, length(nearest_points), 2)])
 
-# Replace the coordinates in points1 with the new coordinates
-st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(1:nrow(points_within_1000m), function(i) st_point(new_coords[i,])))
+  # Replace the coordinates in points1 with the new coordinates
+  st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(1:nrow(points_within_1000m), function(i) st_point(new_coords[i,])))
 
-# Create sub plot polygons
-polygons <- create_sf_polygons(grid_center@grid, 2500, 2000)
+  # Create sub plot polygons
+  polygons <- create_sf_polygons(grid_center@grid, 2500, 2000)
 }
 # plot(st_geometry(wmu))
 # plot(polygons[1], add = TRUE, col = "red")
 
 # create subplot region
 quadcopter_plots <- make.region(
-region.name = "study area",
-shape = polygons,
-strata.name = polygons$ID
+  region.name = "study area",
+  shape = polygons,
+  strata.name = polygons$ID
 )
 
 # plot(quadcopter_plots)
 # create flight lines withing quadcopterplots
 quadcopter_design <- make.design(
-region = quadcopter_plots,
-transect.type = "line",
-design = "systematic",
-samplers = numeric(0), # OR
-line.length = rep(total_length / length(quadcopter_plots@strata.name), length(quadcopter_plots@strata.name)), # OR
-spacing = numeric(0),
-design.angle = 0,
-edge.protocol = "minus",
-truncation = 50, # IMAGE_WIDTH
-coverage.grid = cover
+  region = quadcopter_plots,
+  transect.type = "line",
+  design = "systematic",
+  samplers = numeric(0), # OR
+  line.length = rep(total_length / length(quadcopter_plots@strata.name), length(quadcopter_plots@strata.name)), # OR
+  spacing = numeric(0),
+  design.angle = 0,
+  edge.protocol = "minus",
+  truncation = 50, # IMAGE_WIDTH
+  coverage.grid = cover
 )
 quadcopter_transects <- generate.transects(quadcopter_design)
 ### Coverage
 system.time(quadcopter_design <- run.coverage(quadcopter_design, reps = COV_REPS))
-
 
 
 # Plot desings
@@ -623,157 +621,157 @@ quadcopter_design_metric <- extract_design_metrics(quadcopter_design)
 # Combine metrics into a single dataframe
 rm(design_comparison_df)
 design_comparison_df <- data.frame(
-Simulation = c("Heli", "Sys", "Rnd", "Zig", "Zagcom", "FixW-Sys", "FixW-Zig", "Quadcopter"),
-Design = c(
-heli_design_metric$design_type,
-sys_design_metric$design_type,
-rnd_design_metric$design_type,
-zigzag_design_metric$design_type,
-zigzagcom_design_metric$design_type,
-fixW_sys_design_metric$design_type,
-fixW_zigzag_design_metric$design_type,
-quadcopter_design_metric$design_type
-),
-Mean_Sampler_Count = c(
-heli_design_metric$mean_sampler_count,
-sys_design_metric$mean_sampler_count,
-rnd_design_metric$mean_sampler_count,
-zigzag_design_metric$mean_sampler_count,
-zigzagcom_design_metric$mean_sampler_count,
-fixW_sys_design_metric$mean_sampler_count,
-fixW_zigzag_design_metric$mean_sampler_count,
-quadcopter_design_metric$mean_sampler_count
-),
-Mean_Cover_Area = c(
-heli_design_metric$mean_cover_area,
-sys_design_metric$mean_cover_area,
-rnd_design_metric$mean_cover_area,
-zigzag_design_metric$mean_cover_area,
-zigzagcom_design_metric$mean_cover_area,
-fixW_sys_design_metric$mean_cover_area,
-fixW_zigzag_design_metric$mean_cover_area,
-quadcopter_design_metric$mean_cover_area
-),
-Mean_Cover_Percentage = c(
-heli_design_metric$mean_cover_percentage,
-sys_design_metric$mean_cover_percentage,
-rnd_design_metric$mean_cover_percentage,
-zigzag_design_metric$mean_cover_percentage,
-zigzagcom_design_metric$mean_cover_percentage,
-fixW_sys_design_metric$mean_cover_percentage,
-fixW_zigzag_design_metric$mean_cover_percentage,
-quadcopter_design_metric$mean_cover_percentage
-),
-Mean_Line_Length = c(
-heli_design_metric$mean_line_length,
-sys_design_metric$mean_line_length,
-rnd_design_metric$mean_line_length,
-zigzag_design_metric$mean_line_length,
-zigzagcom_design_metric$mean_line_length,
-fixW_sys_design_metric$mean_line_length,
-fixW_zigzag_design_metric$mean_line_length,
-quadcopter_design_metric$mean_line_length
-),
-Mean_Trackline_Length = c(
-heli_design_metric$mean_trackline,
-sys_design_metric$mean_trackline,
-rnd_design_metric$mean_trackline,
-zigzag_design_metric$mean_trackline,
-zigzagcom_design_metric$mean_trackline,
-fixW_sys_design_metric$mean_trackline,
-fixW_zigzag_design_metric$mean_trackline,
-quadcopter_design_metric$mean_trackline
-),
-Mean_Cyclic_Trackline_Length = c(
-heli_design_metric$mean_cyclic_trackline,
-sys_design_metric$mean_cyclic_trackline,
-rnd_design_metric$mean_cyclic_trackline,
-zigzag_design_metric$mean_cyclic_trackline,
-zigzagcom_design_metric$mean_cyclic_trackline,
-fixW_sys_design_metric$mean_cyclic_trackline,
-fixW_zigzag_design_metric$mean_cyclic_trackline,
-quadcopter_design_metric$mean_cyclic_trackline
-),
-Mean_On_Effort = c(
-heli_design_metric$mean_on_effort,
-sys_design_metric$mean_on_effort,
-rnd_design_metric$mean_on_effort,
-zigzag_design_metric$mean_on_effort,
-zigzagcom_design_metric$mean_on_effort,
-fixW_sys_design_metric$mean_on_effort,
-fixW_zigzag_design_metric$mean_on_effort,
-quadcopter_design_metric$mean_on_effort
-),
-Mean_Off_Effort = c(
-heli_design_metric$mean_off_effort,
-sys_design_metric$mean_off_effort,
-rnd_design_metric$mean_off_effort,
-zigzag_design_metric$mean_off_effort,
-zigzagcom_design_metric$mean_off_effort,
-fixW_sys_design_metric$mean_off_effort,
-fixW_zigzag_design_metric$mean_off_effort,
-quadcopter_design_metric$mean_off_effort
-),
-Mean_Return_to_Home = c(
-heli_design_metric$mean_return2home,
-sys_design_metric$mean_return2home,
-rnd_design_metric$mean_return2home,
-zigzag_design_metric$mean_return2home,
-zigzagcom_design_metric$mean_return2home,
-fixW_sys_design_metric$mean_return2home,
-fixW_zigzag_design_metric$mean_return2home,
-quadcopter_design_metric$mean_return2home
-),
-Mean_Off_Effort_Return = c(
-heli_design_metric$mean_off_effort_return,
-sys_design_metric$mean_off_effort_return,
-rnd_design_metric$mean_off_effort_return,
-zigzag_design_metric$mean_off_effort_return,
-zigzagcom_design_metric$mean_off_effort_return,
-fixW_sys_design_metric$mean_off_effort_return,
-fixW_zigzag_design_metric$mean_off_effort_return,
-quadcopter_design_metric$mean_off_effort_return
-),
-On_Effort_Percentage = c(
-heli_design_metric$on_effort_percentage,
-sys_design_metric$on_effort_percentage,
-rnd_design_metric$on_effort_percentage,
-zigzag_design_metric$on_effort_percentage,
-zigzagcom_design_metric$on_effort_percentage,
-fixW_sys_design_metric$on_effort_percentage,
-fixW_zigzag_design_metric$on_effort_percentage,
-quadcopter_design_metric$on_effort_percentage
-),
-Off_Effort_Percentage = c(
-heli_design_metric$off_effort_percentage,
-sys_design_metric$off_effort_percentage,
-rnd_design_metric$off_effort_percentage,
-zigzag_design_metric$off_effort_percentage,
-zigzagcom_design_metric$off_effort_percentage,
-fixW_sys_design_metric$off_effort_percentage,
-fixW_zigzag_design_metric$off_effort_percentage,
-quadcopter_design_metric$off_effort_percentage
-),
-Return_to_Home_Percentage = c(
-heli_design_metric$return2home_percentage,
-sys_design_metric$return2home_percentage,
-rnd_design_metric$return2home_percentage,
-zigzag_design_metric$return2home_percentage,
-zigzagcom_design_metric$return2home_percentage,
-zigzagcom_design_metric$off_effort_percentage,
-fixW_zigzag_design_metric$return2home_percentage,
-quadcopter_design_metric$return2home_percentage
-),
-Off_Effort_Return_Percentage = c(
-heli_design_metric$off_effort_return_percentage,
-sys_design_metric$off_effort_return_percentage,
-rnd_design_metric$off_effort_return_percentage,
-zigzag_design_metric$off_effort_return_percentage,
-zigzagcom_design_metric$off_effort_return_percentage,
-fixW_sys_design_metric$off_effort_return_percentage,
-fixW_zigzag_design_metric$off_effort_return_percentage,
-quadcopter_design_metric$off_effort_return_percentage
-)
+  Simulation = c("Heli", "Sys", "Rnd", "Zig", "Zagcom", "FixW-Sys", "FixW-Zig", "Quadcopter"),
+  Design = c(
+    heli_design_metric$design_type,
+    sys_design_metric$design_type,
+    rnd_design_metric$design_type,
+    zigzag_design_metric$design_type,
+    zigzagcom_design_metric$design_type,
+    fixW_sys_design_metric$design_type,
+    fixW_zigzag_design_metric$design_type,
+    quadcopter_design_metric$design_type
+  ),
+  Mean_Sampler_Count = c(
+    heli_design_metric$mean_sampler_count,
+    sys_design_metric$mean_sampler_count,
+    rnd_design_metric$mean_sampler_count,
+    zigzag_design_metric$mean_sampler_count,
+    zigzagcom_design_metric$mean_sampler_count,
+    fixW_sys_design_metric$mean_sampler_count,
+    fixW_zigzag_design_metric$mean_sampler_count,
+    quadcopter_design_metric$mean_sampler_count
+  ),
+  Mean_Cover_Area = c(
+    heli_design_metric$mean_cover_area,
+    sys_design_metric$mean_cover_area,
+    rnd_design_metric$mean_cover_area,
+    zigzag_design_metric$mean_cover_area,
+    zigzagcom_design_metric$mean_cover_area,
+    fixW_sys_design_metric$mean_cover_area,
+    fixW_zigzag_design_metric$mean_cover_area,
+    quadcopter_design_metric$mean_cover_area
+  ),
+  Mean_Cover_Percentage = c(
+    heli_design_metric$mean_cover_percentage,
+    sys_design_metric$mean_cover_percentage,
+    rnd_design_metric$mean_cover_percentage,
+    zigzag_design_metric$mean_cover_percentage,
+    zigzagcom_design_metric$mean_cover_percentage,
+    fixW_sys_design_metric$mean_cover_percentage,
+    fixW_zigzag_design_metric$mean_cover_percentage,
+    quadcopter_design_metric$mean_cover_percentage
+  ),
+  Mean_Line_Length = c(
+    heli_design_metric$mean_line_length,
+    sys_design_metric$mean_line_length,
+    rnd_design_metric$mean_line_length,
+    zigzag_design_metric$mean_line_length,
+    zigzagcom_design_metric$mean_line_length,
+    fixW_sys_design_metric$mean_line_length,
+    fixW_zigzag_design_metric$mean_line_length,
+    quadcopter_design_metric$mean_line_length
+  ),
+  Mean_Trackline_Length = c(
+    heli_design_metric$mean_trackline,
+    sys_design_metric$mean_trackline,
+    rnd_design_metric$mean_trackline,
+    zigzag_design_metric$mean_trackline,
+    zigzagcom_design_metric$mean_trackline,
+    fixW_sys_design_metric$mean_trackline,
+    fixW_zigzag_design_metric$mean_trackline,
+    quadcopter_design_metric$mean_trackline
+  ),
+  Mean_Cyclic_Trackline_Length = c(
+    heli_design_metric$mean_cyclic_trackline,
+    sys_design_metric$mean_cyclic_trackline,
+    rnd_design_metric$mean_cyclic_trackline,
+    zigzag_design_metric$mean_cyclic_trackline,
+    zigzagcom_design_metric$mean_cyclic_trackline,
+    fixW_sys_design_metric$mean_cyclic_trackline,
+    fixW_zigzag_design_metric$mean_cyclic_trackline,
+    quadcopter_design_metric$mean_cyclic_trackline
+  ),
+  Mean_On_Effort = c(
+    heli_design_metric$mean_on_effort,
+    sys_design_metric$mean_on_effort,
+    rnd_design_metric$mean_on_effort,
+    zigzag_design_metric$mean_on_effort,
+    zigzagcom_design_metric$mean_on_effort,
+    fixW_sys_design_metric$mean_on_effort,
+    fixW_zigzag_design_metric$mean_on_effort,
+    quadcopter_design_metric$mean_on_effort
+  ),
+  Mean_Off_Effort = c(
+    heli_design_metric$mean_off_effort,
+    sys_design_metric$mean_off_effort,
+    rnd_design_metric$mean_off_effort,
+    zigzag_design_metric$mean_off_effort,
+    zigzagcom_design_metric$mean_off_effort,
+    fixW_sys_design_metric$mean_off_effort,
+    fixW_zigzag_design_metric$mean_off_effort,
+    quadcopter_design_metric$mean_off_effort
+  ),
+  Mean_Return_to_Home = c(
+    heli_design_metric$mean_return2home,
+    sys_design_metric$mean_return2home,
+    rnd_design_metric$mean_return2home,
+    zigzag_design_metric$mean_return2home,
+    zigzagcom_design_metric$mean_return2home,
+    fixW_sys_design_metric$mean_return2home,
+    fixW_zigzag_design_metric$mean_return2home,
+    quadcopter_design_metric$mean_return2home
+  ),
+  Mean_Off_Effort_Return = c(
+    heli_design_metric$mean_off_effort_return,
+    sys_design_metric$mean_off_effort_return,
+    rnd_design_metric$mean_off_effort_return,
+    zigzag_design_metric$mean_off_effort_return,
+    zigzagcom_design_metric$mean_off_effort_return,
+    fixW_sys_design_metric$mean_off_effort_return,
+    fixW_zigzag_design_metric$mean_off_effort_return,
+    quadcopter_design_metric$mean_off_effort_return
+  ),
+  On_Effort_Percentage = c(
+    heli_design_metric$on_effort_percentage,
+    sys_design_metric$on_effort_percentage,
+    rnd_design_metric$on_effort_percentage,
+    zigzag_design_metric$on_effort_percentage,
+    zigzagcom_design_metric$on_effort_percentage,
+    fixW_sys_design_metric$on_effort_percentage,
+    fixW_zigzag_design_metric$on_effort_percentage,
+    quadcopter_design_metric$on_effort_percentage
+  ),
+  Off_Effort_Percentage = c(
+    heli_design_metric$off_effort_percentage,
+    sys_design_metric$off_effort_percentage,
+    rnd_design_metric$off_effort_percentage,
+    zigzag_design_metric$off_effort_percentage,
+    zigzagcom_design_metric$off_effort_percentage,
+    fixW_sys_design_metric$off_effort_percentage,
+    fixW_zigzag_design_metric$off_effort_percentage,
+    quadcopter_design_metric$off_effort_percentage
+  ),
+  Return_to_Home_Percentage = c(
+    heli_design_metric$return2home_percentage,
+    sys_design_metric$return2home_percentage,
+    rnd_design_metric$return2home_percentage,
+    zigzag_design_metric$return2home_percentage,
+    zigzagcom_design_metric$return2home_percentage,
+    zigzagcom_design_metric$off_effort_percentage,
+    fixW_zigzag_design_metric$return2home_percentage,
+    quadcopter_design_metric$return2home_percentage
+  ),
+  Off_Effort_Return_Percentage = c(
+    heli_design_metric$off_effort_return_percentage,
+    sys_design_metric$off_effort_return_percentage,
+    rnd_design_metric$off_effort_return_percentage,
+    zigzag_design_metric$off_effort_return_percentage,
+    zigzagcom_design_metric$off_effort_return_percentage,
+    fixW_sys_design_metric$off_effort_return_percentage,
+    fixW_zigzag_design_metric$off_effort_return_percentage,
+    quadcopter_design_metric$off_effort_return_percentage
+  )
 )
 # unknown error: doublicated rows
 design_comparison_df <- design_comparison_df[1:8,]

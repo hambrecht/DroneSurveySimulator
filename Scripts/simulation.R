@@ -46,10 +46,6 @@ calculate_image_width <- function(ALTITUDE, CAMERA_FOV = 25, CAMERA_ANGLE = 0) {
   round(2 * ALTITUDE * tan((adjusted_FOV * pi / 180) / 2), -1)
 }
 
-correct_degrees <- function(angle) {
-  corrected_angle <- (angle - 2) %% 180
-  return(corrected_angle)
-}
 
 ## design stats
 ## For details see: https://examples.distancesampling.org/dssd-getting-started/GettingStarted-distill.html#appendix-trackline-and-cyclic-trackline-lengths
@@ -104,19 +100,16 @@ find_best_block_dim <- function(total_length, number_blocks, spacing) {
 
 # Function to generate a random square polygon with random orientation
 generate_random_polygon <- function(x, y, crs, area) {
-  angle <- runif(1, 0, 180)
   center_x <- runif(1, min(st_bbox(area)$xmin), max(st_bbox(area)$xmax))
   center_y <- runif(1, min(st_bbox(area)$ymin), max(st_bbox(area)$ymax))
 
   coords <- matrix(c(-x / 2, -y / 2, x / 2, -y / 2, x / 2, y / 2, -x / 2, y / 2, -x / 2, -y / 2), ncol = 2, byrow = TRUE)
-  rotation_matrix <- matrix(c(cos(angle), -sin(angle), sin(angle), cos(angle)), ncol = 2)
-  rotated_coords <- coords %*% rotation_matrix
 
-  rotated_coords[, 1] <- rotated_coords[, 1] + center_x
-  rotated_coords[, 2] <- rotated_coords[, 2] + center_y
+  coords[, 1] <- coords[, 1] + center_x
+  coords[, 2] <- coords[, 2] + center_y
 
-  polygon <- st_polygon(list(rotated_coords))
-  list(polygon = st_sfc(polygon, crs = crs), angle = angle)
+  polygon <- st_polygon(list(coords))
+  list(polygon = st_sfc(polygon, crs = crs))
 }
 
 # Function to check if the polygon is within acceptable bounds with a buffer
@@ -152,32 +145,40 @@ check_overlap <- function(polygon, existing_polygons) {
 }
 
 # Function to place N polygons within the area
-place_polygons <- function(N, x, y, area, buffer_distance, max_attempts = 1000) {
-  polygons <- list()
-  angles <- numeric(N)
+place_polygons <- function(N, x, y, area, buffer_distance, max_attempts = 10000, max_retries = 100) {
   crs <- st_crs(area)
-  for (i in 1:N) {
-    attempts <- 0
-    repeat {
-      attempts <- attempts + 1
-      if (attempts > max_attempts) {
-        warning(paste("Maximum attempts reached for polygon", i))
-        break
+
+  for (retry in 1:max_retries) {
+    print(paste0("Retry ", retry))
+    polygons <- list()
+    success <- TRUE
+
+    for (i in 1:N) {
+      attempts <- 0
+      repeat {
+        attempts <- attempts + 1
+        if (attempts > max_attempts) {
+          success <- FALSE
+          break
+        }
+        result <- generate_random_polygon(x, y, crs, area)
+        polygon <- result$polygon
+        if (check_polygon(polygon, area, buffer_distance) && !check_overlap(polygon, polygons)) {
+          polygons[[i]] <- polygon
+          break
+        }
       }
-      result <- generate_random_polygon(x, y, crs, area)
-      polygon <- result$polygon
-      angle <- result$angle
-      if (check_polygon(polygon, area, buffer_distance) && !check_overlap(polygon, polygons)) {
-        polygons[[i]] <- polygon
-        angles[i] <- angle
-        break
-      }
+      if (!success) break
+    }
+
+    if (success) {
+      sf_polygons <- st_sf(geometry = do.call(c, polygons), crs = crs)
+      sf_polygons$ID <- LETTERS[1:N]
+      return(sf_polygons)
     }
   }
-  sf_polygons <- st_sf(geometry = do.call(c, polygons), crs = crs)
-  sf_polygons$angle <- angles
-  sf_polygons$ID <- LETTERS[1:N]
-  sf_polygons
+
+  stop("Failed to place polygons after 100 retries")
 }
 
 # create polygons when grid of centroids is provided
@@ -362,7 +363,7 @@ heli_design <- make.design(
   design = "segmentedgrid",
   spacing = 1200, # segments seperated by 1.2km
   seg.length = 10000, # segements of 10km
-  design.angle = correct_degrees(0), # align transect with north south
+  design.angle = 0, # align transect with north south
   seg.threshold = 10, # any segments less than 10% of the segment length (i.e. 1km) will be discarded.
   edge.protocol = "minus",
   truncation = IMAGE_WIDTH, # IMAGE_WIDTH
@@ -386,7 +387,7 @@ sys_design <- make.design(
   samplers = numeric(0), # OR
   line.length = total_length, # OR
   spacing = numeric(0),
-  design.angle = correct_degrees(0),
+  design.angle = 0,
   edge.protocol = "minus",
   truncation = IMAGE_WIDTH, # IMAGE_WIDTH
   coverage.grid = cover
@@ -404,7 +405,7 @@ rnd_design <- make.design(
   samplers = numeric(0), # OR
   line.length = total_length, # OR
   spacing = numeric(0),
-  design.angle = correct_degrees(0),
+  design.angle = 0,
   edge.protocol = "minus",
   truncation = IMAGE_WIDTH, # IMAGE_WIDTH
   coverage.grid = cover
@@ -463,7 +464,9 @@ poly_dim <- find_best_block_dim(total_length, number_blocks, spacing)
 if(region@area> (poly_dim[2]*poly_dim[3]*number_blocks)){
   # Create polygons
   fixW_poly <- place_polygons(number_blocks, poly_dim$x_length, poly_dim$y_length, wmu, buffer_distance = 100)
+
 }
+
 # create subplot region
 fixW_plots <- make.region(
   region.name = "study area",
@@ -488,6 +491,9 @@ fixW_sys_design <- make.design(
 fixW_sys_transects <- generate.transects(fixW_sys_design)
 ### Coverage
 fixW_sys_design <- run.coverage(fixW_sys_design, reps = COV_REPS)
+
+
+
 
 # Fixed wing zigzag flights
 fixW_zigzag_design <- make.design(
@@ -514,36 +520,35 @@ number_blocks <- round(total_length/26000)
 spacing <- 200
 
 # Checking that blocks fit within region
-region@area> (2000*2500*number_blocks)
+if(region@area> (2000*2500*number_blocks)){
+  # create coverage grid
+  grid_center <- make.coverage(region,
+    # spacing = 1000
+    n.grid.points = number_blocks
+  )
+  # plot(region, grid_center)
+  # remove coverage.scores column
+  grid_center@grid <- grid_center@grid %>% select(-coverage.scores)
 
-# create coverage grid
-grid_center <- make.coverage(region,
-  # spacing = 1000
-  n.grid.points = number_blocks
-)
-# plot(region, grid_center)
-# remove coverage.scores column
-grid_center@grid <- grid_center@grid %>% select(-coverage.scores)
 
+  # Create a buffer around the polygon boundary
+  buffer_1000m <- st_buffer(region@region, dist = -1001)
 
-# Create a buffer around the polygon boundary
-buffer_1000m <- st_buffer(region@region, dist = -1001)
+  # Identify points within 1000 meters of the boundary
+  selection_index <- st_disjoint(grid_center@grid, buffer_1000m, sparse = FALSE)
+  points_within_1000m <- grid_center@grid[selection_index,]
 
-# Identify points within 1000 meters of the boundary
-selection_index <- st_disjoint(grid_center@grid, buffer_1000m, sparse = FALSE)
-points_within_1000m <- grid_center@grid[selection_index,]
+  # Find the nearest points on the polygon for each point in the grid
+  nearest_lines <- st_nearest_points(points_within_1000m, buffer_1000m)
+  nearest_points <- st_cast(nearest_lines, "POINT")
+  new_coords <- st_coordinates(nearest_points[seq(2,length(nearest_points),2)])
 
-# Find the nearest points on the polygon for each point in the grid
-nearest_lines <- st_nearest_points(points_within_1000m, buffer_1000m)
-nearest_points <- st_cast(nearest_lines, "POINT")
-new_coords <- st_coordinates(nearest_points[seq(2,length(nearest_points),2)])
+  # Replace the coordinates in points1 with the new coordinates
+  st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(1:nrow(points_within_1000m), function(i) st_point(new_coords[i, ])))
 
-# Replace the coordinates in points1 with the new coordinates
-st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(1:nrow(points_within_1000m), function(i) st_point(new_coords[i, ])))
-
-# Create sub plot polygons
-polygons <- create_sf_polygons(grid_center@grid, 2500, 2000)
-
+  # Create sub plot polygons
+  polygons <- create_sf_polygons(grid_center@grid, 2500, 2000)
+}
 # plot(st_geometry(wmu))
 # plot(polygons[1], add = TRUE, col = "red")
 
@@ -561,7 +566,7 @@ quadcopter_design <- make.design(
   transect.type = "line",
   design = "systematic",
   samplers = numeric(0), # OR
-  line.length = (total_length/length(quadcopter_plots@strata.name))*quadcopter_plots@strata.name, # OR
+  line.length = rep(total_length / length(quadcopter_plots@strata.name), length(quadcopter_plots@strata.name)), # OR
   spacing = numeric(0),
   design.angle = 0,
   edge.protocol = "minus",
@@ -575,7 +580,7 @@ quadcopter_design <- run.coverage(quadcopter_design, reps = COV_REPS)
 
 
 # Plot desings
-par(mfrow = c(2, 3))
+par(mfrow = c(2, 4))
 plot(region, heli_transects, lwd = 0.5, col = 4)
 plot(region, sys_transects, lwd = 0.5, col = 4)
 plot(region, rnd_transects, lwd = 0.5, col = 4)
@@ -585,7 +590,7 @@ plot(region, fixW_sys_transects, lwd = 0.5, col = 4)
 plot(region, fixW_zigzag_transects, lwd = 0.5, col = 4)
 plot(region, quadcopter_transects, lwd = 0.5, col = 4)
 par(mfrow = c(1, 1))
-par(mfrow = c(2, 3))
+par(mfrow = c(2, 4))
 plot(heli_design)
 plot(sys_design)
 plot(rnd_design)
@@ -613,7 +618,7 @@ quadcopter_design_metric <- extract_design_metrics(quadcopter_design)
 
 # Combine metrics into a single dataframe
 design_comparison_df <- data.frame(
-  Simulation = c("Heli", "Sys", "Rnd", "Zig", "Zagcom"),
+  Simulation = c("Heli", "Sys", "Rnd", "Zig", "Zagcom", "FixW-Sys", "FixW-Zig", "Quadcopter"),
   Design = c(
     heli_design_metric$design_type, 
     sys_design_metric$design_type, 
@@ -621,7 +626,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$design_type, 
     zigzagcom_design_metric$design_type,
     fixW_sys_design_metric$design_type,
-    fixW_zigzag_design$design_type,
+    fixW_zigzag_design_metric$design_type,
     quadcopter_design_metric$design_type
   ),
   Mean_Sampler_Count = c(
@@ -631,7 +636,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$mean_sampler_count, 
     zigzagcom_design_metric$mean_sampler_count,
     fixW_sys_design_metric$mean_sampler_count,
-    fixW_zigzag_design$mean_sampler_count,
+    fixW_zigzag_design_metric$mean_sampler_count,
     quadcopter_design_metric$mean_sampler_count
   ),
   Mean_Cover_Area = c(
@@ -641,7 +646,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$mean_cover_area, 
     zigzagcom_design_metric$mean_cover_area,
     fixW_sys_design_metric$mean_cover_area,
-    fixW_zigzag_design$mean_cover_area,
+    fixW_zigzag_design_metric$mean_cover_area,
     quadcopter_design_metric$mean_cover_area
   ),
   Mean_Cover_Percentage = c(
@@ -651,7 +656,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$mean_cover_percentage, 
     zigzagcom_design_metric$mean_cover_percentage,
     fixW_sys_design_metric$mean_cover_percentage,
-    fixW_zigzag_design$mean_cover_percentage,
+    fixW_zigzag_design_metric$mean_cover_percentage,
     quadcopter_design_metric$mean_cover_percentage
   ),
   Mean_Line_Length = c(
@@ -661,7 +666,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$mean_line_length, 
     zigzagcom_design_metric$mean_line_length,
     fixW_sys_design_metric$mean_line_length,
-    fixW_zigzag_design$mean_line_length,
+    fixW_zigzag_design_metric$mean_line_length,
     quadcopter_design_metric$mean_line_length
   ),
   Mean_Trackline_Length = c(
@@ -671,7 +676,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$mean_trackline, 
     zigzagcom_design_metric$mean_trackline,
     fixW_sys_design_metric$mean_trackline,
-    fixW_zigzag_design$mean_trackline,
+    fixW_zigzag_design_metric$mean_trackline,
     quadcopter_design_metric$mean_trackline
   ),
   Mean_Cyclic_Trackline_Length = c(
@@ -681,7 +686,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$mean_cyclic_trackline, 
     zigzagcom_design_metric$mean_cyclic_trackline,
     fixW_sys_design_metric$mean_cyclic_trackline,
-    fixW_zigzag_design$mean_cyclic_trackline,
+    fixW_zigzag_design_metric$mean_cyclic_trackline,
     quadcopter_design_metric$mean_cyclic_trackline
   ),
   Mean_On_Effort = c(
@@ -691,7 +696,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$mean_on_effort, 
     zigzagcom_design_metric$mean_on_effort,
     fixW_sys_design_metric$mean_on_effort,
-    fixW_zigzag_design$mean_on_effort,
+    fixW_zigzag_design_metric$mean_on_effort,
     quadcopter_design_metric$mean_on_effort
   ),
   Mean_Off_Effort = c(
@@ -701,7 +706,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$mean_off_effort, 
     zigzagcom_design_metric$mean_off_effort,
     fixW_sys_design_metric$mean_off_effort,
-    fixW_zigzag_design$mean_off_effort,
+    fixW_zigzag_design_metric$mean_off_effort,
     quadcopter_design_metric$mean_off_effort
   ),
   Mean_Return_to_Home = c(
@@ -711,7 +716,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$mean_return2home, 
     zigzagcom_design_metric$mean_return2home,
     fixW_sys_design_metric$mean_return2home,
-    fixW_zigzag_design$mean_return2home,
+    fixW_zigzag_design_metric$mean_return2home,
     quadcopter_design_metric$mean_return2home
   ),
   Mean_Off_Effort_Return = c(
@@ -721,7 +726,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$mean_off_effort_return, 
     zigzagcom_design_metric$mean_off_effort_return,
     fixW_sys_design_metric$mean_off_effort_return,
-    fixW_zigzag_design$mean_off_effort_return,
+    fixW_zigzag_design_metric$mean_off_effort_return,
     quadcopter_design_metric$mean_off_effort_return
   ),
   On_Effort_Percentage = c(
@@ -731,7 +736,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$on_effort_percentage, 
     zigzagcom_design_metric$on_effort_percentage,
     fixW_sys_design_metric$on_effort_percentage,
-    fixW_zigzag_design$on_effort_percentage,
+    fixW_zigzag_design_metric$on_effort_percentage,
     quadcopter_design_metric$on_effort_percentage
   ),
   Off_Effort_Percentage = c(
@@ -741,7 +746,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$off_effort_percentage, 
     zigzagcom_design_metric$off_effort_percentage,
     fixW_sys_design_metric$off_effort_percentage,
-    fixW_zigzag_design$off_effort_percentage,
+    fixW_zigzag_design_metric$off_effort_percentage,
     quadcopter_design_metric$off_effort_percentage
   ),
   Return_to_Home_Percentage = c(
@@ -751,7 +756,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$return2home_percentage, 
     zigzagcom_design_metric$return2home_percentage,
     fixW_sys_design_metric$return2home_percentage,
-    fixW_zigzag_design$return2home_percentage,
+    fixW_zigzag_design_metric$return2home_percentage,
     quadcopter_design_metric$return2home_percentage
   ),
   Off_Effort_Return_Percentage = c(
@@ -761,7 +766,7 @@ design_comparison_df <- data.frame(
     zigzag_design_metric$off_effort_return_percentage, 
     zigzagcom_design_metric$off_effort_return_percentage,
     fixW_sys_design_metric$off_effort_return_percentage,
-    fixW_zigzag_design$off_effort_return_percentage,
+    fixW_zigzag_design_metric$off_effort_return_percentage,
     quadcopter_design_metric$off_effort_return_percentage
   )
 )

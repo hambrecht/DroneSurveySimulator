@@ -947,24 +947,32 @@ sim_quad <- make.simulation(
 
 
 heli_survey <- run.survey(sim_heli)
+rnd_survey <- run.survey(sim_rnd)
 sys_survey <- run.survey(sim_sys)
 zig_survey <- run.survey(sim_zig)
 zagcom_survey <- run.survey(sim_zagcom)
-sim_fixW_sys <- run.survey(sim_fixW_sys)
-sim_fixW_zigzag <- run.survey(sim_fixW_zigzag)
-sim_quad <- run.survey(sim_quad)
+fixW_sys_survey <- run.survey(sim_fixW_sys)
+fixW_zigzag_survey <- run.survey(sim_fixW_zigzag)
+quad_survey <- run.survey(sim_quad)
 
-# plot(heli_survey, region)
-# plot(sys_survey, region)
-# plot(zig_survey, region)
-# plot(zagcom_survey, region)
+plot(heli_survey, region)
+plot(sys_survey, region)
+plot(zig_survey, region)
+plot(zagcom_survey, region)
+plot(fixW_sys_survey, region)
+plot(fixW_zigzag_survey, region)
+plot(quad_survey, region)
 
 
 # Run the full simulation
 sim_heli <- run.simulation(simulation = sim_heli, run.parallel = T)
+sim_rnd <- run.simulation(simulation = sim_rnd, run.parallel = T)
 sim_sys <- run.simulation(simulation = sim_sys, run.parallel = T)
 sim_zig <- run.simulation(simulation = sim_zig, run.parallel = T)
 sim_zagcom <- run.simulation(simulation = sim_zagcom, run.parallel = T)
+sim_fixW_sys <- run.simulation(simulation = sim_fixW_sys, run.parallel = T)
+sim_fixW_zigzag <- run.simulation(simulation = sim_fixW_zigzag, run.parallel = T)
+sim_quad <- run.simulation(simulation = sim_quad, run.parallel = T)
 
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"-DF", detectF@key.function, ".RData"))

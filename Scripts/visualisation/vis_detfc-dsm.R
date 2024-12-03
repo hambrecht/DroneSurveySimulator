@@ -15,7 +15,7 @@ colour_palette <- brewer.pal(5, "RdBu")
 
 # define list with WUM numbers
 wmu_number_list <- c('501','503', '512', '517', '528')
-wmu_number <- wmu_number_list[2]
+wmu_number <- wmu_number_list[4]
 # loop through WUM numbers
 # for(wmu_number in wmu_number_list){
 
@@ -32,6 +32,10 @@ wmu_number <- wmu_number_list[2]
   # Plot distance data
   
   length(detfc_list_bin_compact)
+# remove `detfc_cc_hn_null_trunc_0.6_bin_0.05` from the list in case of error in `cv_values_bin`
+# detfc_list_bin_compact <- detfc_list_bin_compact[-grep("cc_hn_null_trunc_0.6_bin_0.05", detfc_list_bin_compact)]
+# detfc_list_bin_compact <- detfc_list_bin_compact[-grep("cc_hn_null_trunc_0.55_bin_0.05", detfc_list_bin_compact)]
+# detfc_list_bin_compact
 
 aic_values_bin <- purrr::map_dbl(detfc_list_bin_compact, ~ .x$ddf$criterion)
 # Extract CV values for each model

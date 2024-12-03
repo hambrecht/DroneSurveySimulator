@@ -87,6 +87,12 @@ for (i in 1:length(file_ids)) {
 merged_df <- merged_df %>% arrange(Simulation)
 
 # Print the merged dataframe
+## design stats
+## For details see: https://examples.distancesampling.org/dssd-getting-started/GettingStarted-distill.html#appendix-trackline-and-cyclic-trackline-lengths
+## Line lenght = on effort line length
+## The trackline length is the sum of the lengths of the transects plus the off-effort transit time required to complete the survey from the beginning of the first transect to the end of the last transect. The off-effort transit distance is calculated as the crow flies and may be longer in reality if transit is required around lakes, islands or coastlines etc.
+## The cyclic trackline length is the trackline length plus the off-effort transit distance required to return from the end of the last transect to the beginning of the first transect.
+
 kable(merged_df)
 
 

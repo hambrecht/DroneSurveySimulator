@@ -70,11 +70,11 @@ extract_design_metrics <- function(design) {
     mean_on_effort = design@design.statistics$line.length[2],
     mean_off_effort = design@design.statistics$trackline[2] - design@design.statistics$line.length[2],
     mean_return2home = design@design.statistics$cyclictrackline[2] - design@design.statistics$trackline[2],
-    mean_off_effort_return_percentage = design@design.statistics$cyclictrackline[2] - design@design.statistics$line.length[2],
-    on_effort_percentage = (design@design.statistics$line.length[2] / design@design.statistics$cyclictrackline[2]) * 100,
-    off_effort_percentage = ((design@design.statistics$trackline[2] - design@design.statistics$line.length[2]) / design@design.statistics$cyclictrackline[2]) * 100,
-    return2home_percentage = ((design@design.statistics$cyclictrackline[2] - design@design.statistics$trackline[2]) / design@design.statistics$cyclictrackline[2]) * 100,
-    off_effort_return_percentage = ((design@design.statistics$cyclictrackline[2] - design@design.statistics$line.length[2]) / design@design.statistics$cyclictrackline[2]) * 100
+    mean_off_effort_return = design@design.statistics$cyclictrackline[2] - design@design.statistics$line.length[2],
+    on_effort_percentage = round((design@design.statistics$line.length[2] / design@design.statistics$cyclictrackline[2]) * 100,2),
+    off_effort_percentage = round(((design@design.statistics$trackline[2] - design@design.statistics$line.length[2]) / design@design.statistics$cyclictrackline[2]) * 100,2),
+    return2home_percentage = round(((design@design.statistics$cyclictrackline[2] - design@design.statistics$trackline[2]) / design@design.statistics$cyclictrackline[2]) * 100,2),
+    off_effort_return_percentage = round(((design@design.statistics$cyclictrackline[2] - design@design.statistics$line.length[2]) / design@design.statistics$cyclictrackline[2]) * 100,2)
   )
 }
 
@@ -249,10 +249,10 @@ create_sf_polygons <- function(center_points, x_dim, y_dim) {
 
   # Generate chess-like IDs
   generate_id <- function(index) {
-    row <- ceiling(index / 8)
-    col <- index %% 8
-    if (col == 0) col <- 8
-    paste0(LETTERS[row], col)
+    row <- ceiling(index / 64)
+    col <- index %% 64
+    if (col == 0) col <- 64
+    paste0(LETTERS[ceiling(row / 26)], LETTERS[row %% 26], col)
   }
 
   ids <- sapply(1:nrow(center_points), generate_id)
@@ -573,7 +573,7 @@ quadcopter_design <- make.design(
   spacing = numeric(0),
   design.angle = 0,
   edge.protocol = "minus",
-  truncation = 50, # IMAGE_WIDTH
+  truncation = 100, # IMAGE_WIDTH
   coverage.grid = cover
 )
 quadcopter_transects <- generate.transects(quadcopter_design)
@@ -619,7 +619,6 @@ fixW_zigzag_design_metric <- extract_design_metrics(fixW_zigzag_design)
 quadcopter_design_metric <- extract_design_metrics(quadcopter_design)
 
 # Combine metrics into a single dataframe
-rm(design_comparison_df)
 design_comparison_df <- data.frame(
   Simulation = c("Heli", "Sys", "Rnd", "Zig", "Zagcom", "FixW-Sys", "FixW-Zig", "Quadcopter"),
   Design = c(
@@ -628,9 +627,9 @@ design_comparison_df <- data.frame(
     rnd_design_metric$design_type,
     zigzag_design_metric$design_type,
     zigzagcom_design_metric$design_type,
-    fixW_sys_design_metric$design_type,
-    fixW_zigzag_design_metric$design_type,
-    quadcopter_design_metric$design_type
+    fixW_sys_design_metric$design_type[1],
+    fixW_zigzag_design_metric$design_type[1],
+    quadcopter_design_metric$design_type[1]
   ),
   Mean_Sampler_Count = c(
     heli_design_metric$mean_sampler_count,
@@ -758,7 +757,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$return2home_percentage,
     zigzag_design_metric$return2home_percentage,
     zigzagcom_design_metric$return2home_percentage,
-    zigzagcom_design_metric$off_effort_percentage,
+    fixW_sys_design_metric$off_effort_percentage,
     fixW_zigzag_design_metric$return2home_percentage,
     quadcopter_design_metric$return2home_percentage
   ),
@@ -773,8 +772,6 @@ design_comparison_df <- data.frame(
     quadcopter_design_metric$off_effort_return_percentage
   )
 )
-# unknown error: doublicated rows
-design_comparison_df <- design_comparison_df[1:8,]
 # Print the comparison dataframe
 # print(comparison_df)
 kable(design_comparison_df)

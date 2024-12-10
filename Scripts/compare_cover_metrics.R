@@ -95,6 +95,9 @@ merged_df <- merged_df %>% arrange(Simulation)
 
 kable(merged_df)
 
+cover_score <- get.coverage(fixW_zigzag_design)
+hist(cover_score)
+summary(cover_score)
 
 # Calculate statistics for Mean_Cyclic_Trackline_Length grouped by Design
 statistics <- merged_df %>%

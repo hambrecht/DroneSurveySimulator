@@ -7,14 +7,15 @@ library(dplyr)
 library(sf)
 library(units)
 library(geosphere)
+library(parallelly)
 
-# # Check if pbapply is installed
-# if (!requireNamespace("pbapply", quietly = TRUE)) {
-#   message("The 'pbapply' package is not installed. Installing it now...")
-#   install.packages("pbapply")
-# } else {
-#   message("The 'pbapply' package is already installed.")
-# }
+# Check if pbapply is installed
+if (!requireNamespace("pbapply", quietly = TRUE, dependencies = TRUE)) {
+ message("The 'pbapply' package is not installed. Installing it now...")
+ install.packages("pbapply")
+} else {
+ message("The 'pbapply' package is already installed.")
+}
 
 # Define functions
 
@@ -69,8 +70,8 @@ extract_metrics <- function(sim) {
 }
 
 # Load density data
-wmu_number_list <- c("501", "503", "512", "528") #' 517'
-wmu_number <- wmu_number_list[2]
+wmu_number_list <- c("501", "503", "512", "517", "528") 
+wmu_number <- wmu_number_list[4]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
@@ -79,7 +80,7 @@ load(file = input_path)
 # Define constants
 ALTITUDE <- 120 # Height in meters
 CAMERA_HFOV <- 25 # Horizontal FOV in degrees. Max adjustment of 25 degrees. If more than 25 degrees then a third camera or gimbal would be needed to cover 0. Proposed intervals for adjustments are 0, 10, 20, 25
-CAMERA_ANGLE <- 0 # Adjustment in degrees; max 25 with two fix cameras or 35 with gimbal in forested
+CAMERA_ANGLE <- 25 # Adjustment in degrees; max 25 with two fix cameras or 35 with gimbal in forested
 IMAGE_WIDTH <- calculate_image_width(ALTITUDE, CAMERA_HFOV, CAMERA_ANGLE)
 print(paste0("Half swath width is: ", IMAGE_WIDTH, " m"))
 
@@ -94,32 +95,48 @@ pop_desc <- make.population.description(
 # Define and visualise detection function
 detect_hr_overview <- make.detectability(
   key.function = "hr",
-  scale.param = rep(200, 10),
+  scale.param = rep(50, 10),
   shape.param = seq(0.1, 4, 0.4),
-  truncation = IMAGE_WIDTH
+  truncation = 550
 )
 COLORS <- brewer.pal(10, "Paired")
 plot(detect_hr_overview, pop_desc, col = COLORS)
 legend(x = "topright", legend = seq(0.1, 4, 0.4), col = COLORS, lty = 1, cex = 0.8)
 
-detect_hr <- make.detectability(
+detect_heli <- make.detectability(
   key.function = "hr",
-  scale.param = 100, # heli:50
-  shape.param = 3, # heli:2
-  truncation = IMAGE_WIDTH # heli:20
+  scale.param = 50, # heli:50
+  shape.param = 2, # heli:2
+  truncation = 500 # heli:20
 )
-plot(detect_hr, pop_desc, legend = FALSE)
+plot(detect_heli, pop_desc, legend = FALSE)
+
+detect_fixW2 <- make.detectability(
+  key.function = "hn",
+  scale.param = 170, # heli:50
+  # shape.param = 1.3, # heli:2
+  truncation = 180 # heli:20
+)
+plot(detect_fixW2, pop_desc, legend = FALSE)
+
+detect_fixWG <- make.detectability(
+  key.function = "hn",
+  scale.param = 170, # heli:50
+  # shape.param = 3, # heli:2
+  truncation = 260 # heli:20
+)
+plot(detect_fixWG, pop_desc, legend = FALSE)
 
 # Define and visualise uniform detection function
 detect_uf <- make.detectability(
   key.function = "uf",
   scale.param = 0.8, # accounting for canopy cover
-  truncation = IMAGE_WIDTH
+  truncation = 50
 )
 plot(detect_uf, pop_desc)
 
 # Set detection function for simulation
-detectF <- detect_uf
+
 
 
 ## Simulation
@@ -136,7 +153,7 @@ ddf_analyses <- make.ds.analysis(
   dfmodel = list(~1, ~1),
   key = c("hn", "hr"),
   criteria = "AIC",
-  truncation = heli_design@truncation
+  truncation = 500
 )
 
 
@@ -145,7 +162,7 @@ sim_heli <- make.simulation(
   reps = SIM_REPS,
   design = heli_design,
   population.description = pop_desc,
-  detectability = detectF,
+  detectability = detect_heli,
   ds.analysis = ddf_analyses
 )
 
@@ -153,7 +170,7 @@ sim_rnd <- make.simulation(
   reps = SIM_REPS,
   design = rnd_design,
   population.description = pop_desc,
-  detectability = detectF,
+  detectability = detect_heli,
   ds.analysis = ddf_analyses
 )
 
@@ -161,21 +178,21 @@ sim_sys <- make.simulation(
   reps = SIM_REPS,
   design = sys_design,
   population.description = pop_desc,
-  detectability = detectF,
+  detectability = detect_heli,
   ds.analysis = ddf_analyses
 )
 sim_zig <- make.simulation(
   reps = SIM_REPS,
   design = zigzag_design,
   population.description = pop_desc,
-  detectability = detectF,
+  detectability = detect_heli,
   ds.analysis = ddf_analyses
 )
 sim_zagcom <- make.simulation(
   reps = SIM_REPS,
   design = zigzagcom_design,
   population.description = pop_desc,
-  detectability = detectF,
+  detectability = detect_heli,
   ds.analysis = ddf_analyses
 )
 
@@ -208,34 +225,60 @@ fixW_density@density.surface[[1]] <- fixW_density@density.surface[[1]] %>%
   select(-ID)
 
 pop_desc_fixW <- make.population.description(
-  region = fixW_plots,
+  region = fixW_sys_design@region,
   density = fixW_density,
   N = fixW_points_count$count,
   fixed.N = TRUE
 )
 
-ddf_analyses_fixW <- make.ds.analysis(
+ddf_analyses_fixW_2C <- make.ds.analysis(
   dfmodel = list(~1, ~1),
   key = c("hn", "hr"),
   criteria = "AIC",
-  truncation = fixW_sys_design@truncation,
-  group.strata = data.frame(design.id = fixW_plots@strata.name, analysis.id = rep("A", length(fixW_plots@strata.name)))
+  truncation = 180,
+  group.strata = data.frame(design.id = fixW_sys_design@region@strata.name, analysis.id = rep("A", length(fixW_sys_design@region@strata.name)))
 )
 
-sim_fixW_sys <- make.simulation(
+ddf_analyses_fixW_G <- make.ds.analysis(
+  dfmodel = list(~1, ~1),
+  key = c("hn", "hr"),
+  criteria = "AIC",
+  truncation = 260,
+  group.strata = data.frame(design.id = fixW_sys_design@region@strata.name, analysis.id = rep("A", length(fixW_sys_design@region@strata.name)))
+)
+fixW_sys_design@truncation <- 180
+fixW_zigzag_design@truncation <- 180
+sim_fixW_sys_2C <- make.simulation(
   reps = SIM_REPS,
   design = fixW_sys_design,
   population.description = pop_desc_fixW,
-  detectability = detectF,
-  ds.analysis = ddf_analyses_fixW
+  detectability = detect_fixW2,
+  ds.analysis = ddf_analyses_fixW_2C
 )
 
-sim_fixW_zigzag <- make.simulation(
+sim_fixW_zigzag_2C <- make.simulation(
   reps = SIM_REPS,
   design = fixW_zigzag_design,
   population.description = pop_desc_fixW,
-  detectability = detectF,
-  ds.analysis = ddf_analyses_fixW
+  detectability = detect_fixW2,
+  ds.analysis = ddf_analyses_fixW_2C
+)
+fixW_sys_design@truncation <- 260
+fixW_zigzag_design@truncation <- 260
+sim_fixW_sys_G <- make.simulation(
+  reps = SIM_REPS,
+  design = fixW_sys_design,
+  population.description = pop_desc_fixW,
+  detectability = detect_fixWG,
+  ds.analysis = ddf_analyses_fixW_G
+)
+
+sim_fixW_zigzag_G <- make.simulation(
+  reps = SIM_REPS,
+  design = fixW_zigzag_design,
+  population.description = pop_desc_fixW,
+  detectability = detect_fixWG,
+  ds.analysis = ddf_analyses_fixW_G
 )
 # termine abundance in each subplot
 
@@ -272,15 +315,16 @@ ddf_analyses_quadcopter <- make.ds.analysis(
   dfmodel = list(~1, ~1),
   key = c("hn", "hr"),
   criteria = "AIC",
-  truncation = IMAGE_WIDTH,
+  truncation = 50,
   group.strata = data.frame(design.id = quadcopter_design@region@strata.name, analysis.id = rep("A", length(quadcopter_design@region@strata.name)))
 )
 
+quadcopter_design@truncation <-50
 sim_quad <- make.simulation(
   reps = SIM_REPS,
   design = quadcopter_design,
   population.description = pop_desc_quadcopter,
-  detectability = detectF,
+  detectability = detect_uf,
   ds.analysis = ddf_analyses_quadcopter
 )
 
@@ -290,8 +334,10 @@ rnd_survey <- run.survey(sim_rnd)
 sys_survey <- run.survey(sim_sys)
 zig_survey <- run.survey(sim_zig)
 zagcom_survey <- run.survey(sim_zagcom)
-fixW_sys_survey <- run.survey(sim_fixW_sys)
-fixW_zigzag_survey <- run.survey(sim_fixW_zigzag)
+fixW_sys_survey_2C <- run.survey(sim_fixW_sys_2C)
+fixW_zigzag_survey_2C <- run.survey(sim_fixW_zigzag_2C)
+fixW_sys_survey_G <- run.survey(sim_fixW_sys_G)
+fixW_zigzag_survey_G <- run.survey(sim_fixW_zigzag_G)
 quad_survey <- run.survey(sim_quad)
 
 plot(heli_survey, region)
@@ -299,41 +345,57 @@ plot(rnd_survey, region)
 plot(sys_survey, region)
 plot(zig_survey, region)
 plot(zagcom_survey, region)
-plot(fixW_sys_survey, region)
-plot(fixW_zigzag_survey, region)
+plot(fixW_sys_survey_2C, region)
+plot(fixW_zigzag_survey_2C, region)
+plot(fixW_sys_survey_G, region)
+plot(fixW_zigzag_survey_G, region)
 plot(quad_survey, region)
 
 
 # Run the full simulation
-sim_heli <- run.simulation(simulation = sim_heli, run.parallel = F)
-sim_rnd <- run.simulation(simulation = sim_rnd, run.parallel = T)
-sim_sys <- run.simulation(simulation = sim_sys, run.parallel = T)
-sim_zig <- run.simulation(simulation = sim_zig, run.parallel = T)
-sim_zagcom <- run.simulation(simulation = sim_zagcom, run.parallel = T)
-sim_fixW_sys <- run.simulation(simulation = sim_fixW_sys, run.parallel = T)
-sim_fixW_zigzag <- run.simulation(simulation = sim_fixW_zigzag, run.parallel = T)
-system.time(sim_quad <- run.simulation(simulation = sim_quad, run.parallel = F))
+sim_heli <- run.simulation(simulation = sim_heli, run.parallel = T, max.cores=20)
+sim_rnd <- run.simulation(simulation = sim_rnd, run.parallel = T, max.cores=20)
+sim_sys <- run.simulation(simulation = sim_sys, run.parallel = T, max.cores=20)
+sim_zig <- run.simulation(simulation = sim_zig, run.parallel = T, max.cores=20)
+sim_zagcom <- run.simulation(simulation = sim_zagcom, run.parallel = T, max.cores=20)
+sim_fixW_sys_2C <- run.simulation(simulation = sim_fixW_sys_2C, run.parallel = T, max.cores=20)
+sim_fixW_zigzag_2C <- run.simulation(simulation = sim_fixW_zigzag_2C, run.parallel = T, max.cores=20)
+sim_fixW_sys_G <- run.simulation(simulation = sim_fixW_sys_G, run.parallel = T, max.cores=20)
+sim_fixW_zigzag_G <- run.simulation(simulation = sim_fixW_zigzag_G, run.parallel = T, max.cores=20)
+sim_quad <- run.simulation(simulation = sim_quad, run.parallel = T, max.cores=20)
 
 # Save simulation data
-output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, "-T", IMAGE_WIDTH, "-DF", detectF@key.function, ".RData"))
+output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
-save(sim_heli, sim_rnd, sim_sys, sim_zig, sim_zagcom, sim_fixW_sys, sim_fixW_zigzag, sim_quad, file = output_path)
+save(sim_heli, sim_rnd, sim_sys, sim_zig, sim_zagcom, sim_fixW_sys_2C, sim_fixW_zigzag_2C, sim_fixW_sys_G, sim_fixW_zigzag_G, sim_quad, file = output_path)
 
-output_path <- here("Output", "Simulation")
-save.sim.results(sim_quad, output_path)
+
 
 # Display results
 summary(sim_heli, description.summary = FALSE)
-# summary(sim_sys, description.summary = FALSE)
-# summary(sim_zig, description.summary = FALSE)
-# summary(sim_zagcom, description.summary = FALSE)
-
-# par(mfrow = c(2, 2))
-# histogram.N.ests(sim_heli, xlim = c(7500, 11000))
-# histogram.N.ests(sim_sys, xlim = c(7500, 11000))
-# histogram.N.ests(sim_zig, xlim = c(7500, 11000))
-# histogram.N.ests(sim_zagcom, xlim = c(7500, 11000))
-
+summary(sim_rnd, description.summary = FALSE)
+summary(sim_sys, description.summary = FALSE)
+summary(sim_zig, description.summary = FALSE)
+summary(sim_zagcom, description.summary = FALSE)
+summary(sim_fixW_sys_2C, description.summary = FALSE)
+summary(sim_fixW_zigzag_2C, description.summary = FALSE)
+summary(sim_fixW_sys_G, description.summary = FALSE)
+summary(sim_fixW_zigzag_G, description.summary = FALSE)
+summary(sim_quad, description.summary = FALSE)
+total_abundance
+histogram.N.ests(sim_fixW_sys, use.max.reps = TRUE)
+par(mfrow = c(2, 4))
+histogram.N.ests(sim_heli, xlim = c(7100, 9600))
+histogram.N.ests(sim_sys, xlim = c(7100, 9600))
+histogram.N.ests(sim_rnd, xlim = c(7100, 9600))
+histogram.N.ests(sim_zig, xlim = c(7100, 9600))
+histogram.N.ests(sim_zagcom, xlim = c(7100, 9600))
+histogram.N.ests(sim_fixW_sys_2C, xlim = c(2800, 3700))
+histogram.N.ests(sim_fixW_zigzag_2C, xlim = c(2800, 3700))
+histogram.N.ests(sim_fixW_sys_G, xlim = c(2800, 3700))
+histogram.N.ests(sim_fixW_zigzag_G, xlim = c(2800, 3700))
+histogram.N.ests(sim_quad, xlim = c(1000, 1410))
+par(mfrow = c(1, 1))
 
 # # Extract metrics for each simulation
 # metrics_heli <- extract_metrics(sim_heli)

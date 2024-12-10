@@ -2,6 +2,8 @@
 
 # Load the required library
 library(dsims)
+library(sf)
+library(dplyr)
 
 # Define the study area
 area_m <- matrix(c(0,0,500,0,500,500,0,500,0,0), ncol=2, byrow=TRUE)
@@ -28,18 +30,8 @@ heli_design <- make.design(
 )
 heli_transects <- generate.transects(heli_design)
 
-drone_design <- make.design(
-  region = region,
-  transect.type = "line",
-  design = "segmentedgrid",
-  spacing = 2, # segments seperated by 200m
-  seg.length = 20, # segements of 1km
-  design.angle = 0, # align transect with north south
-  seg.threshold = 10, # any segments less than 10% of the segment length (i.e. 1km) will be discarded.
-  edge.protocol = "minus",
-  truncation = 0.5, # IMAGE_WIDTH
-)
-drone_transects <- generate.transects(drone_design)
+heli_transects@line.length
+
 
 ## Systematic design
 sys_design <- make.design(
@@ -105,6 +97,98 @@ zigzagcom_design <- make.design(
   truncation = 5, # IMAGE_WIDTH
 )
 zigzagcom_transects <- generate.transects(zigzagcom_design)
+
+grid_center <- make.coverage(region,
+                             # spacing = 1000
+                             n.grid.points = 1
+)
+plot(grid_center)
+# plot(region, grid_center)
+# remove coverage.scores column
+grid_center@grid <- grid_center@grid %>% select(-coverage.scores)
+
+
+# Create a buffer around the polygon boundary
+buffer_1000m <- st_buffer(region@region, dist = -125)
+
+# Identify points within 1000 meters of the boundary
+selection_index <- st_disjoint(grid_center@grid, buffer_1000m, sparse = FALSE)
+points_within_1000m <- grid_center@grid[selection_index,]
+
+# Find the nearest points on the polygon for each point in the grid
+nearest_lines <- st_nearest_points(points_within_1000m, buffer_1000m)
+nearest_points <- st_cast(nearest_lines, "POINT")
+new_coords <- st_coordinates(nearest_points[seq(2, length(nearest_points), 2)])
+
+# Replace the coordinates in points1 with the new coordinates
+st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(1:nrow(points_within_1000m), function(i) st_point(new_coords[i,])))
+
+# Create sub plot polygons
+polygons <- create_sf_polygons(grid_center@grid, 100, 100)
+plot(area)
+plot(polygons, add = TRUE)
+
+poly_region <- make.region(region.name = "sub plots", shape = polygons)
+fixW_design <- make.design(
+  region = poly_region,
+  transect.type = "line",
+  design = "systematic",
+  samplers = numeric(0), # OR
+  line.length = rep(heli_transects@line.length / length(poly_region@strata.name), length(poly_region@strata.name)), # OR
+  spacing = numeric(0),
+  design.angle = 0,
+  edge.protocol = "minus",
+  truncation = 5, # IMAGE_WIDTH
+)
+fixW_transects <- generate.transects(fixW_design)
+plot(region, fixW_transects, lwd = 0.5, col = 4)
+
+
+grid_center <- make.coverage(region,
+                             # spacing = 1000
+                             n.grid.points = 16
+)
+plot(grid_center)
+# plot(region, grid_center)
+# remove coverage.scores column
+grid_center@grid <- grid_center@grid %>% select(-coverage.scores)
+
+
+# Create a buffer around the polygon boundary
+buffer_1000m <- st_buffer(region@region, dist = -20)
+
+# Identify points within 1000 meters of the boundary
+selection_index <- st_disjoint(grid_center@grid, buffer_1000m, sparse = FALSE)
+points_within_1000m <- grid_center@grid[selection_index,]
+
+# Find the nearest points on the polygon for each point in the grid
+nearest_lines <- st_nearest_points(points_within_1000m, buffer_1000m)
+nearest_points <- st_cast(nearest_lines, "POINT")
+new_coords <- st_coordinates(nearest_points[seq(2, length(nearest_points), 2)])
+
+# Replace the coordinates in points1 with the new coordinates
+st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(1:nrow(points_within_1000m), function(i) st_point(new_coords[i,])))
+
+# Create sub plot polygons
+polygons <- create_sf_polygons(grid_center@grid, 50, 40)
+plot(area)
+plot(polygons, add = TRUE)
+
+poly_region <- make.region(region.name = "sub plots", shape = polygons)
+quad_design <- make.design(
+  region = poly_region,
+  transect.type = "line",
+  design = "systematic",
+  samplers = numeric(0), # OR
+  line.length = rep(heli_transects@line.length / length(poly_region@strata.name), length(poly_region@strata.name)), # OR
+  spacing = numeric(0),
+  design.angle = 0,
+  edge.protocol = "minus",
+  truncation = 5, # IMAGE_WIDTH
+)
+quad_transects <- generate.transects(quad_design)
+plot(region, quad_transects, lwd = 0.5, col = 4)
+
 
 
 # Plot desings

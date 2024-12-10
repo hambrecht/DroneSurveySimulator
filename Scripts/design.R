@@ -178,41 +178,114 @@ check_overlap <- function(polygon, existing_polygons) {
 #' @param max_attempts Maximum number of attempts to place a polygon.
 #' @param max_retries Maximum number of retries to place all polygons.
 #' @return An sf object containing the placed polygons.
-place_polygons <- function(N, x, y, area, buffer_distance, max_attempts = 10000, max_retries = 100) {
+# place_polygons <- function(N, x, y, area, buffer_distance, max_attempts = 1000, max_retries = 1000) {
+#   crs <- st_crs(area)
+#
+#   for (retry in 1:max_retries) {
+#     print(paste0("Retry ", retry))
+#     polygons <- list()
+#     success <- TRUE
+#
+#     # Place the first polygon in the center of the area
+#     center_x <- (st_bbox(area)$xmin + st_bbox(area)$xmax) / 2
+#     center_y <- (st_bbox(area)$ymin + st_bbox(area)$ymax) / 2
+#     coords <- matrix(c(
+#       center_x - x / 2, center_y - y / 2,
+#       center_x + x / 2, center_y - y / 2,
+#       center_x + x / 2, center_y + y / 2,
+#       center_x - x / 2, center_y + y / 2,
+#       center_x - x / 2, center_y - y / 2
+#     ), ncol = 2, byrow = TRUE)
+#     polygon <- st_polygon(list(coords))
+#     polygons[[1]] <- st_sfc(polygon, crs = crs)
+#
+#     for (i in 2:N) {
+#       attempts <- 0
+#       repeat {
+#         attempts <- attempts + 1
+#         if (attempts > max_attempts) {
+#           success <- FALSE
+#           break
+#         }
+#         result <- generate_random_polygon(x, y, crs, area)
+#         polygon <- result$polygon
+#         if (check_polygon(polygon, area, buffer_distance) && !check_overlap(polygon, polygons)) {
+#           polygons[[i]] <- polygon
+#           break
+#         }
+#       }
+#       if (!success) break
+#     }
+#
+#     if (success) {
+#       sf_polygons <- st_sf(geometry = do.call(c, polygons), crs = crs)
+#       sf_polygons$ID <- LETTERS[1:N]
+#       return(sf_polygons)
+#     }
+#   }
+#
+#   stop("Failed to place polygons after 100 retries")
+# }
+
+
+# Function to create a grid with cell size half the size of the polygon
+create_grid <- function(area, x, y) {
+  bbox <- st_bbox(area)
+  cell_size_x <- x / 2
+  cell_size_y <- y / 2
+  grid <- st_make_grid(area, cellsize = c(cell_size_x, cell_size_y), what = "centers")
+  grid <- st_as_sf(grid)
+  grid <- grid[st_within(grid, area, sparse = FALSE), ]
+  return(grid)
+}
+
+# Function to place polygons using the grid cells
+place_polygons_grid <- function(N, x, y, area, buffer_distance, max_attempts = 1000) {
   crs <- st_crs(area)
+  grid <- create_grid(area, x, y)
+  polygons <- list()
+  success <- TRUE
 
-  for (retry in 1:max_retries) {
-    print(paste0("Retry ", retry))
-    polygons <- list()
-    success <- TRUE
-
-    for (i in 1:N) {
-      attempts <- 0
-      repeat {
-        attempts <- attempts + 1
-        if (attempts > max_attempts) {
-          success <- FALSE
-          break
-        }
-        result <- generate_random_polygon(x, y, crs, area)
-        polygon <- result$polygon
-        if (check_polygon(polygon, area, buffer_distance) && !check_overlap(polygon, polygons)) {
-          polygons[[i]] <- polygon
-          break
-        }
+  for (i in 1:N) {
+    attempts <- 0
+    repeat {
+      attempts <- attempts + 1
+      if (attempts > max_attempts) {
+        success <- FALSE
+        break
       }
-      if (!success) break
-    }
 
-    if (success) {
-      sf_polygons <- st_sf(geometry = do.call(c, polygons), crs = crs)
-      sf_polygons$ID <- LETTERS[1:N]
-      return(sf_polygons)
+      # Select a random grid cell
+      center <- grid[sample(nrow(grid), 1), ]
+      center_x <- st_coordinates(center)[1]
+      center_y <- st_coordinates(center)[2]
+      coords <- matrix(c(
+        center_x - x / 2, center_y - y / 2,
+        center_x + x / 2, center_y - y / 2,
+        center_x + x / 2, center_y + y / 2,
+        center_x - x / 2, center_y + y / 2,
+        center_x - x / 2, center_y - y / 2
+      ), ncol = 2, byrow = TRUE)
+      polygon <- st_polygon(list(coords))
+      polygon_sfc <- st_sfc(polygon, crs = crs)
+
+      if (check_polygon(polygon_sfc, area, buffer_distance) && !check_overlap(polygon_sfc, polygons)) {
+        polygons[[i]] <- polygon_sfc
+        break
+      }
     }
+    if (!success) break
   }
 
-  stop("Failed to place polygons after 100 retries")
+  if (success) {
+    sf_polygons <- st_sf(geometry = do.call(c, polygons), crs = crs)
+    sf_polygons$ID <- LETTERS[1:N]
+    return(sf_polygons)
+  }
+
+  stop("Failed to place polygons after max attempts")
 }
+
 
 #' Create polygons when grid of centroids is provided
 #'
@@ -247,15 +320,16 @@ create_sf_polygons <- function(center_points, x_dim, y_dim) {
     create_polygon(center_points[i,], x_dim, y_dim)
   })
 
-  # Generate chess-like IDs
-  generate_id <- function(index) {
-    row <- ceiling(index / 64)
-    col <- index %% 64
-    if (col == 0) col <- 64
-    paste0(LETTERS[ceiling(row / 26)], LETTERS[row %% 26], col)
+  # Generate IDs based on coordinates
+  generate_id <- function(center) {
+    coords <- st_coordinates(center)
+    paste0(round(coords[1], 0), " ", round(coords[2], 0))
   }
 
-  ids <- sapply(1:nrow(center_points), generate_id)
+  ids <- sapply(1:nrow(center_points), function(i) {
+    generate_id(center_points[i,])
+  })
+
 
   # Combine polygons into an sf object and add IDs
   sf_polygons <- st_sf(
@@ -384,6 +458,7 @@ heli_transects <- generate.transects(heli_design)
 #### results should vary slightly from mine, make sure you haven't set a seed!
 heli_design <- run.coverage(heli_design, reps = COV_REPS)
 total_length <- heli_design@design.statistics$line.length[2]
+# total_length <- heli_transects@line.length
 
 
 ## Systematic design
@@ -463,15 +538,63 @@ zigzagcom_design <- run.coverage(zigzagcom_design, reps = COV_REPS)
 ## Fix-wing
 # Compute polygon dimensions
 number_blocks <- round(total_length / 367200) # 367.2km is the total distance superwake can fly, assuming a speed of 17m/s and a flight time of 6h.
-spacing <- 500
+spacing <- 800
 poly_dim <- find_best_block_dim(total_length, number_blocks, spacing)
+# Check if the polygons can fit into the area
+
 
 # Checking that blocks fit within region
-if (region@area > (poly_dim[2] * poly_dim[3] * number_blocks)) {
-  # Create polygons
-  fixW_poly <- place_polygons(number_blocks, poly_dim$x_length, poly_dim$y_length, wmu, buffer_distance = 100)
+if (region@area > (poly_dim$x_length * poly_dim$y_length * number_blocks)) {
+  # Create a buffer around the polygon boundary
+  buffer <- st_buffer(region@region, dist = -1000)
+
+  buffer_region <- make.region(region.name = 'buffer', shape = buffer)
+
+  # create coverage grid
+  grid_center <- make.coverage(buffer_region,
+                               # spacing = 1000
+                               n.grid.points = number_blocks
+  )
+
+  # Check if the number of grid points is less than number_blocks
+  if (nrow(grid_center@grid) < number_blocks) {
+    grid_center <- make.coverage(buffer_region,
+                                 # spacing = 1000
+                                 n.grid.points = number_blocks + 1
+    )
+  }
+
+  # plot(region, grid_center)
+  # remove coverage.scores column
+  grid_center@grid <- grid_center@grid %>% select(-coverage.scores)
+
+
+
+  #
+  # # Identify points within 1000 meters of the boundary
+  # selection_index <- st_disjoint(grid_center@grid, buffer_1000m, sparse = FALSE)
+  # points_within_1000m <- grid_center@grid[selection_index,]
+  #
+  # # Find the nearest points on the polygon for each point in the grid
+  # nearest_lines <- st_nearest_points(points_within_1000m, buffer_1000m)
+  # nearest_points <- st_cast(nearest_lines, "POINT")
+  # new_coords <- st_coordinates(nearest_points[seq(2, length(nearest_points), 2)])
+  #
+  # # Replace the coordinates in points1 with the new coordinates
+  # st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(1:nrow(points_within_1000m), function(i) st_point(new_coords[i,])))
+
+  # Create sub plot polygons
+  fixW_poly <- create_sf_polygons(grid_center@grid, poly_dim$x_length, poly_dim$y_length)
+  fixW_poly <- st_intersection(fixW_poly, wmu)
+  # Cast the geometries to POLYGON or MULTIPOLYGON
+  fixW_poly <- st_cast(fixW_poly, "MULTIPOLYGON")
 
 }
+plot(st_geometry(wmu))
+plot(fixW_poly[1], add = TRUE, col = "red")
+print(paste0("Number of  required plots: ", number_blocks, " Number calculated plots: ",nrow(grid_center@grid)))
+
+
 
 # create subplot region
 fixW_plots <- make.region(
@@ -491,7 +614,7 @@ fixW_sys_design <- make.design(
   spacing = numeric(0),
   design.angle = 0,
   edge.protocol = "minus",
-  truncation = 600, # IMAGE_WIDTH
+  truncation = 400, # IMAGE_WIDTH
   coverage.grid = cover
 )
 fixW_sys_transects <- generate.transects(fixW_sys_design)
@@ -509,7 +632,7 @@ fixW_zigzag_design <- make.design(
   spacing = numeric(0),
   design.angle = 0,
   edge.protocol = "minus",
-  truncation = 600, # IMAGE_WIDTH
+  truncation = 400, # IMAGE_WIDTH
   coverage.grid = cover
 )
 fixW_zigzag_transects <- generate.transects(fixW_zigzag_design)
@@ -552,8 +675,11 @@ if (region@area > (2000 * 2500 * number_blocks)) {
   # Create sub plot polygons
   polygons <- create_sf_polygons(grid_center@grid, 2500, 2000)
 }
-# plot(st_geometry(wmu))
-# plot(polygons[1], add = TRUE, col = "red")
+plot(st_geometry(wmu))
+plot(polygons[1], add = TRUE, col = "red")
+
+number_blocks
+nrow(polygons)
 
 # create subplot region
 quadcopter_plots <- make.region(
@@ -573,14 +699,14 @@ quadcopter_design <- make.design(
   spacing = numeric(0),
   design.angle = 0,
   edge.protocol = "minus",
-  truncation = 100, # IMAGE_WIDTH
+  truncation = 50, # IMAGE_WIDTH
   coverage.grid = cover
 )
 quadcopter_transects <- generate.transects(quadcopter_design)
 ### Coverage
-system.time(quadcopter_design <- run.coverage(quadcopter_design, reps = COV_REPS))
+system.time(quadcopter_design <- run.coverage(quadcopter_design, reps = COV_REPS))[3]/60
 
-
+hist(get.coverage(heli_design))
 # Plot desings
 par(mfrow = c(2, 4))
 plot(region, heli_transects, lwd = 0.5, col = 4)

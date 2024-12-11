@@ -230,7 +230,6 @@ check_overlap <- function(polygon, existing_polygons) {
 
 # Function to create a grid with cell size half the size of the polygon
 create_grid <- function(area, x, y) {
-  bbox <- st_bbox(area)
   cell_size_x <- x / 2
   cell_size_y <- y / 2
   grid <- st_make_grid(area, cellsize = c(cell_size_x, cell_size_y), what = "centers")
@@ -316,7 +315,7 @@ create_sf_polygons <- function(center_points, x_dim, y_dim) {
   }
 
   # Create polygons for each center point
-  polygons <- lapply(1:nrow(center_points), function(i) {
+  polygons <- lapply(seq_len(nrow(center_points)), function(i) {
     create_polygon(center_points[i,], x_dim, y_dim)
   })
 
@@ -326,7 +325,7 @@ create_sf_polygons <- function(center_points, x_dim, y_dim) {
     paste0(round(coords[1], 0), " ", round(coords[2], 0))
   }
 
-  ids <- sapply(1:nrow(center_points), function(i) {
+  ids <- sapply(seq_len(nrow(center_points)), function(i) {
     generate_id(center_points[i,])
   })
 
@@ -408,7 +407,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[1]
+wmu_number <- wmu_number_list[5]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 
@@ -420,8 +419,8 @@ IMAGE_WIDTH <- calculate_image_width(ALTITUDE, CAMERA_HFOV, CAMERA_ANGLE)
 print(paste0("Half swath width is: ", IMAGE_WIDTH, " m"))
 
 # Define cover grid spacing and repetition
-COV_SPACE = 500
-COV_REPS = 100
+COV_SPACE <- 500
+COV_REPS <- 100
 
 # Calculate the angle of longest Dimension of WMU
 COORDS <- st_coordinates(region@region)[, 1:2]
@@ -610,8 +609,8 @@ fixW_sys_design <- make.design(
   transect.type = "line",
   design = "systematic",
   samplers = numeric(0), # OR
-  line.length = rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)), # OR
-  spacing = numeric(0),
+  line.length = numeric(0), # rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)) OR
+  spacing = spacing,
   design.angle = 0,
   edge.protocol = "minus",
   truncation = 400, # IMAGE_WIDTH
@@ -628,7 +627,7 @@ fixW_zigzag_design <- make.design(
   transect.type = "line",
   design = "eszigzag",
   samplers = numeric(0), # OR
-  line.length = rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)), # OR
+  line.length = fixW_sys_design@design.statistics$line.length[2], # rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)) OR
   spacing = numeric(0),
   design.angle = 0,
   edge.protocol = "minus",
@@ -670,7 +669,7 @@ if (region@area > (2000 * 2500 * number_blocks)) {
   new_coords <- st_coordinates(nearest_points[seq(2, length(nearest_points), 2)])
 
   # Replace the coordinates in points1 with the new coordinates
-  st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(1:nrow(points_within_1000m), function(i) st_point(new_coords[i,])))
+  st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(seq_len(nrow(points_within_1000m)), function(i) st_point(new_coords[i,])))
 
   # Create sub plot polygons
   polygons <- create_sf_polygons(grid_center@grid, 2500, 2000)
@@ -696,7 +695,7 @@ quadcopter_design <- make.design(
   design = "systematic",
   samplers = numeric(0), # OR
   line.length = numeric(0), # rep(total_length / length(quadcopter_plots@strata.name), length(quadcopter_plots@strata.name)) OR
-  spacing = numeric(spacing), # numeric(spacing)
+  spacing = spacing, # numeric(0)
   design.angle = 0,
   edge.protocol = "minus",
   truncation = 50, # IMAGE_WIDTH

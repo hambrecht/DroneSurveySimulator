@@ -383,19 +383,57 @@ summary(sim_fixW_sys_G, description.summary = FALSE)
 summary(sim_fixW_zigzag_G, description.summary = FALSE)
 summary(sim_quad, description.summary = FALSE)
 total_abundance
-histogram.N.ests(sim_fixW_sys, use.max.reps = TRUE)
-par(mfrow = c(2, 4))
-histogram.N.ests(sim_heli, xlim = c(7100, 9600))
-histogram.N.ests(sim_sys, xlim = c(7100, 9600))
-histogram.N.ests(sim_rnd, xlim = c(7100, 9600))
-histogram.N.ests(sim_zig, xlim = c(7100, 9600))
-histogram.N.ests(sim_zagcom, xlim = c(7100, 9600))
-histogram.N.ests(sim_fixW_sys_2C, xlim = c(2800, 3700))
-histogram.N.ests(sim_fixW_zigzag_2C, xlim = c(2800, 3700))
-histogram.N.ests(sim_fixW_sys_G, xlim = c(2800, 3700))
-histogram.N.ests(sim_fixW_zigzag_G, xlim = c(2800, 3700))
-histogram.N.ests(sim_quad, xlim = c(1000, 1410))
+histogram.N.ests(sim_rnd, use.max.reps = TRUE)
+
+# Define labels
+labels <- c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
+xlims <- c(49500, 80000)
+par(mfrow = c(2, 5))
+
+# Plot each histogram and add the corresponding label
+histogram.N.ests(sim_heli, xlim = xlims)
+usr <- par("usr")
+text(x = usr[2], y = usr[4], labels = labels[1], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+
+
+histogram.N.ests(sim_sys, xlim = xlims)
+usr <- par("usr")
+text(x = usr[2], y = usr[4], labels = labels[2], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+
+histogram.N.ests(sim_rnd, xlim = xlims)
+usr <- par("usr")
+text(x = usr[2], y = usr[4], labels = labels[3], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+
+histogram.N.ests(sim_zig, xlim = xlims)
+usr <- par("usr")
+text(x = usr[2], y = usr[4], labels = labels[4], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+
+histogram.N.ests(sim_zagcom, xlim = xlims)
+usr <- par("usr")
+text(x = usr[2], y = usr[4], labels = labels[5], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+
+histogram.N.ests(sim_fixW_sys_2C, xlim = c(30000, 33500))
+usr <- par("usr")
+text(x = usr[2], y = usr[4], labels = labels[6], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+
+histogram.N.ests(sim_fixW_zigzag_2C, xlim = c(30000, 33500))
+usr <- par("usr")
+text(x = usr[2], y = usr[4], labels = labels[7], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+
+histogram.N.ests(sim_fixW_sys_G, xlim = c(30000, 33500))
+usr <- par("usr")
+text(x = usr[2], y = usr[4], labels = labels[8], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+
+histogram.N.ests(sim_fixW_zigzag_G, xlim = c(30000, 33500))
+usr <- par("usr")
+text(x = usr[2], y = usr[4], labels = labels[9], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+
+histogram.N.ests(sim_quad, xlim = c(6500, 8900))
+usr <- par("usr")
+text(x = usr[2], y = usr[4], labels = labels[10], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+
 par(mfrow = c(1, 1))
+
 
 # # Extract metrics for each simulation
 # metrics_heli <- extract_metrics(sim_heli)

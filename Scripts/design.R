@@ -408,7 +408,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[5]
+wmu_number <- wmu_number_list[1]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 
@@ -695,8 +695,8 @@ quadcopter_design <- make.design(
   transect.type = "line",
   design = "systematic",
   samplers = numeric(0), # OR
-  line.length = rep(total_length / length(quadcopter_plots@strata.name), length(quadcopter_plots@strata.name)), # OR
-  spacing = numeric(0),
+  line.length = numeric(0), # rep(total_length / length(quadcopter_plots@strata.name), length(quadcopter_plots@strata.name)) OR
+  spacing = numeric(spacing), # numeric(spacing)
   design.angle = 0,
   edge.protocol = "minus",
   truncation = 50, # IMAGE_WIDTH

@@ -61,20 +61,20 @@ calculate_image_width <- function(ALTITUDE, CAMERA_FOV = 25, CAMERA_ANGLE = 0) {
 extract_design_metrics <- function(design) {
   list(
     design_type = design@design,
-    mean_sampler_count = design@design.statistics$sampler.count[2],
-    mean_cover_area = design@design.statistics$cov.area[2],
-    mean_cover_percentage = design@design.statistics$p.cov.area[2],
-    mean_line_length = design@design.statistics$line.length[2],
-    mean_trackline = design@design.statistics$trackline[2],
-    mean_cyclic_trackline = design@design.statistics$cyclictrackline[2],
-    mean_on_effort = design@design.statistics$line.length[2],
-    mean_off_effort = design@design.statistics$trackline[2] - design@design.statistics$line.length[2],
-    mean_return2home = design@design.statistics$cyclictrackline[2] - design@design.statistics$trackline[2],
-    mean_off_effort_return = design@design.statistics$cyclictrackline[2] - design@design.statistics$line.length[2],
-    on_effort_percentage = round((design@design.statistics$line.length[2] / design@design.statistics$cyclictrackline[2]) * 100,2),
-    off_effort_percentage = round(((design@design.statistics$trackline[2] - design@design.statistics$line.length[2]) / design@design.statistics$cyclictrackline[2]) * 100,2),
-    return2home_percentage = round(((design@design.statistics$cyclictrackline[2] - design@design.statistics$trackline[2]) / design@design.statistics$cyclictrackline[2]) * 100,2),
-    off_effort_return_percentage = round(((design@design.statistics$cyclictrackline[2] - design@design.statistics$line.length[2]) / design@design.statistics$cyclictrackline[2]) * 100,2)
+    mean_sampler_count = design@design.statistics$sampler.count[2, 'Total'],
+    mean_cover_area = design@design.statistics$cov.area[2, 'Total'],
+    mean_cover_percentage = design@design.statistics$p.cov.area[2, 'Total'],
+    mean_line_length = design@design.statistics$line.length[2, 'Total'],
+    mean_trackline = design@design.statistics$trackline[2, 'Total'],
+    mean_cyclic_trackline = design@design.statistics$cyclictrackline[2, 'Total'],
+    mean_on_effort = design@design.statistics$line.length[2, 'Total'],
+    mean_off_effort = design@design.statistics$trackline[2, 'Total'] - design@design.statistics$line.length[2, 'Total'],
+    mean_return2home = design@design.statistics$cyclictrackline[2, 'Total'] - design@design.statistics$trackline[2, 'Total'],
+    mean_off_effort_return = design@design.statistics$cyclictrackline[2, 'Total'] - design@design.statistics$line.length[2, 'Total'],
+    on_effort_percentage = round((design@design.statistics$line.length[2, 'Total'] / design@design.statistics$cyclictrackline[2, 'Total']) * 100, 2),
+    off_effort_percentage = round(((design@design.statistics$trackline[2, 'Total'] - design@design.statistics$line.length[2, 'Total']) / design@design.statistics$cyclictrackline[2, 'Total']) * 100, 2),
+    return2home_percentage = round(((design@design.statistics$cyclictrackline[2, 'Total'] - design@design.statistics$trackline[2, 'Total']) / design@design.statistics$cyclictrackline[2, 'Total']) * 100, 2),
+    off_effort_return_percentage = round(((design@design.statistics$cyclictrackline[2, 'Total'] - design@design.statistics$line.length[2, 'Total']) / design@design.statistics$cyclictrackline[2, 'Total']) * 100, 2)
   )
 }
 
@@ -535,6 +535,27 @@ zigzagcom_design <- run.coverage(zigzagcom_design, reps = COV_REPS)
 
 # Drone survey designs
 ## Fix-wing
+## Zigzag design
+short_zigzag_design <- make.design(
+  region = region,
+  transect.type = "line",
+  design = "eszigzag",
+  samplers = numeric(0), # OR
+  line.length = 367200, # OR
+  spacing = numeric(0),
+  design.angle = TRANSECT_ANGLE, # The design angle for the zigzag designs refers to the angle of a line which would run through the middle of each zigzag transect if the zigzags were to be generated within a rectangle. The design angle for zigzags should usually run along the longest dimension of the study region.
+  edge.protocol = "minus",
+  bounding.shape = "convex.hull", # rectangle or convex.hull. convex hull is generally more efficient.
+  truncation = 400, # IMAGE_WIDTH
+  coverage.grid = cover
+)
+short_zigzag_transects <- generate.transects(short_zigzag_design)
+
+### Coverage
+short_zigzag_design <- run.coverage(short_zigzag_design, reps = COV_REPS)
+
+
+
 # Compute polygon dimensions
 number_blocks <- round(total_length / 367200) # 367.2km is the total distance superwake can fly, assuming a speed of 17m/s and a flight time of 6h.
 spacing <- 800
@@ -588,6 +609,15 @@ if (region@area > (poly_dim$x_length * poly_dim$y_length * number_blocks)) {
   # Cast the geometries to POLYGON or MULTIPOLYGON
   fixW_poly <- st_cast(fixW_poly, "MULTIPOLYGON")
 
+  if (number_blocks < nrow(fixW_poly)) {
+    areas <- st_area(fixW_poly)
+
+    # Identify the index of the smallest polygon
+    smallest_index <- which.min(areas)
+
+    # Remove the smallest polygon
+    fixW_poly <- fixW_poly[-smallest_index,]
+  }
 }
 plot(st_geometry(wmu))
 plot(fixW_poly[1], add = TRUE, col = "red")
@@ -627,7 +657,7 @@ fixW_zigzag_design <- make.design(
   transect.type = "line",
   design = "eszigzag",
   samplers = numeric(0), # OR
-  line.length = fixW_sys_design@design.statistics$line.length[2], # rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)) OR
+  line.length = fixW_sys_design@design.statistics$line.length[2,], # rep(total_length / length(fixW_plots@strata.name), length(fixW_plots@strata.name)) OR
   spacing = numeric(0),
   design.angle = 0,
   edge.protocol = "minus",
@@ -713,6 +743,7 @@ plot(region, sys_transects, lwd = 0.5, col = 4)
 plot(region, rnd_transects, lwd = 0.5, col = 4)
 plot(region, zigzag_transects, lwd = 0.5, col = 4)
 plot(region, zigzagcom_transects, lwd = 0.5, col = 4)
+plot(region, short_zigzag_transects, lwd = 0.5, col = 4)
 plot(region, fixW_sys_transects, lwd = 0.5, col = 4)
 plot(region, fixW_zigzag_transects, lwd = 0.5, col = 4)
 plot(region, quadcopter_transects, lwd = 0.5, col = 4)
@@ -723,6 +754,7 @@ plot(sys_design)
 plot(rnd_design)
 plot(zigzag_design)
 plot(zigzagcom_design)
+plot(short_zigzag_design)
 plot(fixW_sys_design)
 plot(fixW_zigzag_design)
 plot(quadcopter_design)
@@ -739,19 +771,21 @@ sys_design_metric <- extract_design_metrics(sys_design)
 rnd_design_metric <- extract_design_metrics(rnd_design)
 zigzag_design_metric <- extract_design_metrics(zigzag_design)
 zigzagcom_design_metric <- extract_design_metrics(zigzagcom_design)
+short_zigzag_design_metric <- extract_design_metrics(short_zigzag_design)
 fixW_sys_design_metric <- extract_design_metrics(fixW_sys_design)
 fixW_zigzag_design_metric <- extract_design_metrics(fixW_zigzag_design)
 quadcopter_design_metric <- extract_design_metrics(quadcopter_design)
 
 # Combine metrics into a single dataframe
 design_comparison_df <- data.frame(
-  Simulation = c("Heli", "Sys", "Rnd", "Zig", "Zagcom", "FixW-Sys", "FixW-Zig", "Quadcopter"),
+  Simulation = c("Heli", "Sys", "Rnd", "Zig", "Zagcom", "Short-Zig", "FixW-Sys", "FixW-Zig", "Quadcopter"),
   Design = c(
     heli_design_metric$design_type,
     sys_design_metric$design_type,
     rnd_design_metric$design_type,
     zigzag_design_metric$design_type,
     zigzagcom_design_metric$design_type,
+    short_zigzag_design_metric$design_type,
     fixW_sys_design_metric$design_type[1],
     fixW_zigzag_design_metric$design_type[1],
     quadcopter_design_metric$design_type[1]
@@ -762,6 +796,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_sampler_count,
     zigzag_design_metric$mean_sampler_count,
     zigzagcom_design_metric$mean_sampler_count,
+    short_zigzag_design_metric$mean_sampler_count,
     fixW_sys_design_metric$mean_sampler_count,
     fixW_zigzag_design_metric$mean_sampler_count,
     quadcopter_design_metric$mean_sampler_count
@@ -772,6 +807,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_cover_area,
     zigzag_design_metric$mean_cover_area,
     zigzagcom_design_metric$mean_cover_area,
+    short_zigzag_design_metric$mean_cover_area,
     fixW_sys_design_metric$mean_cover_area,
     fixW_zigzag_design_metric$mean_cover_area,
     quadcopter_design_metric$mean_cover_area
@@ -782,6 +818,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_cover_percentage,
     zigzag_design_metric$mean_cover_percentage,
     zigzagcom_design_metric$mean_cover_percentage,
+    short_zigzag_design_metric$mean_cover_percentage,
     fixW_sys_design_metric$mean_cover_percentage,
     fixW_zigzag_design_metric$mean_cover_percentage,
     quadcopter_design_metric$mean_cover_percentage
@@ -792,6 +829,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_line_length,
     zigzag_design_metric$mean_line_length,
     zigzagcom_design_metric$mean_line_length,
+    short_zigzag_design_metric$mean_line_length,
     fixW_sys_design_metric$mean_line_length,
     fixW_zigzag_design_metric$mean_line_length,
     quadcopter_design_metric$mean_line_length
@@ -802,6 +840,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_trackline,
     zigzag_design_metric$mean_trackline,
     zigzagcom_design_metric$mean_trackline,
+    short_zigzag_design_metric$mean_trackline,
     fixW_sys_design_metric$mean_trackline,
     fixW_zigzag_design_metric$mean_trackline,
     quadcopter_design_metric$mean_trackline
@@ -812,6 +851,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_cyclic_trackline,
     zigzag_design_metric$mean_cyclic_trackline,
     zigzagcom_design_metric$mean_cyclic_trackline,
+    short_zigzag_design_metric$mean_cyclic_trackline,
     fixW_sys_design_metric$mean_cyclic_trackline,
     fixW_zigzag_design_metric$mean_cyclic_trackline,
     quadcopter_design_metric$mean_cyclic_trackline
@@ -822,6 +862,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_on_effort,
     zigzag_design_metric$mean_on_effort,
     zigzagcom_design_metric$mean_on_effort,
+    short_zigzag_design_metric$mean_on_effort,
     fixW_sys_design_metric$mean_on_effort,
     fixW_zigzag_design_metric$mean_on_effort,
     quadcopter_design_metric$mean_on_effort
@@ -832,6 +873,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_off_effort,
     zigzag_design_metric$mean_off_effort,
     zigzagcom_design_metric$mean_off_effort,
+    short_zigzag_design_metric$mean_off_effort,
     fixW_sys_design_metric$mean_off_effort,
     fixW_zigzag_design_metric$mean_off_effort,
     quadcopter_design_metric$mean_off_effort
@@ -842,6 +884,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_return2home,
     zigzag_design_metric$mean_return2home,
     zigzagcom_design_metric$mean_return2home,
+    short_zigzag_design_metric$mean_return2home,
     fixW_sys_design_metric$mean_return2home,
     fixW_zigzag_design_metric$mean_return2home,
     quadcopter_design_metric$mean_return2home
@@ -852,6 +895,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$mean_off_effort_return,
     zigzag_design_metric$mean_off_effort_return,
     zigzagcom_design_metric$mean_off_effort_return,
+    short_zigzag_design_metric$mean_off_effort_return,
     fixW_sys_design_metric$mean_off_effort_return,
     fixW_zigzag_design_metric$mean_off_effort_return,
     quadcopter_design_metric$mean_off_effort_return
@@ -862,6 +906,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$on_effort_percentage,
     zigzag_design_metric$on_effort_percentage,
     zigzagcom_design_metric$on_effort_percentage,
+    short_zigzag_design_metric$on_effort_percentage,
     fixW_sys_design_metric$on_effort_percentage,
     fixW_zigzag_design_metric$on_effort_percentage,
     quadcopter_design_metric$on_effort_percentage
@@ -872,6 +917,7 @@ design_comparison_df <- data.frame(
     rnd_design_metric$off_effort_percentage,
     zigzag_design_metric$off_effort_percentage,
     zigzagcom_design_metric$off_effort_percentage,
+    short_zigzag_design_metric$off_effort_percentage,
     fixW_sys_design_metric$off_effort_percentage,
     fixW_zigzag_design_metric$off_effort_percentage,
     quadcopter_design_metric$off_effort_percentage
@@ -882,7 +928,8 @@ design_comparison_df <- data.frame(
     rnd_design_metric$return2home_percentage,
     zigzag_design_metric$return2home_percentage,
     zigzagcom_design_metric$return2home_percentage,
-    fixW_sys_design_metric$off_effort_percentage,
+    short_zigzag_design_metric$return2home_percentage,
+    fixW_sys_design_metric$return2home_percentage,
     fixW_zigzag_design_metric$return2home_percentage,
     quadcopter_design_metric$return2home_percentage
   ),
@@ -892,9 +939,21 @@ design_comparison_df <- data.frame(
     rnd_design_metric$off_effort_return_percentage,
     zigzag_design_metric$off_effort_return_percentage,
     zigzagcom_design_metric$off_effort_return_percentage,
+    short_zigzag_design_metric$off_effort_return_percentage,
     fixW_sys_design_metric$off_effort_return_percentage,
     fixW_zigzag_design_metric$off_effort_return_percentage,
     quadcopter_design_metric$off_effort_return_percentage
+  ),
+  Number_of_Plots = c(
+    length(heli_design_metric$design_type),
+    length(sys_design_metric$design_type),
+    length(rnd_design_metric$design_type),
+    length(zigzag_design_metric$design_type),
+    length(zigzagcom_design_metric$design_type),
+    length(short_zigzag_design_metric$design_type),
+    length(fixW_sys_design_metric$design_type),
+    length(fixW_zigzag_design_metric$design_type),
+    length(quadcopter_design_metric$design_type)
   )
 )
 # Print the comparison dataframe
@@ -906,5 +965,5 @@ kable(design_comparison_df)
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
-save(heli_design, sys_design, rnd_design, zigzag_design, zigzagcom_design, fixW_sys_design, fixW_zigzag_design, quadcopter_design, heli_transects, sys_transects, rnd_transects, zigzag_transects, zigzagcom_transects, fixW_sys_transects, fixW_zigzag_transects, quadcopter_transects, design_comparison_df, file = output_path)
+save(heli_design, sys_design, rnd_design, zigzag_design, zigzagcom_design, short_zigzag_design, fixW_sys_design, fixW_zigzag_design, quadcopter_design, heli_transects, sys_transects, rnd_transects, zigzag_transects, zigzagcom_transects, short_zigzag_transects, fixW_sys_transects, fixW_zigzag_transects, quadcopter_transects, design_comparison_df, file = output_path)
 

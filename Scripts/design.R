@@ -411,6 +411,13 @@ wmu_number <- wmu_number_list[5]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 
+# load cover
+output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
+# output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
+rm(heli_design, sys_design, rnd_design, zigzag_design, zigzagcom_design, short_zigzag_design, fixW_sys_design, fixW_zigzag_design, quadcopter_design, heli_transects, sys_transects, rnd_transects, zigzag_transects, zigzagcom_transects, short_zigzag_transects, fixW_sys_transects, fixW_zigzag_transects, quadcopter_transects, design_comparison_df)
+
+
+
 # Define constants
 ALTITUDE <- 120 # Height in meters
 CAMERA_HFOV <- 25 # Horizontal FOV in degrees. Max adjustment of 25 degrees. If more than 25 degrees then a third camera or gimbal would be needed to cover 0. Proposed intervals for adjustments are 0, 10, 20, 25
@@ -965,5 +972,5 @@ kable(design_comparison_df)
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
-save(heli_design, sys_design, rnd_design, zigzag_design, zigzagcom_design, short_zigzag_design, fixW_sys_design, fixW_zigzag_design, quadcopter_design, heli_transects, sys_transects, rnd_transects, zigzag_transects, zigzagcom_transects, short_zigzag_transects, fixW_sys_transects, fixW_zigzag_transects, quadcopter_transects, design_comparison_df, file = output_path)
+save(cover, heli_design, sys_design, rnd_design, zigzag_design, zigzagcom_design, short_zigzag_design, fixW_sys_design, fixW_zigzag_design, quadcopter_design, heli_transects, sys_transects, rnd_transects, zigzag_transects, zigzagcom_transects, short_zigzag_transects, fixW_sys_transects, fixW_zigzag_transects, quadcopter_transects, design_comparison_df, file = output_path)
 

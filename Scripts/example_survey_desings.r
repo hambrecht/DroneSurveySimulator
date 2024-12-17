@@ -198,7 +198,7 @@ plot(region, drone_transects, lwd = 1, col = 4)
 plot(region, sys_transects, lwd = 1, col = 4)
 plot(region, rnd_transects, lwd = 1, col = 4)
 plot(region, zigzag_transects, lwd = 1, col = 4)
-plot(region, zigzagcom_transects, lwd = 1, col = 4)
+plot(region, zigzagcom_transects, lwd = 1, col = 2)
 par(mfrow = c(1, 1))
 par(mfrow = c(3, 3))
 plot(heli_design)
@@ -208,3 +208,13 @@ plot(rnd_design)
 plot(zigzag_design)
 plot(zigzagcom_design)
 par(mfrow = c(1, 1))
+
+
+# Plot zigzagcom_transects with alternating colors
+plot(area, asp = 0.8, col = rgb(230, 230, 250, maxColorValue = 255))
+colors <- c(4, 3) # Define the colors to alternate between
+for (i in seq(2, length(zigzagcom_transects@samplers$geometry), by = 2)) {
+  color <- colors[((i - 1) %/% 2) %% 2 + 1]
+  plot(zigzagcom_transects@samplers$geometry[i], add = TRUE, col = color, lwd = 1)
+  plot(zigzagcom_transects@samplers$geometry[i + 1], add = TRUE, col = color, lwd = 1)
+}

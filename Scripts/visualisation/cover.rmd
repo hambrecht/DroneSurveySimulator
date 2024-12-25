@@ -1,0 +1,160 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+The [R plugin](https://www.jetbrains.com/help/pycharm/r-plugin-support.html) for IntelliJ-based IDEs provides
+handy capabilities to work with the [R Markdown](https://www.jetbrains.com/help/pycharm/r-markdown.html) files.
+To [add](https://www.jetbrains.com/help/pycharm/r-markdown.html#add-code-chunk) a new R chunk,
+position the caret at any line or the code chunk, then click "+".
+
+The code chunk appears:
+```{r}
+library(here)
+library(knitr)
+library(sf)
+library(dplyr)
+library(GGally)
+library(dssd)
+```
+
+Type any R code in the chunk, for example:
+```{r}
+# List all files containing 'cover' in folder Output/Simulation
+files <- list.files(path = here("Output", "Simulation"), pattern = "cover", full.names = TRUE)
+wmu_path_list <- list.files(path = here("Output", "PrepData"), pattern = "prepared", full.names = TRUE)
+
+# Extract the last three digits before the file extension for each file
+file_ids <- sapply(files, function(file) {
+  match <- regmatches(file, regexpr("\\d{3}(?=\\.\\w+$)", file, perl = TRUE))
+  return(match)
+})
+
+# Load the first file and list its contents to verify object names
+# Combine names with the first item in file_ids
+
+for (i in seq_along(files)) {
+  before_load <- ls()
+  load(files[i])
+  load(wmu_path_list[i])
+  rm(segdata, distdata, obsdata)
+  after_load <- ls()
+  new_objs <- setdiff(after_load, before_load)
+  suffix <- file_ids[[i]]
+  for (obj in new_objs) {
+    assign(paste0(obj, "_", suffix), get(obj))
+    rm(list = obj)
+  }
+}
+```
+```{r}
+# Assuming the WMU data is already loaded and renamed
+# Create an empty dataframe to store the results
+wmu_metrics <- data.frame()
+
+# Loop through each renamed WMU object and calculate the metrics
+for (i in seq_along(file_ids)) {
+  wmu_id <- file_ids[[i]]
+  wmu_data <- get(paste0("wmu_", wmu_id))
+
+  # Calculate area, perimeter, and shape index
+  wmu_data <- wmu_data %>%
+    mutate(
+      area = st_area(geometry),
+      perimeter = st_length(st_cast(geometry, "MULTILINESTRING")),
+      shapeindex = perimeter / (2 * sqrt(pi * area))
+    )
+
+  # Summarize the metrics
+  wmu_summary <- wmu_data %>%
+    summarise(
+      wmu_id = wmu_id,
+      total_area = sum(as.numeric(area)),
+      total_perimeter = sum(as.numeric(perimeter)),
+      mean_shapeindex = mean(as.numeric(shapeindex))
+    ) %>%
+    as.data.frame()
+
+  # Bind the summary to the results dataframe
+  wmu_metrics <- bind_rows(wmu_metrics, wmu_summary[1:4])
+}
+# Merge all objects into one dataframe and add `i` as a column to identify the origins
+merged_df <- data.frame()
+
+for (i in 1:length(file_ids)) {
+  obj_name <- paste0("design_comparison_df_", file_ids[i])
+  if (exists(obj_name)) {
+    temp_df <- get(obj_name)
+    temp_df$Simulation <- paste0(temp_df$Simulation, "_", file_ids[i])
+    temp_df$total_area = wmu_metrics$total_area[i]
+    temp_df$total_perimeter = wmu_metrics$total_perimeter[i]
+    temp_df$mean_shapeindex = wmu_metrics$mean_shapeindex[i]
+    merged_df <- bind_rows(merged_df, temp_df)
+  }
+}
+
+# Sort merged_df by the `Simulation` column
+merged_df <- merged_df %>% arrange(Simulation)
+```
+```{r}
+print(wmu_metrics)
+kable(merged_df)
+```
+```{r}
+# Calculate statistics for Mean_Cyclic_Trackline_Length grouped by Design
+statistics <- merged_df %>%
+  group_by(Design) %>%
+  summarise(
+    mean_cyclic_trackline_length = mean(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
+    sd_cyclic_trackline_length = sd(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
+    min_cyclic_trackline_length = min(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
+    max_cyclic_trackline_length = max(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
+    n = n()
+  )
+```
+```{r}
+# Print the statistics
+kable(statistics)
+```
+```{r}
+cover_score <- get.coverage(fixW_zigzag_design_501)
+hist(cover_score)
+summary(cover_score)
+```
+```{r}
+# Initialize an empty data frame to store the summary outcomes
+coverage_summary_df <- data.frame()
+
+# Get the names of all objects in the environment
+object_names <- ls()
+
+# Loop through each object name
+for (obj_name in object_names) {
+  # Check if the object name contains 'design'
+  if (grepl("design", obj_name) && !grepl("comparison", obj_name)) {
+    # Get the coverage score
+    cover_score <- get.coverage(get(obj_name))
+
+    # Get the summary of the coverage score
+    cover_summary <- summary(cover_score)
+
+    # Create a data frame with the summary outcomes
+    summary_df <- data.frame(
+      Design = obj_name,
+      Min = cover_summary[["Min."]],
+      `1st_Qu` = cover_summary[["1st Qu."]],
+      Median = cover_summary[["Median"]],
+      Mean = cover_summary[["Mean"]],
+      `3rd_Qu` = cover_summary[["3rd Qu."]],
+      Max = cover_summary[["Max."]]
+    )
+
+    # Bind the summary data frame to the coverage summary data frame
+    coverage_summary_df <- rbind(coverage_summary_df, summary_df)
+  }
+}
+```
+```{r}
+# Print the coverage summary data frame
+kable(coverage_summary_df)
+```

@@ -6,8 +6,7 @@ library(RColorBrewer)
 library(dplyr)
 library(sf)
 library(units)
-library(geosphere)
-library(parallelly)
+
 
 # Check if pbapply is installed
 if (!requireNamespace("pbapply", quietly = TRUE, dependencies = TRUE)) {
@@ -70,8 +69,8 @@ extract_metrics <- function(sim) {
 }
 
 # Load density data
-wmu_number_list <- c("501", "503", "512", "517", "528") 
-wmu_number <- wmu_number_list[4]
+wmu_number_list <- c("501", "503", "512", "517", "528")
+wmu_number <- wmu_number_list[2]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
@@ -103,29 +102,29 @@ COLORS <- brewer.pal(10, "Paired")
 plot(detect_hr_overview, pop_desc, col = COLORS)
 legend(x = "topright", legend = seq(0.1, 4, 0.4), col = COLORS, lty = 1, cex = 0.8)
 
-detect_heli <- make.detectability(
+detect_H <- make.detectability(
   key.function = "hr",
   scale.param = 50, # heli:50
   shape.param = 2, # heli:2
   truncation = 500 # heli:20
 )
-plot(detect_heli, pop_desc, legend = FALSE)
+plot(detect_H, pop_desc, legend = FALSE)
 
-detect_fixW2 <- make.detectability(
+detect_FW2 <- make.detectability(
   key.function = "hn",
-  scale.param = 170, # heli:50
-  # shape.param = 1.3, # heli:2
-  truncation = 180 # heli:20
+  scale.param = 170,
+  # shape.param = 1.3,
+  truncation = 180 
 )
-plot(detect_fixW2, pop_desc, legend = FALSE)
+plot(detect_FW2, pop_desc, legend = FALSE)
 
-detect_fixWG <- make.detectability(
+detect_FWG <- make.detectability(
   key.function = "hn",
-  scale.param = 170, # heli:50
-  # shape.param = 3, # heli:2
-  truncation = 260 # heli:20
+  scale.param = 170,
+  # shape.param = 3,
+  truncation = 260
 )
-plot(detect_fixWG, pop_desc, legend = FALSE)
+plot(detect_FWG, pop_desc, legend = FALSE)
 
 # Define and visualise uniform detection function
 detect_uf <- make.detectability(
@@ -158,41 +157,41 @@ ddf_analyses <- make.ds.analysis(
 
 
 # Create and run the simulation
-sim_heli <- make.simulation(
+sim_H_SG <- make.simulation(
   reps = SIM_REPS,
-  design = heli_design,
+  design = H_SG_design,
   population.description = pop_desc,
-  detectability = detect_heli,
+  detectability = detect_H,
   ds.analysis = ddf_analyses
 )
 
-sim_rnd <- make.simulation(
+sim_Rnd <- make.simulation(
   reps = SIM_REPS,
-  design = rnd_design,
+  design = Rnd_design,
   population.description = pop_desc,
-  detectability = detect_heli,
+  detectability = detect_H,
   ds.analysis = ddf_analyses
 )
 
-sim_sys <- make.simulation(
+sim_Sys <- make.simulation(
   reps = SIM_REPS,
-  design = sys_design,
+  design = Sys_design,
   population.description = pop_desc,
-  detectability = detect_heli,
+  detectability = detect_H,
   ds.analysis = ddf_analyses
 )
-sim_zig <- make.simulation(
+sim_ZZ <- make.simulation(
   reps = SIM_REPS,
-  design = zigzag_design,
+  design = ZZ_design,
   population.description = pop_desc,
-  detectability = detect_heli,
+  detectability = detect_H,
   ds.analysis = ddf_analyses
 )
-sim_zagcom <- make.simulation(
+sim_ZZC <- make.simulation(
   reps = SIM_REPS,
-  design = zigzagcom_design,
+  design = ZZC_design,
   population.description = pop_desc,
-  detectability = detect_heli,
+  detectability = detect_H,
   ds.analysis = ddf_analyses
 )
 
@@ -204,186 +203,186 @@ example_population <- generate.population(object = pop_desc, detectability = det
 points_sf <- st_as_sf(example_population@population, coords = c("x", "y"), crs = st_crs(wmu))
 
 # Perform spatial join to count points within each polygon
-points_within_fixW_polygons <- st_join(points_sf, fixW_sys_design@region@region, join = st_within)
+points_within_FW_polygons <- st_join(points_sf, FW_Sys_design@region@region, join = st_within)
 
 # Count the number of points in each polygon
-fixW_points_count <- points_within_fixW_polygons %>%
+FW_points_count <- points_within_FW_polygons %>%
   group_by(ID) %>%  # Replace `id` with the actual column name identifying polygons
   summarise(count = n()) %>%
   filter(!is.na(ID))  # Remove rows with NA in the id column
 
 # View the result
-print(fixW_points_count)
-fixW_points_count$count
+print(FW_points_count)
+FW_points_count$count
 
-fixW_density <- density
-fixW_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], fixW_sys_design@region@region)
-fixW_density@region.name <- fixW_sys_design@region@region.name
-fixW_density@strata.name <- fixW_sys_design@region@strata.name
-fixW_density@density.surface[[1]] <- fixW_density@density.surface[[1]] %>%
+FW_density <- density
+FW_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], FW_Sys_design@region@region)
+FW_density@region.name <- FW_Sys_design@region@region.name
+FW_density@strata.name <- FW_Sys_design@region@strata.name
+FW_density@density.surface[[1]] <- FW_density@density.surface[[1]] %>%
   mutate(strata = ID) %>%
   select(-ID)
 
-pop_desc_fixW <- make.population.description(
-  region = fixW_sys_design@region,
-  density = fixW_density,
-  N = fixW_points_count$count,
+pop_desc_FW <- make.population.description(
+  region = FW_Sys_design@region,
+  density = FW_density,
+  N = FW_points_count$count,
   fixed.N = TRUE
 )
 
-ddf_analyses_fixW_2C <- make.ds.analysis(
+ddf_analyses_FW_2C <- make.ds.analysis(
   dfmodel = list(~1, ~1),
   key = c("hn", "hr"),
   criteria = "AIC",
   truncation = 180,
-  group.strata = data.frame(design.id = fixW_sys_design@region@strata.name, analysis.id = rep("A", length(fixW_sys_design@region@strata.name)))
+  group.strata = data.frame(design.id = FW_Sys_design@region@strata.name, analysis.id = rep("A", length(FW_Sys_design@region@strata.name)))
 )
 
-ddf_analyses_fixW_G <- make.ds.analysis(
+ddf_analyses_FW_G <- make.ds.analysis(
   dfmodel = list(~1, ~1),
   key = c("hn", "hr"),
   criteria = "AIC",
   truncation = 260,
-  group.strata = data.frame(design.id = fixW_sys_design@region@strata.name, analysis.id = rep("A", length(fixW_sys_design@region@strata.name)))
+  group.strata = data.frame(design.id = FW_Sys_design@region@strata.name, analysis.id = rep("A", length(FW_Sys_design@region@strata.name)))
 )
-fixW_sys_design@truncation <- 180
-fixW_zigzag_design@truncation <- 180
-sim_fixW_sys_2C <- make.simulation(
+FW_Sys_design@truncation <- 180
+FW_ZZ_design@truncation <- 180
+sim_FW_Sys_2C <- make.simulation(
   reps = SIM_REPS,
-  design = fixW_sys_design,
-  population.description = pop_desc_fixW,
-  detectability = detect_fixW2,
-  ds.analysis = ddf_analyses_fixW_2C
-)
-
-sim_fixW_zigzag_2C <- make.simulation(
-  reps = SIM_REPS,
-  design = fixW_zigzag_design,
-  population.description = pop_desc_fixW,
-  detectability = detect_fixW2,
-  ds.analysis = ddf_analyses_fixW_2C
-)
-fixW_sys_design@truncation <- 260
-fixW_zigzag_design@truncation <- 260
-sim_fixW_sys_G <- make.simulation(
-  reps = SIM_REPS,
-  design = fixW_sys_design,
-  population.description = pop_desc_fixW,
-  detectability = detect_fixWG,
-  ds.analysis = ddf_analyses_fixW_G
+  design = FW_Sys_design,
+  population.description = pop_desc_FW,
+  detectability = detect_FW2,
+  ds.analysis = ddf_analyses_FW_2C
 )
 
-sim_fixW_zigzag_G <- make.simulation(
+sim_FW_ZZ_2C <- make.simulation(
   reps = SIM_REPS,
-  design = fixW_zigzag_design,
-  population.description = pop_desc_fixW,
-  detectability = detect_fixWG,
-  ds.analysis = ddf_analyses_fixW_G
+  design = FW_ZZ_design,
+  population.description = pop_desc_FW,
+  detectability = detect_FW2,
+  ds.analysis = ddf_analyses_FW_2C
+)
+FW_Sys_design@truncation <- 260
+FW_ZZ_design@truncation <- 260
+sim_FW_Sys_G <- make.simulation(
+  reps = SIM_REPS,
+  design = FW_Sys_design,
+  population.description = pop_desc_FW,
+  detectability = detect_FWG,
+  ds.analysis = ddf_analyses_FW_G
+)
+
+sim_FW_ZZ_G <- make.simulation(
+  reps = SIM_REPS,
+  design = FW_ZZ_design,
+  population.description = pop_desc_FW,
+  detectability = detect_FWG,
+  ds.analysis = ddf_analyses_FW_G
 )
 # termine abundance in each subplot
 
 # Perform spatial join to count points within each polygon
-points_within_quad_polygons <- st_join(points_sf, quadcopter_design@region@region, join = st_within)
+points_within_QC_polygons <- st_join(points_sf, QC_Sys_design@region@region, join = st_within)
 
 # Count the number of points in each polygon
-quad_points_count <- points_within_quad_polygons %>%
+QC_points_count <- points_within_QC_polygons %>%
   group_by(ID) %>%  # Replace `id` with the actual column name identifying polygons
   summarise(count = n()) %>%
   filter(!is.na(ID))  # Remove rows with NA in the id column
 
 # View the result
-print(quad_points_count)
-quad_points_count$count
+print(QC_points_count)
+QC_points_count$count
 
-quadcopter_density <- density
-quadcopter_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], quadcopter_design@region@region)
-quadcopter_density@region.name <- quadcopter_design@region@region.name
-quadcopter_density@strata.name <- quadcopter_design@region@strata.name
-quadcopter_density@density.surface[[1]] <- quadcopter_density@density.surface[[1]] %>%
+QC_Sys_density <- density
+QC_Sys_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], QC_Sys_design@region@region)
+QC_Sys_density@region.name <- QC_Sys_design@region@region.name
+QC_Sys_density@strata.name <- QC_Sys_design@region@strata.name
+QC_Sys_density@density.surface[[1]] <- QC_Sys_density@density.surface[[1]] %>%
   mutate(strata = ID) %>%
   select(-ID)
 
 
-pop_desc_quadcopter <- make.population.description(
-  region = quadcopter_design@region,
-  density = quadcopter_density,
-  N = quad_points_count$count,
+pop_desc_QC <- make.population.description(
+  region = QC_Sys_design@region,
+  density = QC_Sys_density,
+  N = QC_points_count$count,
   fixed.N = TRUE
 )
 
-ddf_analyses_quadcopter <- make.ds.analysis(
+ddf_analyses_QC <- make.ds.analysis(
   dfmodel = list(~1, ~1),
   key = c("hn", "hr"),
   criteria = "AIC",
   truncation = 50,
-  group.strata = data.frame(design.id = quadcopter_design@region@strata.name, analysis.id = rep("A", length(quadcopter_design@region@strata.name)))
+  group.strata = data.frame(design.id = QC_Sys_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_design@region@strata.name)))
 )
 
-quadcopter_design@truncation <-50
-sim_quad <- make.simulation(
+QC_Sys_design@truncation <- 50
+sim_QC <- make.simulation(
   reps = SIM_REPS,
-  design = quadcopter_design,
-  population.description = pop_desc_quadcopter,
+  design = QC_Sys_design,
+  population.description = pop_desc_QC,
   detectability = detect_uf,
-  ds.analysis = ddf_analyses_quadcopter
+  ds.analysis = ddf_analyses_QC
 )
 
 
-heli_survey <- run.survey(sim_heli)
-rnd_survey <- run.survey(sim_rnd)
-sys_survey <- run.survey(sim_sys)
-zig_survey <- run.survey(sim_zig)
-zagcom_survey <- run.survey(sim_zagcom)
-fixW_sys_survey_2C <- run.survey(sim_fixW_sys_2C)
-fixW_zigzag_survey_2C <- run.survey(sim_fixW_zigzag_2C)
-fixW_sys_survey_G <- run.survey(sim_fixW_sys_G)
-fixW_zigzag_survey_G <- run.survey(sim_fixW_zigzag_G)
-quad_survey <- run.survey(sim_quad)
+H_SG_survey <- run.survey(sim_H_SG)
+Rnd_survey <- run.survey(sim_Rnd)
+Sys_survey <- run.survey(sim_Sys)
+ZZ_survey <- run.survey(sim_ZZ)
+ZZC_survey <- run.survey(sim_ZZC)
+FW_Sys_survey_2C <- run.survey(sim_FW_Sys_2C)
+FW_ZZ_survey_2C <- run.survey(sim_FW_ZZ_2C)
+FW_Sys_survey_G <- run.survey(sim_FW_Sys_G)
+FW_ZZ_survey_G <- run.survey(sim_FW_ZZ_G)
+QC_Sys_survey <- run.survey(sim_QC)
 
-plot(heli_survey, region)
-plot(rnd_survey, region)
-plot(sys_survey, region)
-plot(zig_survey, region)
-plot(zagcom_survey, region)
-plot(fixW_sys_survey_2C, region)
-plot(fixW_zigzag_survey_2C, region)
-plot(fixW_sys_survey_G, region)
-plot(fixW_zigzag_survey_G, region)
-plot(quad_survey, region)
+plot(H_SG_survey, region)
+plot(Rnd_survey, region)
+plot(Sys_survey, region)
+plot(ZZ_survey, region)
+plot(ZZC_survey, region)
+plot(FW_Sys_survey_2C, region)
+plot(FW_ZZ_survey_2C, region)
+plot(FW_Sys_survey_G, region)
+plot(FW_ZZ_survey_G, region)
+plot(QC_Sys_survey, region)
 
 
 # Run the full simulation
-sim_heli <- run.simulation(simulation = sim_heli, run.parallel = T, max.cores=20)
-sim_rnd <- run.simulation(simulation = sim_rnd, run.parallel = T, max.cores=20)
-sim_sys <- run.simulation(simulation = sim_sys, run.parallel = T, max.cores=20)
-sim_zig <- run.simulation(simulation = sim_zig, run.parallel = T, max.cores=20)
-sim_zagcom <- run.simulation(simulation = sim_zagcom, run.parallel = T, max.cores=20)
-sim_fixW_sys_2C <- run.simulation(simulation = sim_fixW_sys_2C, run.parallel = T, max.cores=20)
-sim_fixW_zigzag_2C <- run.simulation(simulation = sim_fixW_zigzag_2C, run.parallel = T, max.cores=20)
-sim_fixW_sys_G <- run.simulation(simulation = sim_fixW_sys_G, run.parallel = T, max.cores=20)
-sim_fixW_zigzag_G <- run.simulation(simulation = sim_fixW_zigzag_G, run.parallel = T, max.cores=20)
-sim_quad <- run.simulation(simulation = sim_quad, run.parallel = T, max.cores=20)
+sim_H_SG <- run.simulation(simulation = sim_H_SG, run.parallel = T, max.cores = 20)
+sim_Rnd <- run.simulation(simulation = sim_Rnd, run.parallel = T, max.cores = 20)
+sim_Sys <- run.simulation(simulation = sim_Sys, run.parallel = T, max.cores = 20)
+sim_ZZ <- run.simulation(simulation = sim_ZZ, run.parallel = T, max.cores = 20)
+sim_ZZC <- run.simulation(simulation = sim_ZZC, run.parallel = T, max.cores = 20)
+sim_FW_Sys_2C <- run.simulation(simulation = sim_FW_Sys_2C, run.parallel = T, max.cores = 20)
+sim_FW_ZZ_2C <- run.simulation(simulation = sim_FW_ZZ_2C, run.parallel = T, max.cores = 20)
+sim_FW_Sys_G <- run.simulation(simulation = sim_FW_Sys_G, run.parallel = T, max.cores = 20)
+sim_FW_ZZ_G <- run.simulation(simulation = sim_FW_ZZ_G, run.parallel = T, max.cores = 20)
+sim_QC <- run.simulation(simulation = sim_QC, run.parallel = T, max.cores = 20)
 
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
-# output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"heli-DF", detectF@key.function, ".RData"))
-save(sim_heli, sim_rnd, sim_sys, sim_zig, sim_zagcom, sim_fixW_sys_2C, sim_fixW_zigzag_2C, sim_fixW_sys_G, sim_fixW_zigzag_G, sim_quad, file = output_path)
+# output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
+save(sim_H_SG, sim_Rnd, sim_Sys, sim_ZZ, sim_ZZC, sim_FW_Sys_2C, sim_FW_ZZ_2C, sim_FW_Sys_G, sim_FW_ZZ_G, sim_QC, file = output_path)
 
 
 
 # Display results
-summary(sim_heli, description.summary = FALSE)
-summary(sim_rnd, description.summary = FALSE)
-summary(sim_sys, description.summary = FALSE)
-summary(sim_zig, description.summary = FALSE)
-summary(sim_zagcom, description.summary = FALSE)
-summary(sim_fixW_sys_2C, description.summary = FALSE)
-summary(sim_fixW_zigzag_2C, description.summary = FALSE)
-summary(sim_fixW_sys_G, description.summary = FALSE)
-summary(sim_fixW_zigzag_G, description.summary = FALSE)
-summary(sim_quad, description.summary = FALSE)
+summary(sim_H_SG, description.summary = FALSE)
+summary(sim_Rnd, description.summary = FALSE)
+summary(sim_Sys, description.summary = FALSE)
+summary(sim_ZZ, description.summary = FALSE)
+summary(sim_ZZC, description.summary = FALSE)
+summary(sim_FW_Sys_2C, description.summary = FALSE)
+summary(sim_FW_ZZ_2C, description.summary = FALSE)
+summary(sim_FW_Sys_G, description.summary = FALSE)
+summary(sim_FW_ZZ_G, description.summary = FALSE)
+summary(sim_QC, description.summary = FALSE)
 total_abundance
-histogram.N.ests(sim_rnd, use.max.reps = TRUE)
+histogram.N.ests(sim_Rnd, use.max.reps = TRUE)
 
 # Define labels
 labels <- c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
@@ -391,44 +390,44 @@ xlims <- c(49500, 80000)
 par(mfrow = c(2, 5))
 
 # Plot each histogram and add the corresponding label
-histogram.N.ests(sim_heli, xlim = xlims)
+histogram.N.ests(sim_H_SG, xlim = xlims)
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[1], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
 
-histogram.N.ests(sim_sys, xlim = xlims)
+histogram.N.ests(sim_Sys, xlim = xlims)
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[2], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_rnd, xlim = xlims)
+histogram.N.ests(sim_Rnd, xlim = xlims)
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[3], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_zig, xlim = xlims)
+histogram.N.ests(sim_ZZ, xlim = xlims)
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[4], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_zagcom, xlim = xlims)
+histogram.N.ests(sim_ZZC, xlim = xlims)
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[5], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_fixW_sys_2C, xlim = c(30000, 33500))
+histogram.N.ests(sim_FW_Sys_2C, xlim = c(30000, 33500))
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[6], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_fixW_zigzag_2C, xlim = c(30000, 33500))
+histogram.N.ests(sim_FW_ZZ_2C, xlim = c(30000, 33500))
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[7], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_fixW_sys_G, xlim = c(30000, 33500))
+histogram.N.ests(sim_FW_Sys_G, xlim = c(30000, 33500))
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[8], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_fixW_zigzag_G, xlim = c(30000, 33500))
+histogram.N.ests(sim_FW_ZZ_G, xlim = c(30000, 33500))
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[9], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_quad, xlim = c(6500, 8900))
+histogram.N.ests(sim_QC, xlim = c(6500, 8900))
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[10], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
@@ -436,26 +435,26 @@ par(mfrow = c(1, 1))
 
 
 # # Extract metrics for each simulation
-# metrics_heli <- extract_metrics(sim_heli)
-# metrics_sys <- extract_metrics(sim_sys)
-# metrics_zig <- extract_metrics(sim_zig)
-# metrics_zagcom <- extract_metrics(sim_zagcom)
+# metrics_H_SG <- extract_metrics(sim_H_SG)
+# metrics_Sys <- extract_metrics(sim_Sys)
+# metrics_ZZ <- extract_metrics(sim_ZZ)
+# metrics_ZZC <- extract_metrics(sim_ZZC)
 
 # # Combine metrics into a single dataframe
 # comparison_df <- data.frame(
-#   Simulation = c("Heli", "Sys", "Zig", "Zagcom"),
-#   Mean_Estimate = c(metrics_heli$mean_estimate, metrics_sys$mean_estimate, metrics_zig$mean_estimate, metrics_zagcom$mean_estimate),
-#   Percent_Bias = c(metrics_heli$percent_bias, metrics_sys$percent_bias, metrics_zig$percent_bias, metrics_zagcom$percent_bias),
-#   RMSE = c(metrics_heli$rmse, metrics_sys$rmse, metrics_zig$rmse, metrics_zagcom$rmse),
-#   CI_Coverage_Prob = c(metrics_heli$ci_coverage_prob, metrics_sys$ci_coverage_prob, metrics_zig$ci_coverage_prob, metrics_zagcom$ci_coverage_prob),
-#   Mean_SE = c(metrics_heli$mean_se, metrics_sys$mean_se, metrics_zig$mean_se, metrics_zagcom$mean_se),
-#   SD_of_Means = c(metrics_heli$sd_of_means, metrics_sys$sd_of_means, metrics_zig$sd_of_means, metrics_zagcom$sd_of_means),
-#   Mean_Cover_Area = c(metrics_heli$mean_cover_area, metrics_sys$mean_cover_area, metrics_zig$mean_cover_area, metrics_zagcom$mean_cover_area),
-#   Mean_Effort = c(metrics_heli$mean_effort, metrics_sys$mean_effort, metrics_zig$mean_effort, metrics_zagcom$mean_effort),
-#   Mean_n = c(metrics_heli$mean_n, metrics_sys$mean_n, metrics_zig$mean_n, metrics_zagcom$mean_n),
-#   Mean_k = c(metrics_heli$mean_k, metrics_sys$mean_k, metrics_zig$mean_k, metrics_zagcom$mean_k),
-#   Mean_ER = c(metrics_heli$mean_ER, metrics_sys$mean_ER, metrics_zig$mean_ER, metrics_zagcom$mean_ER),
-#   Mean_se_ER = c(metrics_heli$mean_se_ER, metrics_sys$mean_se_ER, metrics_zig$mean_se_ER, metrics_zagcom$mean_se_ER)
+#   Simulation = c("H_SG", "Sys", "Zig", "Zagcom"),
+#   Mean_Estimate = c(metrics_H_SG$mean_estimate, metrics_Sys$mean_estimate, metrics_ZZ$mean_estimate, metrics_ZZC$mean_estimate),
+#   Percent_Bias = c(metrics_H_SG$percent_bias, metrics_Sys$percent_bias, metrics_ZZ$percent_bias, metrics_ZZC$percent_bias),
+#   RMSE = c(metrics_H_SG$rmse, metrics_Sys$rmse, metrics_ZZ$rmse, metrics_ZZC$rmse),
+#   CI_Coverage_Prob = c(metrics_H_SG$ci_coverage_prob, metrics_Sys$ci_coverage_prob, metrics_ZZ$ci_coverage_prob, metrics_ZZC$ci_coverage_prob),
+#   Mean_SE = c(metrics_H_SG$mean_se, metrics_Sys$mean_se, metrics_ZZ$mean_se, metrics_ZZC$mean_se),
+#   SD_of_Means = c(metrics_H_SG$sd_of_means, metrics_Sys$sd_of_means, metrics_ZZ$sd_of_means, metrics_ZZC$sd_of_means),
+#   Mean_Cover_Area = c(metrics_H_SG$mean_cover_area, metrics_Sys$mean_cover_area, metrics_ZZ$mean_cover_area, metrics_ZZC$mean_cover_area),
+#   Mean_Effort = c(metrics_H_SG$mean_effort, metrics_Sys$mean_effort, metrics_ZZ$mean_effort, metrics_ZZC$mean_effort),
+#   Mean_n = c(metrics_H_SG$mean_n, metrics_Sys$mean_n, metrics_ZZ$mean_n, metrics_ZZC$mean_n),
+#   Mean_k = c(metrics_H_SG$mean_k, metrics_Sys$mean_k, metrics_ZZ$mean_k, metrics_ZZC$mean_k),
+#   Mean_ER = c(metrics_H_SG$mean_ER, metrics_Sys$mean_ER, metrics_ZZ$mean_ER, metrics_ZZC$mean_ER),
+#   Mean_se_ER = c(metrics_H_SG$mean_se_ER, metrics_Sys$mean_se_ER, metrics_ZZ$mean_se_ER, metrics_ZZC$mean_se_ER)
 # )
 
 # # Print the comparison dataframe

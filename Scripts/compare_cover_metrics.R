@@ -3,11 +3,24 @@ library(knitr)
 library(sf)
 library(dplyr)
 library(GGally)
+library(dssd)
+
+# Create a named vector with old and new group names
+group_names <- c(
+  "H_SG" = "H-SG",
+  "Sys" = "Sys",
+  "Rnd" = "Rnd",
+  "ZZ" = "ZZ",
+  "ZZC" = "ZZC",
+  "FW_Sys" = "FW-Sys",
+  "FW_ZZ" = "FW-ZZ",
+  "QC_Sys" = "QC-Sys"
+)
 
 # List all files containing 'cover' in folder Output/Simulation
 files <- list.files(path = here("Output", "Simulation"), pattern = "cover", full.names = TRUE)
 wmu_path_list <- list.files(path = here("Output", "PrepData"), pattern = "prepared", full.names = TRUE)
-wmu_path_list <- wmu_path_list[-4]
+# wmu_path_list <- wmu_path_list[-4]
 
 # Extract the last three digits before the file extension for each file
 file_ids <- sapply(files, function(file) {
@@ -21,8 +34,10 @@ file_ids <- sapply(files, function(file) {
 for (i in seq_along(files)) {
     before_load <- ls()
     load(files[i])
+  if (exists("short_zigzag_design")) rm(short_zigzag_design)
+  if (exists("short_zigzag_transects")) rm(short_zigzag_transects)
     load(wmu_path_list[i])
-    rm(segdata, distdata, obsdata)    
+  rm(segdata, distdata, obsdata)
     after_load <- ls()
     new_objs <- setdiff(after_load, before_load)
     suffix <- file_ids[[i]]
@@ -33,40 +48,6 @@ for (i in seq_along(files)) {
 }
 ls()
 
-# Assuming the WMU data is already loaded and renamed
-# Create an empty dataframe to store the results
-wmu_metrics <- data.frame()
-
-# Loop through each renamed WMU object and calculate the metrics
-for (i in seq_along(file_ids)) {
-    wmu_id <- file_ids[[i]]
-    wmu_data <- get(paste0("wmu_", wmu_id))
-    
-    # Calculate area, perimeter, and shape index
-    wmu_data <- wmu_data %>%
-        mutate(
-            area = st_area(geometry),
-            perimeter = st_length(st_cast(geometry, "MULTILINESTRING")),
-            shapeindex = perimeter / (2 * sqrt(pi * area))
-        )
-    
-    # Summarize the metrics
-    wmu_summary <- wmu_data %>%
-        summarise(
-            wmu_id = wmu_id,
-            total_area = sum(as.numeric(area)),
-            total_perimeter = sum(as.numeric(perimeter)),
-            mean_shapeindex = mean(as.numeric(shapeindex))
-        ) %>%
-        as.data.frame()
-    
-    # Bind the summary to the results dataframe
-    wmu_metrics <- bind_rows(wmu_metrics, wmu_summary[1:4])
-}
-
-# Print the resulting dataframe
-print(wmu_metrics)
-wmu_metrics$total_area[1]
 
 # Merge all objects into one dataframe and add `i` as a column to identify the origins
 merged_df <- data.frame()
@@ -75,16 +56,20 @@ for (i in 1:length(file_ids)) {
     obj_name <- paste0("design_comparison_df_", file_ids[i])
     if (exists(obj_name)) {
         temp_df <- get(obj_name)
-        temp_df$Simulation <- paste0(temp_df$Simulation, "_", file_ids[i])
-        temp_df$total_area = wmu_metrics$total_area[i]
-        temp_df$total_perimeter = wmu_metrics$total_perimeter[i]
-        temp_df$mean_shapeindex = wmu_metrics$mean_shapeindex[i]
+      # temp_df$Simulation <- paste0(temp_df$Simulation, "_", file_ids[i])
+      temp_df$WMU <- file_ids[i]
         merged_df <- bind_rows(merged_df, temp_df)
     }
 }
 
 # Sort merged_df by the `Simulation` column
 merged_df <- merged_df %>% arrange(Simulation)
+
+# Remove all rows with 'Short-Zig' in the 'Simulation' column
+merged_df <- merged_df %>%
+  filter(Simulation != "Short-Zig")
+
+kable(merged_df)
 
 # Print the merged dataframe
 ## design stats
@@ -93,61 +78,84 @@ merged_df <- merged_df %>% arrange(Simulation)
 ## The trackline length is the sum of the lengths of the transects plus the off-effort transit time required to complete the survey from the beginning of the first transect to the end of the last transect. The off-effort transit distance is calculated as the crow flies and may be longer in reality if transit is required around lakes, islands or coastlines etc.
 ## The cyclic trackline length is the trackline length plus the off-effort transit distance required to return from the end of the last transect to the beginning of the first transect.
 
-kable(merged_df)
 
-cover_score <- get.coverage(fixW_zigzag_design)
-hist(cover_score)
+summary_by_simulation <- merged_df %>%
+  group_by(Simulation) %>%
+  summarise(across(where(is.numeric), \(x) round(mean(x, na.rm = TRUE), 1))) %>%
+  select(1, 12:15)
+# mutate(Simulation = recode(Simulation, !!!sim_names))
+
+
+# Print the summarized table
+kable(summary_by_simulation)
+
+cover_score <- get.coverage(FW_Sys_design_528)
+# hist(cover_score)
 summary(cover_score)
 
-# Calculate statistics for Mean_Cyclic_Trackline_Length grouped by Design
-statistics <- merged_df %>%
-  group_by(Design) %>%
-  summarise(
-    mean_cyclic_trackline_length = mean(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
-    sd_cyclic_trackline_length = sd(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
-    min_cyclic_trackline_length = min(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
-    max_cyclic_trackline_length = max(Mean_Cyclic_Trackline_Length, na.rm = TRUE),
-    n = n()
-  )
 
-# Print the statistics
-kable(statistics)
+# Initialize an empty dataframe to store the results
+coverage_stats <- data.frame()
+
+# Loop through all objects in the environment
+for (obj_name in ls()) {
+  # Check if the object name contains 'design' but not 'comparison'
+  if (grepl("design", obj_name) && !grepl("comparison", obj_name)) {
+    # Get the coverage score
+    coverage_score <- get.coverage(get(obj_name))
 
 
-# Select the relevant columns
-data <- merged_df %>%
-  select(mean_shapeindex, ends_with("Percentage"), Design)
+    # Calculate summary statistics manually
+    min_val <- min(coverage_score, na.rm = TRUE)
+    first_qu <- quantile(coverage_score, 0.25, na.rm = TRUE)
+    median_val <- median(coverage_score, na.rm = TRUE)
+    mean_val <- mean(coverage_score, na.rm = TRUE)
+    third_qu <- quantile(coverage_score, 0.75, na.rm = TRUE)
+    max_val <- max(coverage_score, na.rm = TRUE)
 
-# Create the scatter plot matrix
-ggpairs(data, aes(color = Design), 
-        columns = 1:(ncol(data)-1), 
-        upper = list(continuous = "points"),
-        lower = list(continuous = "points"),
-        diag = list(continuous = "densityDiag"))
+    # Create a dataframe with the statistics
+    temp_df <- data.frame(
+      Simulation = obj_name,
+      Min = min_val,
+      First_Qu = first_qu,
+      Median = median_val,
+      Mean = mean_val,
+      Third_Qu = third_qu,
+      Max = max_val
+    )
 
-# Install and load the necessary packages
-library(ggplot2)
+    # Bind the results to the coverage_stats dataframe
+    coverage_stats <- rbind(coverage_stats, temp_df)
+  }
+}
 
-# Create the scatter plot with regression lines
-ggplot(merged_df, aes(x = total_perimeter, y = Off_Effort_Return_Percentage, color = Design)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
-  labs(title = "Influence of mean_shapeindex on Off_Effort_Return_Percentage",
-       x = "Mean Shape Index",
-       y = "Off Effort Return Percentage") +
+
+# Group the results by the names that match those in summary_by_simulation$Simulation
+coverage_stats <- coverage_stats %>%
+  mutate(Group = case_when(
+    grepl(paste(substr(summary_by_simulation$Simulation, 1, nchar(summary_by_simulation$Simulation) - 11), collapse = "|"), substr(Simulation, 1, nchar(Simulation) - 11)) ~ substr(Simulation, 1, nchar(Simulation) - 11),
+    TRUE ~ "Other"
+  ))
+
+# Create a box plot
+
+# Update the Group column with new names
+coverage_stats <- coverage_stats %>%
+  mutate(Group = recode(Group, !!!group_names))
+
+# Manually set the order of the groups
+coverage_stats$Group <- factor(coverage_stats$Group, levels = c(
+  "H-SG",
+  "Sys",
+  "Rnd",
+  "ZZ",
+  "ZZC",
+  "FW-Sys",
+  "FW-ZZ",
+  "QC-Sys"
+))
+
+ggplot(coverage_stats, aes(x = Group, y = Mean)) +
+  geom_boxplot() +
+  labs(x = "Design", y = "Mean Coverage Score") +
   theme_minimal()
-
-# Install and load the necessary packages
-install.packages("broom")
-library(dplyr)
-library(broom)
-
-# Perform linear regression with interaction term
-interaction_model <- lm(Off_Effort_Return_Percentage ~ total_perimeter * Design, data = merged_df)
-
-# Summarize the regression results
-summary(interaction_model)
-
-# Tidy the results for better readability
-tidy_results <- tidy(interaction_model)
-print(tidy_results)

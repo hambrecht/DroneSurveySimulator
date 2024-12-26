@@ -352,21 +352,22 @@ plot(QC_Sys_survey, region)
 
 
 # Run the full simulation
-sim_H_SG <- run.simulation(simulation = sim_H_SG, run.parallel = T, max.cores = 20)
-sim_Rnd <- run.simulation(simulation = sim_Rnd, run.parallel = T, max.cores = 20)
-sim_Sys <- run.simulation(simulation = sim_Sys, run.parallel = T, max.cores = 20)
-sim_ZZ <- run.simulation(simulation = sim_ZZ, run.parallel = T, max.cores = 20)
-sim_ZZC <- run.simulation(simulation = sim_ZZC, run.parallel = T, max.cores = 20)
-sim_FW_Sys_2C <- run.simulation(simulation = sim_FW_Sys_2C, run.parallel = T, max.cores = 20)
-sim_FW_ZZ_2C <- run.simulation(simulation = sim_FW_ZZ_2C, run.parallel = T, max.cores = 20)
-sim_FW_Sys_G <- run.simulation(simulation = sim_FW_Sys_G, run.parallel = T, max.cores = 20)
-sim_FW_ZZ_G <- run.simulation(simulation = sim_FW_ZZ_G, run.parallel = T, max.cores = 20)
-sim_QC <- run.simulation(simulation = sim_QC, run.parallel = T, max.cores = 20)
+H_SG_sim <- run.simulation(simulation = sim_H_SG, run.parallel = T, max.cores = 20)
+Rnd_sim <- run.simulation(simulation = sim_Rnd, run.parallel = T, max.cores = 20)
+Sys_sim <- run.simulation(simulation = sim_Sys, run.parallel = T, max.cores = 20)
+ZZ_sim <- run.simulation(simulation = sim_ZZ, run.parallel = T, max.cores = 20)
+ZZC_sim <- run.simulation(simulation = sim_ZZC, run.parallel = T, max.cores = 20)
+FW_Sys_2C_sim <- run.simulation(simulation = sim_FW_Sys_2C, run.parallel = T, max.cores = 20)
+FW_ZZ_2C_sim <- run.simulation(simulation = sim_FW_ZZ_2C, run.parallel = T, max.cores = 20)
+FW_Sys_G_sim <- run.simulation(simulation = sim_FW_Sys_G, run.parallel = T, max.cores = 20)
+FW_ZZ_G_sim <- run.simulation(simulation = sim_FW_ZZ_G, run.parallel = T, max.cores = 20)
+QC_Sys_sim <- run.simulation(simulation = sim_QC, run.parallel = T, max.cores = 20)
+
 
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
-save(sim_H_SG, sim_Rnd, sim_Sys, sim_ZZ, sim_ZZC, sim_FW_Sys_2C, sim_FW_ZZ_2C, sim_FW_Sys_G, sim_FW_ZZ_G, sim_QC, file = output_path)
+save(H_SG_sim, Rnd_sim, Sys_sim, ZZ_sim, FW_Sys_2C_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_sim, file = output_path)
 
 
 

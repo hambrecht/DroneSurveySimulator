@@ -43,7 +43,7 @@ possDS <- possibly(.f = Distance::ds, otherwise = NULL)
 ### Set Variables
 
 wmu_number_list <- c('501', '503', '512', '517', '528')
-wmu_number <- wmu_number_list[4]
+wmu_number <- wmu_number_list[1]
 # for (wmu_number in wmu_number_list){
   print(paste0("Processing WMU: ", wmu_number))
 
@@ -84,7 +84,6 @@ wmu_number <- wmu_number_list[4]
       detfc_list_bin[[paste0("detfc_cc_hn_null_trunc_", truncation_distance, "_bin_", bin_size)]] <- possDS(distdata, truncation_distance, formula = ~as.factor(canopy_cover), key = "hn", adjustment = NULL, cutpoints = seq(from = 0, to = truncation_distance, by = bin_size))
       # detfc_list_bin[[paste0("detfc_cc_hn_cos_trunc_", truncation_distance, "_bin_", bin_size)]] <- possDS(distdata, truncation_distance, formula = ~as.factor(canopy_cover), key = "hn", adjustment = "cos", max_adjustments = 2,  monotonicity = 'strict', cutpoints = seq(from = 0, to = truncation_distance, by = bin_size))
   }
-
 
 
   # clean lists

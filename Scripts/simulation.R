@@ -70,7 +70,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[2]
+wmu_number <- wmu_number_list[1]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
@@ -103,10 +103,10 @@ plot(detect_hr_overview, pop_desc, col = COLORS)
 legend(x = "topright", legend = seq(0.1, 4, 0.4), col = COLORS, lty = 1, cex = 0.8)
 
 detect_H <- make.detectability(
-  key.function = "hr",
-  scale.param = 50, # heli:50
-  shape.param = 2, # heli:2
-  truncation = 500 # heli:20
+  key.function = "hn",
+  scale.param = 140, # heli:50
+  # shape.param = 2, # heli:2
+  truncation = 600 # heli:20
 )
 plot(detect_H, pop_desc, legend = FALSE)
 
@@ -157,7 +157,7 @@ ddf_analyses <- make.ds.analysis(
 
 
 # Create and run the simulation
-sim_H_SG <- make.simulation(
+H_SG_sim <- make.simulation(
   reps = SIM_REPS,
   design = H_SG_design,
   population.description = pop_desc,
@@ -165,7 +165,7 @@ sim_H_SG <- make.simulation(
   ds.analysis = ddf_analyses
 )
 
-sim_Rnd <- make.simulation(
+Rnd_sim <- make.simulation(
   reps = SIM_REPS,
   design = Rnd_design,
   population.description = pop_desc,
@@ -173,21 +173,21 @@ sim_Rnd <- make.simulation(
   ds.analysis = ddf_analyses
 )
 
-sim_Sys <- make.simulation(
+Sys_sim <- make.simulation(
   reps = SIM_REPS,
   design = Sys_design,
   population.description = pop_desc,
   detectability = detect_H,
   ds.analysis = ddf_analyses
 )
-sim_ZZ <- make.simulation(
+ZZ_sim <- make.simulation(
   reps = SIM_REPS,
   design = ZZ_design,
   population.description = pop_desc,
   detectability = detect_H,
   ds.analysis = ddf_analyses
 )
-sim_ZZC <- make.simulation(
+ZZC_sim <- make.simulation(
   reps = SIM_REPS,
   design = ZZC_design,
   population.description = pop_desc,
@@ -247,7 +247,7 @@ ddf_analyses_FW_G <- make.ds.analysis(
 )
 FW_Sys_design@truncation <- 180
 FW_ZZ_design@truncation <- 180
-sim_FW_Sys_2C <- make.simulation(
+FW_Sys_2C_sim <- make.simulation(
   reps = SIM_REPS,
   design = FW_Sys_design,
   population.description = pop_desc_FW,
@@ -255,7 +255,7 @@ sim_FW_Sys_2C <- make.simulation(
   ds.analysis = ddf_analyses_FW_2C
 )
 
-sim_FW_ZZ_2C <- make.simulation(
+FW_ZZ_2C_sim <- make.simulation(
   reps = SIM_REPS,
   design = FW_ZZ_design,
   population.description = pop_desc_FW,
@@ -264,7 +264,7 @@ sim_FW_ZZ_2C <- make.simulation(
 )
 FW_Sys_design@truncation <- 260
 FW_ZZ_design@truncation <- 260
-sim_FW_Sys_G <- make.simulation(
+FW_Sys_G_sim <- make.simulation(
   reps = SIM_REPS,
   design = FW_Sys_design,
   population.description = pop_desc_FW,
@@ -272,7 +272,7 @@ sim_FW_Sys_G <- make.simulation(
   ds.analysis = ddf_analyses_FW_G
 )
 
-sim_FW_ZZ_G <- make.simulation(
+FW_ZZ_G_sim <- make.simulation(
   reps = SIM_REPS,
   design = FW_ZZ_design,
   population.description = pop_desc_FW,
@@ -284,6 +284,7 @@ sim_FW_ZZ_G <- make.simulation(
 # Perform spatial join to count points within each polygon
 points_within_QC_polygons <- st_join(points_sf, QC_Sys_design@region@region, join = st_within)
 
+QC_points_count <- QC_Sys_design@region@strata.name
 # Count the number of points in each polygon
 QC_points_count <- points_within_QC_polygons %>%
   group_by(ID) %>%  # Replace `id` with the actual column name identifying polygons
@@ -292,7 +293,16 @@ QC_points_count <- points_within_QC_polygons %>%
 
 # View the result
 print(QC_points_count)
-QC_points_count$count
+QC_points_count$ID
+
+id_df <- data.frame(
+  ID = QC_Sys_design@region@strata.name,
+  count = 0
+)
+merged_df <- full_join(id_df, QC_points_count, by = "ID")
+# Replace NA values in the count column with 0
+merged_df$count <- ifelse(is.na(merged_df$count.y), merged_df$count.x, merged_df$count.y)
+QC_pop_count <- merged_df %>% select(ID, count)
 
 QC_Sys_density <- density
 QC_Sys_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], QC_Sys_design@region@region)
@@ -306,7 +316,7 @@ QC_Sys_density@density.surface[[1]] <- QC_Sys_density@density.surface[[1]] %>%
 pop_desc_QC <- make.population.description(
   region = QC_Sys_design@region,
   density = QC_Sys_density,
-  N = QC_points_count$count,
+  N = QC_pop_count$count,
   fixed.N = TRUE
 )
 
@@ -319,7 +329,7 @@ ddf_analyses_QC <- make.ds.analysis(
 )
 
 QC_Sys_design@truncation <- 50
-sim_QC <- make.simulation(
+QC_Sys_sim <- make.simulation(
   reps = SIM_REPS,
   design = QC_Sys_design,
   population.description = pop_desc_QC,
@@ -328,16 +338,16 @@ sim_QC <- make.simulation(
 )
 
 
-H_SG_survey <- run.survey(sim_H_SG)
-Rnd_survey <- run.survey(sim_Rnd)
-Sys_survey <- run.survey(sim_Sys)
-ZZ_survey <- run.survey(sim_ZZ)
-ZZC_survey <- run.survey(sim_ZZC)
-FW_Sys_survey_2C <- run.survey(sim_FW_Sys_2C)
-FW_ZZ_survey_2C <- run.survey(sim_FW_ZZ_2C)
-FW_Sys_survey_G <- run.survey(sim_FW_Sys_G)
-FW_ZZ_survey_G <- run.survey(sim_FW_ZZ_G)
-QC_Sys_survey <- run.survey(sim_QC)
+H_SG_survey <- run.survey(H_SG_sim)
+Rnd_survey <- run.survey(Rnd_sim)
+Sys_survey <- run.survey(Sys_sim)
+ZZ_survey <- run.survey(ZZ_sim)
+ZZC_survey <- run.survey(ZZC_sim)
+FW_Sys_survey_2C <- run.survey(FW_Sys_2C_sim)
+FW_ZZ_survey_2C <- run.survey(FW_ZZ_2C_sim)
+FW_Sys_survey_G <- run.survey(FW_Sys_G_sim)
+FW_ZZ_survey_G <- run.survey(FW_ZZ_G_sim)
+QC_Sys_survey <- run.survey(QC_Sys_sim)
 
 plot(H_SG_survey, region)
 plot(Rnd_survey, region)
@@ -352,38 +362,38 @@ plot(QC_Sys_survey, region)
 
 
 # Run the full simulation
-H_SG_sim <- run.simulation(simulation = sim_H_SG, run.parallel = T, max.cores = 20)
-Rnd_sim <- run.simulation(simulation = sim_Rnd, run.parallel = T, max.cores = 20)
-Sys_sim <- run.simulation(simulation = sim_Sys, run.parallel = T, max.cores = 20)
-ZZ_sim <- run.simulation(simulation = sim_ZZ, run.parallel = T, max.cores = 20)
-ZZC_sim <- run.simulation(simulation = sim_ZZC, run.parallel = T, max.cores = 20)
-FW_Sys_2C_sim <- run.simulation(simulation = sim_FW_Sys_2C, run.parallel = T, max.cores = 20)
-FW_ZZ_2C_sim <- run.simulation(simulation = sim_FW_ZZ_2C, run.parallel = T, max.cores = 20)
-FW_Sys_G_sim <- run.simulation(simulation = sim_FW_Sys_G, run.parallel = T, max.cores = 20)
-FW_ZZ_G_sim <- run.simulation(simulation = sim_FW_ZZ_G, run.parallel = T, max.cores = 20)
-QC_Sys_sim <- run.simulation(simulation = sim_QC, run.parallel = T, max.cores = 20)
+H_SG_sim <- run.simulation(simulation = H_SG_sim, run.parallel = T, max.cores = 20)
+Rnd_sim <- run.simulation(simulation = Rnd_sim, run.parallel = T, max.cores = 20)
+Sys_sim <- run.simulation(simulation = Sys_sim, run.parallel = T, max.cores = 20)
+ZZ_sim <- run.simulation(simulation = ZZ_sim, run.parallel = T, max.cores = 20)
+ZZC_sim <- run.simulation(simulation = ZZC_sim, run.parallel = T, max.cores = 20)
+FW_Sys_2C_sim <- run.simulation(simulation = FW_Sys_2C_sim, run.parallel = T, max.cores = 20)
+FW_ZZ_2C_sim <- run.simulation(simulation = FW_ZZ_2C_sim, run.parallel = T, max.cores = 20)
+FW_Sys_G_sim <- run.simulation(simulation = FW_Sys_G_sim, run.parallel = T, max.cores = 20)
+FW_ZZ_G_sim <- run.simulation(simulation = FW_ZZ_G_sim, run.parallel = T, max.cores = 20)
+QC_Sys_sim <- run.simulation(simulation = QC_Sys_sim, run.parallel = T, max.cores = 20)
 
 
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
-save(H_SG_sim, Rnd_sim, Sys_sim, ZZ_sim, FW_Sys_2C_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_sim, file = output_path)
+save(H_SG_sim, Rnd_sim, Sys_sim, ZZ_sim, ZZC_sim, FW_Sys_2C_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_sim, file = output_path)
 
 
 
 # Display results
-summary(sim_H_SG, description.summary = FALSE)
-summary(sim_Rnd, description.summary = FALSE)
-summary(sim_Sys, description.summary = FALSE)
-summary(sim_ZZ, description.summary = FALSE)
-summary(sim_ZZC, description.summary = FALSE)
-summary(sim_FW_Sys_2C, description.summary = FALSE)
-summary(sim_FW_ZZ_2C, description.summary = FALSE)
-summary(sim_FW_Sys_G, description.summary = FALSE)
-summary(sim_FW_ZZ_G, description.summary = FALSE)
-summary(sim_QC, description.summary = FALSE)
+summary(H_SG_sim, description.summary = FALSE)
+summary(Rnd_sim, description.summary = FALSE)
+summary(Sys_sim, description.summary = FALSE)
+summary(ZZ_sim, description.summary = FALSE)
+summary(ZZC_sim, description.summary = FALSE)
+summary(FW_Sys_2C_sim, description.summary = FALSE)
+summary(FW_ZZ_2C_sim, description.summary = FALSE)
+summary(FW_Sys_G_sim, description.summary = FALSE)
+summary(FW_ZZ_G_sim, description.summary = FALSE)
+summary(QC_Sys_sim, description.summary = FALSE)
 total_abundance
-histogram.N.ests(sim_Rnd, use.max.reps = TRUE)
+histogram.N.ests(Rnd_sim, use.max.reps = TRUE)
 
 # Define labels
 labels <- c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
@@ -391,55 +401,101 @@ xlims <- c(49500, 80000)
 par(mfrow = c(2, 5))
 
 # Plot each histogram and add the corresponding label
-histogram.N.ests(sim_H_SG, xlim = xlims)
+histogram.N.ests(H_SG_sim, xlim = xlims)
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[1], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
 
-histogram.N.ests(sim_Sys, xlim = xlims)
+histogram.N.ests(Sys_sim, xlim = xlims)
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[2], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_Rnd, xlim = xlims)
+histogram.N.ests(Rnd_sim, xlim = xlims)
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[3], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_ZZ, xlim = xlims)
+histogram.N.ests(ZZ_sim, xlim = xlims)
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[4], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_ZZC, xlim = xlims)
+histogram.N.ests(ZZC_sim, xlim = xlims)
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[5], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_FW_Sys_2C, xlim = c(30000, 33500))
+histogram.N.ests(FW_Sys_2C_sim, xlim = c(30000, 33500))
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[6], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_FW_ZZ_2C, xlim = c(30000, 33500))
+histogram.N.ests(FW_ZZ_2C_sim, xlim = c(30000, 33500))
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[7], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_FW_Sys_G, xlim = c(30000, 33500))
+histogram.N.ests(FW_Sys_G_sim, xlim = c(30000, 33500))
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[8], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_FW_ZZ_G, xlim = c(30000, 33500))
+histogram.N.ests(FW_ZZ_G_sim, xlim = c(30000, 33500))
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[9], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
-histogram.N.ests(sim_QC, xlim = c(6500, 8900))
+histogram.N.ests(QC_Sys_sim, xlim = c(6500, 8900))
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[10], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
 par(mfrow = c(1, 1))
 
+# 
+# 
+# # Density
+# N_factors <- c(0.75, 0.5, 0.25)
+# FACTOR <- 1
+# 
+# pop_desc_density <- pop_desc
+# pop_desc_density@N <- pop_desc@N * N_factor[FACTOR]
+# H_SG_sim_density <- make.simulation(
+#   reps = SIM_REPS,
+#   design = H_SG_design,
+#   population.description = pop_desc_density,
+#   detectability = detect_H,
+#   ds.analysis = ddf_analyses
+# )
+# 
+# pop_desc_FW_density <- pop_desc_FW
+# pop_desc_FW_density@N <-pop_desc_FW@N * N_factor[FACTOR]
+# FW_Sys_G_sim_density <- make.simulation(
+#   reps = SIM_REPS,
+#   design = FW_Sys_design,
+#   population.description = pop_desc_FW_density,
+#   detectability = detect_FWG,
+#   ds.analysis = ddf_analyses_FW_G
+# )
+# 
+# pop_desc_QC_density <- pop_desc_QC
+# pop_desc_QC_density@N <- pop_desc_QC@N* N_factor[FACTOR]
+# QC_Sys_sim_density <- make.simulation(
+#   reps = SIM_REPS,
+#   design = QC_Sys_design,
+#   population.description = pop_desc_QC_density,
+#   detectability = detect_uf,
+#   ds.analysis = ddf_analyses_QC
+# )
+# 
+# H_SG_sim_density <- run.simulation(simulation = H_SG_sim_density, run.parallel = T, max.cores = 20)
+# FW_Sys_G_sim_density <- run.simulation(simulation = FW_Sys_G_sim_density, run.parallel = T, max.cores = 20)
+# QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = T, max.cores = 20)
+# 
+# # Save simulation data
+# output_path <- here("Output", "Simulation", paste0("density_sim-WMU", wmu_number, "-D", N_factor[FACTOR], ".RData"))
+# # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
+# save(H_SG_sim_density, FW_Sys_G_sim_density, QC_Sys_sim_density, file = output_path)
+# 
+
 
 # # Extract metrics for each simulation
-# metrics_H_SG <- extract_metrics(sim_H_SG)
-# metrics_Sys <- extract_metrics(sim_Sys)
-# metrics_ZZ <- extract_metrics(sim_ZZ)
-# metrics_ZZC <- extract_metrics(sim_ZZC)
+# metrics_H_SG <- extract_metrics(H_SG_sim)
+# metrics_Sys <- extract_metrics(Sys_sim)
+# metrics_ZZ <- extract_metrics(ZZ_sim)
+# metrics_ZZC <- extract_metrics(ZZC_sim)
 
 # # Combine metrics into a single dataframe
 # comparison_df <- data.frame(

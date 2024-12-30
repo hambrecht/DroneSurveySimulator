@@ -1,0 +1,147 @@
+---
+title: "Visualisation of Density"
+author: "Leonard Hambrecht"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    theme: cerulean
+subtitle: "An Analysis of Wildlife Management Units"
+abstract: "This document provides a detailed analysis of the density and abundance of wildlife in various management units."
+keywords: ["density", "wildlife", "management units", "R Markdown"]
+
+---
+
+```{r setup, include = FALSE}
+library(here)
+library(knitr)
+library(dsims)
+wmu_number_list <- c('501','503', '512', '517', '528')
+```
+```{r, include = FALSE}
+wmu_number <- wmu_number_list[1]
+
+```
+# WMU `r wmu_number`
+```{r, include = FALSE}
+# load density data
+input_path <-  here("Output", "Density", paste0("density",wmu_number,".RData"))
+load(file = input_path)
+total_abundance <- round(total_abundance,0)
+summary_df <- c(total_abundance = round(sum(density@density.surface[[1]]$density),0), average_density = round(mean(density@density.surface[[1]]$density)*4,2)
+)
+```
+## Density Map
+```{r, echo = FALSE, fig.cap = paste("Density map of WMU", wmu_number), fig.alt = "Density map of WMU"}
+plot(density)
+```
+## Density Summary
+```{r, echo = FALSE}
+kable(summary_df)
+```
+## Model Variance
+```{r, echo = FALSE}
+print(model_variance)
+```
+
+```{r, include = FALSE}
+wmu_number <- wmu_number_list[2]
+
+```
+# WMU `r wmu_number`
+```{r, include = FALSE}
+# load density data
+input_path <-  here("Output", "Density", paste0("density",wmu_number,".RData"))
+load(file = input_path)
+total_abundance <- round(total_abundance,0)
+summary_df <- c(total_abundance = round(sum(density@density.surface[[1]]$density),0), average_density = round(mean(density@density.surface[[1]]$density)*4,2)
+)
+```
+## Density Map
+```{r, echo = FALSE, fig.cap = paste("Density map of WMU", wmu_number), fig.alt = "Density map of WMU"}
+plot(density)
+```
+## Density Summary
+```{r, echo = FALSE}
+kable(summary_df)
+```
+## Model Variance
+```{r, echo = FALSE}
+print(model_variance)
+```
+
+```{r, include = FALSE}
+wmu_number <- wmu_number_list[3]
+```
+# WMU `r wmu_number`
+```{r, include = FALSE}
+# load density data
+input_path <-  here("Output", "Density", paste0("density",wmu_number,".RData"))
+load(file = input_path)
+total_abundance <- round(total_abundance,0)
+summary_df <- c(total_abundance = round(sum(density@density.surface[[1]]$density),0), average_density = round(mean(density@density.surface[[1]]$density)*4,2)
+)
+```
+## Density Map
+```{r, echo = FALSE, fig.cap = paste("Density map of WMU", wmu_number), fig.alt = "Density map of WMU"}
+plot(density)
+```
+## Density Summary
+```{r, echo = FALSE}
+kable(summary_df)
+```
+## Model Variance
+```{r, echo = FALSE}
+print(model_variance)
+```
+
+```{r, include = FALSE}
+wmu_number <- wmu_number_list[4]
+```
+# WMU `r wmu_number`
+```{r, include = FALSE}
+# load density data
+input_path <-  here("Output", "Density", paste0("density",wmu_number,".RData"))
+load(file = input_path)
+total_abundance <- round(total_abundance,0)
+summary_df <- c(total_abundance = round(sum(density@density.surface[[1]]$density),0), average_density = round(mean(density@density.surface[[1]]$density)*4,2)
+)
+```
+## Density Map
+```{r, echo = FALSE, fig.cap = paste("Density map of WMU", wmu_number), fig.alt = "Density map of WMU"}
+plot(density)
+```
+## Density Summary
+```{r, echo = FALSE}
+kable(summary_df)
+```
+## Model Variance
+```{r, echo = FALSE}
+# print(model_variance)
+```
+
+```{r, include = FALSE}
+wmu_number <- wmu_number_list[5]
+```
+# WMU `r wmu_number`
+```{r, include = FALSE}
+# load density data
+input_path <-  here("Output", "Density", paste0("density",wmu_number,".RData"))
+load(file = input_path)
+total_abundance <- round(total_abundance,0)
+summary_df <- c(total_abundance = round(sum(density@density.surface[[1]]$density),0), average_density = round(mean(density@density.surface[[1]]$density)*4,2)
+)
+```
+## Density Map
+```{r, echo = FALSE, fig.cap = paste("Density map of WMU", wmu_number), fig.alt = "Density map of WMU"}
+plot(density)
+```
+## Density Summary
+```{r, echo = FALSE}
+kable(summary_df)
+```
+## Model Variance
+```{r, echo = FALSE}
+print(model_variance)
+```

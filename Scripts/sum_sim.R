@@ -76,14 +76,14 @@ for (file in inputFilePaths) {
 
   # Combine metrics into a single dataframe
   metrics <- data.frame(
-    Simulation = c("H-SG", "Rnd", "Sys", "ZZ", "ZZC", "FW-Sys_2C", "FW-ZZ_2C", "FW-Sys_G", "FW-ZZ_G", "QC-Sys"),
+      Simulation = c("H-SG", "Rnd", "Sys", "ZZ", "ZZC", "FW-Sys_2C", "FW-ZZ_2C", "FW-Sys_G", "FW-ZZ_G", "QC-Sys"),
     # Relative_Avalibility = c(H_SG_metric$percent_available, Rnd_metric$percent_available, Rys_metric$percent_available, ZZ_metric$percent_available, ZZC_metric$percent_available, FW_Sys_2C_metric$percent_available, FW_ZZ_2C_metric$percent_available, FW_Sys_G_metric$percent_available, FW_ZZ_G_metric$percent_available, QC_Sys_metric$percent_available),
     Mean_relative_Estimate = c(H_SG_metric$relative_mean_estimate, Rnd_metric$relative_mean_estimate, Rys_metric$relative_mean_estimate, ZZ_metric$relative_mean_estimate, ZZC_metric$relative_mean_estimate, FW_Sys_2C_metric$relative_mean_estimate, FW_ZZ_2C_metric$relative_mean_estimate, FW_Sys_G_metric$relative_mean_estimate, FW_ZZ_G_metric$relative_mean_estimate, QC_Sys_metric$relative_mean_estimate),
     Percent_Bias = c(H_SG_metric$percent_bias, Rnd_metric$percent_bias, Rys_metric$percent_bias, ZZ_metric$percent_bias, ZZC_metric$percent_bias, FW_Sys_2C_metric$percent_bias, FW_ZZ_2C_metric$percent_bias, FW_Sys_G_metric$percent_bias, FW_ZZ_G_metric$percent_bias, QC_Sys_metric$percent_bias),
     RRMSE = c(H_SG_metric$rrmse, Rnd_metric$rrmse, Rys_metric$rrmse, ZZ_metric$rrmse, ZZC_metric$rrmse, FW_Sys_2C_metric$rrmse, FW_ZZ_2C_metric$rrmse, FW_Sys_G_metric$rrmse, FW_ZZ_G_metric$rrmse, QC_Sys_metric$rrmse),
     CI_Coverage_Prob = c(H_SG_metric$ci_coverage_pro, Rnd_metric$ci_coverage_pro, Rys_metric$ci_coverage_prob, ZZ_metric$ci_coverage_prob, ZZC_metric$ci_coverage_prob, FW_Sys_2C_metric$ci_coverage_prob, FW_ZZ_2C_metric$ci_coverage_prob, FW_Sys_G_metric$ci_coverage_prob, FW_ZZ_G_metric$ci_coverage_prob, QC_Sys_metric$ci_coverage_prob),
-    relative_Mean_SE = c(H_SG_metric$mean_rse, Rnd_metric$mean_rse, Rys_metric$mean_rse, ZZ_metric$mean_rse, ZZC_metric$mean_rse, FW_Sys_2C_metric$mean_rse, FW_ZZ_2C_metric$mean_rse, FW_Sys_G_metric$mean_rse, FW_ZZ_G_metric$mean_rse, QC_Sys_metric$mean_rse),
-    CV- = c(H_SG_metric$cv_of_means, Rnd_metric$cv_of_means, Rys_metric$cv_of_means, ZZ_metric$cv_of_means, ZZC_metric$cv_of_means, FW_Sys_2C_metric$cv_of_means, FW_ZZ_2C_metric$cv_of_means, FW_Sys_G_metric$cv_of_means, FW_ZZ_G_metric$cv_of_means, QC_Sys_metric$cv_of_means),
+    Mean_SE = c(H_SG_metric$mean_rse, Rnd_metric$mean_rse, Rys_metric$mean_rse, ZZ_metric$mean_rse, ZZC_metric$mean_rse, FW_Sys_2C_metric$mean_rse, FW_ZZ_2C_metric$mean_rse, FW_Sys_G_metric$mean_rse, FW_ZZ_G_metric$mean_rse, QC_Sys_metric$mean_rse),
+    SD_of_Means = c(H_SG_metric$cv_of_means, Rnd_metric$cv_of_means, Rys_metric$cv_of_means, ZZ_metric$cv_of_means, ZZC_metric$cv_of_means, FW_Sys_2C_metric$cv_of_means, FW_ZZ_2C_metric$cv_of_means, FW_Sys_G_metric$cv_of_means, FW_ZZ_G_metric$cv_of_means, QC_Sys_metric$cv_of_means),
     Mean_n = c(H_SG_metric$mean_rN, Rnd_metric$mean_rN, Rys_metric$mean_rN, ZZ_metric$mean_rN, ZZC_metric$mean_rN, FW_Sys_2C_metric$mean_rN, FW_ZZ_2C_metric$mean_rN, FW_Sys_G_metric$mean_rN, FW_ZZ_G_metric$mean_rN, QC_Sys_metric$mean_rN),
     Mean_ER = c(H_SG_metric$mean_ER, Rnd_metric$mean_ER, Rys_metric$mean_ER, ZZ_metric$mean_ER, ZZC_metric$mean_ER, FW_Sys_2C_metric$mean_ER, FW_ZZ_2C_metric$mean_ER, FW_Sys_G_metric$mean_ER, FW_ZZ_G_metric$mean_ER, QC_Sys_metric$mean_ER),
     Mean_se_ER = c(H_SG_metric$mean_se_ER, Rnd_metric$mean_se_ER, Rys_metric$mean_se_ER, ZZ_metric$mean_se_ER, ZZC_metric$mean_se_ER, FW_Sys_2C_metric$mean_se_ER, FW_ZZ_2C_metric$mean_se_ER, FW_Sys_G_metric$mean_se_ER, FW_ZZ_G_metric$mean_se_ER, QC_Sys_metric$mean_se_ER)
@@ -93,6 +93,9 @@ for (file in inputFilePaths) {
 
 # Combine the metrics into a single dataframe
 comparison_df <- do.call(rbind, lapply(metrics_list, as.data.frame))
+
+output_path <- here("Output", "Simulation", "sim_comparison.csv")
+write.csv(comparison_df, file = output_path, row.names = TRUE)
 
 # Assuming comparison_df is your dataframe
 averaged_df <- comparison_df %>%
@@ -136,5 +139,5 @@ transposed_df <- transposed_df[-1,]
 kable(transposed_df)
 
 # Save the transposed dataframe as a CSV file
-output_path <- here("Output", "Simulation", "sim_comparison.csv")
+output_path <- here("Output", "Simulation", "sim_average.csv")
 write.csv(transposed_df, file = output_path, row.names = TRUE)

@@ -70,7 +70,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[1]
+wmu_number <- wmu_number_list[5]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
@@ -150,7 +150,7 @@ SIM_REPS <- 999
 # )
 ddf_analyses <- make.ds.analysis(
   dfmodel = list(~1, ~1),
-  key = c("hn", "hr"),
+  key = "hr",
   criteria = "AIC",
   truncation = 500
 )
@@ -232,7 +232,7 @@ pop_desc_FW <- make.population.description(
 
 ddf_analyses_FW_2C <- make.ds.analysis(
   dfmodel = list(~1, ~1),
-  key = c("hn", "hr"),
+  key = "hr",
   criteria = "AIC",
   truncation = 180,
   group.strata = data.frame(design.id = FW_Sys_design@region@strata.name, analysis.id = rep("A", length(FW_Sys_design@region@strata.name)))
@@ -240,7 +240,7 @@ ddf_analyses_FW_2C <- make.ds.analysis(
 
 ddf_analyses_FW_G <- make.ds.analysis(
   dfmodel = list(~1, ~1),
-  key = c("hn", "hr"),
+  key = "hr",
   criteria = "AIC",
   truncation = 260,
   group.strata = data.frame(design.id = FW_Sys_design@region@strata.name, analysis.id = rep("A", length(FW_Sys_design@region@strata.name)))
@@ -322,7 +322,7 @@ pop_desc_QC <- make.population.description(
 
 ddf_analyses_QC <- make.ds.analysis(
   dfmodel = list(~1, ~1),
-  key = c("hn", "hr"),
+  key = "hr",
   criteria = "AIC",
   truncation = 50,
   group.strata = data.frame(design.id = QC_Sys_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_design@region@strata.name)))
@@ -444,51 +444,51 @@ text(x = usr[2], y = usr[4], labels = labels[10], adj = c(1.2, 1.2), col = "blac
 
 par(mfrow = c(1, 1))
 
-# 
-# 
-# # Density
-# N_factors <- c(0.75, 0.5, 0.25)
-# FACTOR <- 1
-# 
-# pop_desc_density <- pop_desc
-# pop_desc_density@N <- pop_desc@N * N_factor[FACTOR]
-# H_SG_sim_density <- make.simulation(
-#   reps = SIM_REPS,
-#   design = H_SG_design,
-#   population.description = pop_desc_density,
-#   detectability = detect_H,
-#   ds.analysis = ddf_analyses
-# )
-# 
-# pop_desc_FW_density <- pop_desc_FW
-# pop_desc_FW_density@N <-pop_desc_FW@N * N_factor[FACTOR]
-# FW_Sys_G_sim_density <- make.simulation(
-#   reps = SIM_REPS,
-#   design = FW_Sys_design,
-#   population.description = pop_desc_FW_density,
-#   detectability = detect_FWG,
-#   ds.analysis = ddf_analyses_FW_G
-# )
-# 
-# pop_desc_QC_density <- pop_desc_QC
-# pop_desc_QC_density@N <- pop_desc_QC@N* N_factor[FACTOR]
-# QC_Sys_sim_density <- make.simulation(
-#   reps = SIM_REPS,
-#   design = QC_Sys_design,
-#   population.description = pop_desc_QC_density,
-#   detectability = detect_uf,
-#   ds.analysis = ddf_analyses_QC
-# )
-# 
-# H_SG_sim_density <- run.simulation(simulation = H_SG_sim_density, run.parallel = T, max.cores = 20)
-# FW_Sys_G_sim_density <- run.simulation(simulation = FW_Sys_G_sim_density, run.parallel = T, max.cores = 20)
-# QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = T, max.cores = 20)
-# 
-# # Save simulation data
-# output_path <- here("Output", "Simulation", paste0("density_sim-WMU", wmu_number, "-D", N_factor[FACTOR], ".RData"))
-# # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
-# save(H_SG_sim_density, FW_Sys_G_sim_density, QC_Sys_sim_density, file = output_path)
-# 
+
+
+# Density
+N_factor <- c(0.75, 0.5, 0.25)
+
+for (FACTOR in 1:length(N_factor)) {
+  pop_desc_density <- pop_desc
+  pop_desc_density@N <- pop_desc@N * N_factor[FACTOR]
+  H_SG_sim_density <- make.simulation(
+    reps = SIM_REPS,
+    design = H_SG_design,
+    population.description = pop_desc_density,
+    detectability = detect_H,
+    ds.analysis = ddf_analyses
+  )
+  
+  pop_desc_FW_density <- pop_desc_FW
+  pop_desc_FW_density@N <-pop_desc_FW@N * N_factor[FACTOR]
+  FW_Sys_G_sim_density <- make.simulation(
+    reps = SIM_REPS,
+    design = FW_Sys_design,
+    population.description = pop_desc_FW_density,
+    detectability = detect_FWG,
+    ds.analysis = ddf_analyses_FW_G
+  )
+  
+  pop_desc_QC_density <- pop_desc_QC
+  pop_desc_QC_density@N <- pop_desc_QC@N* N_factor[FACTOR]
+  QC_Sys_sim_density <- make.simulation(
+    reps = SIM_REPS,
+    design = QC_Sys_design,
+    population.description = pop_desc_QC_density,
+    detectability = detect_uf,
+    ds.analysis = ddf_analyses_QC
+  )
+  
+  H_SG_sim_density <- run.simulation(simulation = H_SG_sim_density, run.parallel = T, max.cores = 20)
+  FW_Sys_G_sim_density <- run.simulation(simulation = FW_Sys_G_sim_density, run.parallel = T, max.cores = 20)
+  QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = T, max.cores = 20)
+  
+  # Save simulation data
+  output_path <- here("Output", "Simulation", paste0("density_sim-WMU", wmu_number, "-D", N_factor[FACTOR], ".RData"))
+  # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
+  save(H_SG_sim_density, FW_Sys_G_sim_density, QC_Sys_sim_density, file = output_path)
+}
 
 
 # # Extract metrics for each simulation
@@ -535,7 +535,7 @@ par(mfrow = c(1, 1))
 
 #   new_ds_analyses <- make.ds.analysis(
 #     dfmodel = list(~1, ~1),
-#     key = c("hn", "hr"),
+#     key = "hr",
 #     criteria = "AIC",
 #     truncation = truncation_distances[i]
 #   )

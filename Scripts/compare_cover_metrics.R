@@ -155,7 +155,20 @@ coverage_stats$Group <- factor(coverage_stats$Group, levels = c(
   "QC-Sys"
 ))
 
+# Define custom colors for each group
+group_colors <- c(
+  "H-SG" = "#b2df8a",   # Pink
+  "Sys" = "##b2df8a",    # Light Blue
+  "Rnd" = "#b2df8a",    # Green
+  "ZZ" = "#b2df8a",     # Light Green
+  "ZZC" = "#b2df8a",    # Blue
+  "FW-Sys" = "#1f78b4", # Orange
+  "FW-ZZ" = "#1f78b4",  # Purple
+  "QC-Sys" = "#a6cee3"  # Dark Purple
+)
+
 ggplot(coverage_stats, aes(x = Group, y = Mean)) +
   geom_boxplot() +
-  labs(x = "Design", y = "Mean Coverage Score") +
+  scale_fill_manual(values = group_colors) +
+  labs(x = "Design", y = "Mean coverage score") +
   theme_minimal()

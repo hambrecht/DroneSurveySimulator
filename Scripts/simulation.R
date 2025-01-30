@@ -70,16 +70,24 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[5]
+wmu_number <- wmu_number_list[2]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
 load(file = input_path)
 
+# Save simulation data
+input_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
+load(file = input_path)
+# QC_Sys_nadir_sim <- QC_Sys_sim
+rm(QC_Sys_sim)
+
+
+
 # Define constants
 ALTITUDE <- 120 # Height in meters
 CAMERA_HFOV <- 25 # Horizontal FOV in degrees. Max adjustment of 25 degrees. If more than 25 degrees then a third camera or gimbal would be needed to cover 0. Proposed intervals for adjustments are 0, 10, 20, 25
-CAMERA_ANGLE <- 25 # Adjustment in degrees; max 25 with two fix cameras or 35 with gimbal in forested
+CAMERA_ANGLE <- 35 # Adjustment in degrees; max 25 with two fix cameras or 35 with gimbal in forested
 IMAGE_WIDTH <- calculate_image_width(ALTITUDE, CAMERA_HFOV, CAMERA_ANGLE)
 print(paste0("Half swath width is: ", IMAGE_WIDTH, " m"))
 
@@ -129,7 +137,7 @@ plot(detect_FWG, pop_desc, legend = FALSE)
 # Define and visualise uniform detection function
 detect_uf <- make.detectability(
   key.function = "uf",
-  scale.param = 0.8, # accounting for canopy cover
+  scale.param = 1, # accounting for canopy cover
   truncation = 50
 )
 plot(detect_uf, pop_desc)
@@ -149,7 +157,7 @@ SIM_REPS <- 999
 #   truncation = IMAGE_WIDTH
 # )
 ddf_analyses <- make.ds.analysis(
-  dfmodel = list(~1, ~1),
+  dfmodel = ~1,
   key = "hr",
   criteria = "AIC",
   truncation = 500
@@ -160,36 +168,6 @@ ddf_analyses <- make.ds.analysis(
 H_SG_sim <- make.simulation(
   reps = SIM_REPS,
   design = H_SG_design,
-  population.description = pop_desc,
-  detectability = detect_H,
-  ds.analysis = ddf_analyses
-)
-
-Rnd_sim <- make.simulation(
-  reps = SIM_REPS,
-  design = Rnd_design,
-  population.description = pop_desc,
-  detectability = detect_H,
-  ds.analysis = ddf_analyses
-)
-
-Sys_sim <- make.simulation(
-  reps = SIM_REPS,
-  design = Sys_design,
-  population.description = pop_desc,
-  detectability = detect_H,
-  ds.analysis = ddf_analyses
-)
-ZZ_sim <- make.simulation(
-  reps = SIM_REPS,
-  design = ZZ_design,
-  population.description = pop_desc,
-  detectability = detect_H,
-  ds.analysis = ddf_analyses
-)
-ZZC_sim <- make.simulation(
-  reps = SIM_REPS,
-  design = ZZC_design,
   population.description = pop_desc,
   detectability = detect_H,
   ds.analysis = ddf_analyses
@@ -231,7 +209,7 @@ pop_desc_FW <- make.population.description(
 )
 
 ddf_analyses_FW_2C <- make.ds.analysis(
-  dfmodel = list(~1, ~1),
+  dfmodel = ~1,
   key = "hr",
   criteria = "AIC",
   truncation = 180,
@@ -239,7 +217,7 @@ ddf_analyses_FW_2C <- make.ds.analysis(
 )
 
 ddf_analyses_FW_G <- make.ds.analysis(
-  dfmodel = list(~1, ~1),
+  dfmodel = ~1,
   key = "hr",
   criteria = "AIC",
   truncation = 260,
@@ -281,6 +259,40 @@ FW_ZZ_G_sim <- make.simulation(
 )
 # termine abundance in each subplot
 
+# # Perform spatial join to count points within each polygon
+# points_within_QC_polygons <- st_join(points_sf, QC_Sys_nadir_design@region@region, join = st_within)
+
+# QC_points_count <- QC_Sys_nadir_design@region@strata.name
+# # Count the number of points in each polygon
+# QC_points_count <- points_within_QC_polygons %>%
+#   group_by(ID) %>%  # Replace `id` with the actual column name identifying polygons
+#   summarise(count = n()) %>%
+#   filter(!is.na(ID))  # Remove rows with NA in the id column
+
+# # View the result
+# print(QC_points_count)
+# QC_points_count$ID
+
+# id_df <- data.frame(
+#   ID = QC_Sys_nadir_design@region@strata.name,
+#   count = 0
+# )
+# merged_df <- full_join(id_df, QC_points_count, by = "ID")
+# # Replace NA values in the count column with 0
+# merged_df$count <- ifelse(is.na(merged_df$count.y), merged_df$count.x, merged_df$count.y)
+# QC_pop_count <- merged_df %>% select(ID, count)
+
+# QC_Sys_density <- density
+# QC_Sys_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], QC_Sys_nadir_design@region@region)
+# QC_Sys_density@region.name <- QC_Sys_nadir_design@region@region.name
+# QC_Sys_density@strata.name <- QC_Sys_nadir_design@region@strata.name
+# QC_Sys_density@density.surface[[1]] <- QC_Sys_density@density.surface[[1]] %>%
+#   mutate(strata = ID) %>%
+#   select(-ID)
+
+
+
+
 # Perform spatial join to count points within each polygon
 points_within_QC_polygons <- st_join(points_sf, QC_Sys_design@region@region, join = st_within)
 
@@ -313,6 +325,31 @@ QC_Sys_density@density.surface[[1]] <- QC_Sys_density@density.surface[[1]] %>%
   select(-ID)
 
 
+pop_desc_QC_nadir <- make.population.description(
+  region = QC_Sys_design@region,
+  density = QC_Sys_density,
+  N = QC_pop_count$count,
+  fixed.N = TRUE
+)
+
+ddf_analyses_QC_nadir <- make.ds.analysis(
+  dfmodel = ~1,
+  key = "hr",
+  criteria = "AIC",
+  truncation = 50,
+  group.strata = data.frame(design.id = QC_Sys_nadir_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_nadir_design@region@strata.name)))
+)
+
+QC_Sys_design@truncation <- 50
+QC_Sys_nadir_sim <- make.simulation(
+  reps = SIM_REPS,
+  design = QC_Sys_design,
+  population.description = pop_desc_QC_nadir,
+  detectability = detect_uf,
+  ds.analysis = ddf_analyses_QC_nadir
+)
+
+
 pop_desc_QC <- make.population.description(
   region = QC_Sys_design@region,
   density = QC_Sys_density,
@@ -321,76 +358,64 @@ pop_desc_QC <- make.population.description(
 )
 
 ddf_analyses_QC <- make.ds.analysis(
-  dfmodel = list(~1, ~1),
+  dfmodel = ~1,
   key = "hr",
   criteria = "AIC",
-  truncation = 50,
+  truncation = 260,
   group.strata = data.frame(design.id = QC_Sys_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_design@region@strata.name)))
 )
 
-QC_Sys_design@truncation <- 50
+QC_Sys_design@truncation <- 260
 QC_Sys_sim <- make.simulation(
   reps = SIM_REPS,
   design = QC_Sys_design,
   population.description = pop_desc_QC,
-  detectability = detect_uf,
+  detectability = detect_FWG,
   ds.analysis = ddf_analyses_QC
 )
 
 
 H_SG_survey <- run.survey(H_SG_sim)
-Rnd_survey <- run.survey(Rnd_sim)
-Sys_survey <- run.survey(Sys_sim)
-ZZ_survey <- run.survey(ZZ_sim)
-ZZC_survey <- run.survey(ZZC_sim)
 FW_Sys_survey_2C <- run.survey(FW_Sys_2C_sim)
 FW_ZZ_survey_2C <- run.survey(FW_ZZ_2C_sim)
 FW_Sys_survey_G <- run.survey(FW_Sys_G_sim)
 FW_ZZ_survey_G <- run.survey(FW_ZZ_G_sim)
+QC_Sys_nadir_survey <- run.survey(QC_Sys_nadir_sim)
 QC_Sys_survey <- run.survey(QC_Sys_sim)
 
 plot(H_SG_survey, region)
-plot(Rnd_survey, region)
-plot(Sys_survey, region)
-plot(ZZ_survey, region)
-plot(ZZC_survey, region)
 plot(FW_Sys_survey_2C, region)
 plot(FW_ZZ_survey_2C, region)
 plot(FW_Sys_survey_G, region)
 plot(FW_ZZ_survey_G, region)
+plot(QC_Sys_nadir_survey, region)
 plot(QC_Sys_survey, region)
 
 
 # Run the full simulation
 H_SG_sim <- run.simulation(simulation = H_SG_sim, run.parallel = T, max.cores = 20)
-Rnd_sim <- run.simulation(simulation = Rnd_sim, run.parallel = T, max.cores = 20)
-Sys_sim <- run.simulation(simulation = Sys_sim, run.parallel = T, max.cores = 20)
-ZZ_sim <- run.simulation(simulation = ZZ_sim, run.parallel = T, max.cores = 20)
-ZZC_sim <- run.simulation(simulation = ZZC_sim, run.parallel = T, max.cores = 20)
 FW_Sys_2C_sim <- run.simulation(simulation = FW_Sys_2C_sim, run.parallel = T, max.cores = 20)
 FW_ZZ_2C_sim <- run.simulation(simulation = FW_ZZ_2C_sim, run.parallel = T, max.cores = 20)
 FW_Sys_G_sim <- run.simulation(simulation = FW_Sys_G_sim, run.parallel = T, max.cores = 20)
 FW_ZZ_G_sim <- run.simulation(simulation = FW_ZZ_G_sim, run.parallel = T, max.cores = 20)
+QC_Sys_nadir_sim <- run.simulation(simulation = QC_Sys_nadir_sim, run.parallel = T, max.cores = 20)
 QC_Sys_sim <- run.simulation(simulation = QC_Sys_sim, run.parallel = T, max.cores = 20)
 
 
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
-save(H_SG_sim, Rnd_sim, Sys_sim, ZZ_sim, ZZC_sim, FW_Sys_2C_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_sim, file = output_path)
+save(H_SG_sim, FW_Sys_2C_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_nadir_sim, QC_Sys_sim, file = output_path)
 
 
 
 # Display results
 summary(H_SG_sim, description.summary = FALSE)
-summary(Rnd_sim, description.summary = FALSE)
-summary(Sys_sim, description.summary = FALSE)
-summary(ZZ_sim, description.summary = FALSE)
-summary(ZZC_sim, description.summary = FALSE)
 summary(FW_Sys_2C_sim, description.summary = FALSE)
 summary(FW_ZZ_2C_sim, description.summary = FALSE)
 summary(FW_Sys_G_sim, description.summary = FALSE)
 summary(FW_ZZ_G_sim, description.summary = FALSE)
+summary(QC_Sys_nadir_sim, description.summary = FALSE)
 summary(QC_Sys_sim, description.summary = FALSE)
 total_abundance
 histogram.N.ests(Rnd_sim, use.max.reps = TRUE)
@@ -404,23 +429,6 @@ par(mfrow = c(2, 5))
 histogram.N.ests(H_SG_sim, xlim = xlims)
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[1], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
-
-
-histogram.N.ests(Sys_sim, xlim = xlims)
-usr <- par("usr")
-text(x = usr[2], y = usr[4], labels = labels[2], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
-
-histogram.N.ests(Rnd_sim, xlim = xlims)
-usr <- par("usr")
-text(x = usr[2], y = usr[4], labels = labels[3], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
-
-histogram.N.ests(ZZ_sim, xlim = xlims)
-usr <- par("usr")
-text(x = usr[2], y = usr[4], labels = labels[4], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
-
-histogram.N.ests(ZZC_sim, xlim = xlims)
-usr <- par("usr")
-text(x = usr[2], y = usr[4], labels = labels[5], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
 histogram.N.ests(FW_Sys_2C_sim, xlim = c(30000, 33500))
 usr <- par("usr")
@@ -442,19 +450,24 @@ histogram.N.ests(QC_Sys_sim, xlim = c(6500, 8900))
 usr <- par("usr")
 text(x = usr[2], y = usr[4], labels = labels[10], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
 
+histogram.N.ests(QC_Sys_nadir_sim, xlim = c(6500, 8900))
+usr <- par("usr")
+text(x = usr[2], y = usr[4], labels = labels[10], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+
+
 par(mfrow = c(1, 1))
 
 
 
 # Density
-N_factor <- c(0.75, 0.5, 0.25)
+N_factor <- c(1.0, 0.75, 0.5, 0.25)
 
 for (FACTOR in 1:length(N_factor)) {
   pop_desc_density <- pop_desc
   pop_desc_density@N <- pop_desc@N * N_factor[FACTOR]
   H_SG_sim_density <- make.simulation(
     reps = SIM_REPS,
-    design = H_SG_design,
+    design = H_SG_design,s
     population.description = pop_desc_density,
     detectability = detect_H,
     ds.analysis = ddf_analyses

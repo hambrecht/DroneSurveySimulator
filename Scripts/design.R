@@ -431,10 +431,10 @@ print(paste0("Half swath width is: ", IMAGE_WIDTH, " m"))
 COV_SPACE <- 500
 COV_REPS <- 100
 
-# Calculate the angle of longest Dimension of WMU
-COORDS <- st_coordinates(region@region)[, 1:2]
-LONGEST_DIMENSION <- find_longest_dimension_angle(COORDS)
-TRANSECT_ANGLE <- LONGEST_DIMENSION$angle
+# Calculate the angle of longest Dimension of WMU, only needed for Zigzag
+# COORDS <- st_coordinates(region@region)[, 1:2]
+# LONGEST_DIMENSION <- find_longest_dimension_angle(COORDS)
+# TRANSECT_ANGLE <- LONGEST_DIMENSION$angle
 
 # create coverage grid
 cover <- make.coverage(region,
@@ -656,7 +656,7 @@ number_blocks <- round(total_length / 26000)
 spacing <- 400
 
 # Checking that blocks fit within region
-if (region@area > (2000 * 5000 * number_blocks)) {
+if (region@area > (3200 * 3200 * number_blocks)) {
   # create coverage grid
   grid_center <- make.coverage(region,
                                # spacing = 1000
@@ -683,8 +683,11 @@ if (region@area > (2000 * 5000 * number_blocks)) {
   st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(seq_len(nrow(points_within_1000m)), function(i) st_point(new_coords[i,])))
 
   # Create sub plot polygons
-  polygons <- create_sf_polygons(grid_center@grid, 5000, 2000)
+  polygons <- create_sf_polygons(grid_center@grid, 3200, 3200)
   polygons <- st_intersection(polygons, wmu)
+ 
+  # Convert MULTIPOLYGON to POLYGON
+  polygons <- st_cast(polygons, "POLYGON")
 }
 plot(st_geometry(wmu))
 plot(polygons[1], add = TRUE, col = "red")
@@ -718,7 +721,7 @@ plot(QC_Sys_transects)
 ### Coverage
 system.time(QC_Sys_design <- run.coverage(QC_Sys_design, reps = COV_REPS))[3] / 60
 
-hist(get.coverage(H_SG_design))
+# hist(get.coverage(H_SG_design))
 # Plot desings
 par(mfrow = c(2, 4))
 plot(region, H_SG_transects, lwd = 0.5, col = 4)
@@ -731,7 +734,7 @@ par(mfrow = c(2, 4))
 plot(H_SG_design)
 plot(FW_Sys_design)
 plot(FW_ZZ_design)
-plot(QC_Sys_nadir_design)
+# plot(QC_Sys_nadir_design)
 plot(QC_Sys_design)
 par(mfrow = c(1, 1))
 

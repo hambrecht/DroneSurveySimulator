@@ -70,7 +70,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[1]
+wmu_number <- wmu_number_list[2]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
@@ -338,7 +338,7 @@ ddf_analyses_QC_nadir <- make.ds.analysis(
   key = "hr",
   criteria = "AIC",
   truncation = 50,
-  group.strata = data.frame(design.id = QC_Sys_nadir_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_nadir_design@region@strata.name)))
+  group.strata = data.frame(design.id = QC_Sys_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_design@region@strata.name)))
 )
 
 QC_Sys_design@truncation <- 50

@@ -70,7 +70,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[2]
+wmu_number <- wmu_number_list[1]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
@@ -81,6 +81,7 @@ input_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, 
 load(file = input_path)
 # QC_Sys_nadir_sim <- QC_Sys_sim
 rm(QC_Sys_sim)
+rm(QC_Sys_nadir_sim)
 
 
 
@@ -489,7 +490,7 @@ for (FACTOR in 1:length(N_factor)) {
     reps = SIM_REPS,
     design = QC_Sys_design,
     population.description = pop_desc_QC_density,
-    detectability = detect_uf,
+    detectability = detect_FWG,
     ds.analysis = ddf_analyses_QC
   )
   

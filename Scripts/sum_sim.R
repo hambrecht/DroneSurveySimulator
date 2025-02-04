@@ -26,10 +26,6 @@ extract_metrics <- function(sim) {
 inputFilePaths <- list.files(path = here("Output", "Simulation"), pattern = "^simulation.*\\.RData$", full.names = TRUE)
 load(inputFilePaths[2])
 
-test_summary_data <- summary(H_SG_sim, description.summary = FALSE)
-test_summary_data
-test_summary_data@individuals$summary$mean.Effort
-
 # H_SG_metric <- extract_metrics(H_SG_sim)
 # Rnd_metric <- extract_metrics(Rnd_sim)
 # Sys_metric <- extract_metrics(Sys_sim)

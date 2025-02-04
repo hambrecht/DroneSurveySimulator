@@ -4,6 +4,7 @@ library(sf)
 library(dplyr)
 library(GGally)
 library(dssd)
+library(reshape2)
 
 # Create a named vector with old and new group names
 group_names <- c(
@@ -27,6 +28,7 @@ file_ids <- sapply(files, function(file) {
     match <- regmatches(file, regexpr("\\d{3}(?=\\.\\w+$)", file, perl = TRUE))
     return(match)
 })
+
 
 # Load the first file and list its contents to verify object names
 # Combine names with the first item in file_ids
@@ -65,11 +67,54 @@ for (i in 1:length(file_ids)) {
 # Sort merged_df by the `Simulation` column
 merged_df <- merged_df %>% arrange(Simulation)
 
-# Remove all rows with 'Short-Zig' in the 'Simulation' column
-merged_df <- merged_df %>%
-  filter(Simulation != "Short-Zig")
+# # Remove all rows with 'Short-Zig' in the 'Simulation' column
+# merged_df <- merged_df %>%
+#   filter(Simulation != "Short-Zig")
+
+# Convert Mean_Cover_Area from m² to km² and round to 2 decimal places
+merged_df$Mean_Cover_Area <- round(merged_df$Mean_Cover_Area / 1e6, 2)
+
+# Convert specified columns from m to km and round to 2 decimal places
+columns_to_convert <- c("Mean_Line_Length", "Mean_Trackline_Length", "Mean_Cyclic_Trackline_Length", 
+                        "Mean_On_Effort", "Mean_Off_Effort", "Mean_Return_to_Home", "Mean_Off_Effort_Return")
+
+merged_df[columns_to_convert] <- round(merged_df[columns_to_convert] / 1e3, 2)
 
 kable(merged_df)
+
+
+
+# Reorder columns and sort by WMU
+merged_df <- merged_df %>%
+  select(WMU, everything()) %>%
+  arrange(WMU)
+
+kable(merged_df)
+
+# Identify list columns
+list_columns <- sapply(merged_df, is.list)
+# Convert list columns to character
+merged_df[list_columns] <- lapply(merged_df[list_columns], as.character)
+
+
+
+# Save the transposed dataframe as a CSV file
+output_path <- here("Output", "Simulation", "cover_overview.csv")
+write.csv(merged_df, file = output_path, row.names = TRUE)
+
+
+### Move to Python `vis_cover.ipynb`
+
+# Assuming merged_df is your data frame and it has columns WMU, Simulation, and Mean_Line_Length
+matrix_df <- dcast(merged_df, WMU ~ Simulation, value.var = "Mean_Line_Length")
+
+# Print the matrix
+kable(matrix_df)
+
+
+#####
+
+
 
 # Print the merged dataframe
 ## design stats
@@ -89,9 +134,8 @@ summary_by_simulation <- merged_df %>%
 # Print the summarized table
 kable(summary_by_simulation)
 
-cover_score <- get.coverage(FW_Sys_design_528)
-# hist(cover_score)
-summary(cover_score)
+
+
 
 
 # Initialize an empty dataframe to store the results
@@ -145,30 +189,12 @@ coverage_stats <- coverage_stats %>%
 
 # Manually set the order of the groups
 coverage_stats$Group <- factor(coverage_stats$Group, levels = c(
-  "H-SG",
-  "Sys",
-  "Rnd",
-  "ZZ",
-  "ZZC",
   "FW-Sys",
   "FW-ZZ",
-  "QC-Sys"
+  "QC-Sys",
+  "H-SG"
 ))
 
-# Define custom colors for each group
-group_colors <- c(
-  "H-SG" = "#b2df8a",   # Pink
-  "Sys" = "##b2df8a",    # Light Blue
-  "Rnd" = "#b2df8a",    # Green
-  "ZZ" = "#b2df8a",     # Light Green
-  "ZZC" = "#b2df8a",    # Blue
-  "FW-Sys" = "#1f78b4", # Orange
-  "FW-ZZ" = "#1f78b4",  # Purple
-  "QC-Sys" = "#a6cee3"  # Dark Purple
-)
-
-ggplot(coverage_stats, aes(x = Group, y = Mean)) +
-  geom_boxplot() +
-  scale_fill_manual(values = group_colors) +
-  labs(x = "Design", y = "Mean coverage score") +
-  theme_minimal()
+# Save the transposed dataframe as a CSV file
+output_path <- here("Output", "Simulation", "coverage_score.csv")
+write.csv(coverage_stats, file = output_path, row.names = TRUE)

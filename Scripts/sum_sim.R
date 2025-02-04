@@ -8,19 +8,27 @@ extract_metrics <- function(sim) {
   summary_data <- summary(sim, description.summary = FALSE)
 
   list(
-    relative_mean_estimate = round(summary_data@individuals$D$mean.Estimate / summary_data@individuals$D$Truth, 3), # mean estimate of abundance across simulation
+    mean_estimate_density = round(summary_data@individuals$D$mean.Estimate*1e6, 3), # mean estimate of abundance across simulation
+    true_density =  round(summary_data@individuals$D$Truth*1e6, 3),
+    relative_mean_estimate_density = round(summary_data@individuals$D$mean.Estimate / summary_data@individuals$D$Truth, 3), # mean estimate of abundance across simulation
     percent_bias = round(summary_data@individuals$D$percent.bias, 3), # the percentage of bias in the estimates
     rrmse = round(summary_data@individuals$D$RMSE / summary_data@individuals$D$mean.Estimate, 3), # root mean squared error/no. successful reps
     ci_coverage_prob = round(summary_data@individuals$D$CI.coverage.prob, 3), # proportion of times the 95% confidence interval contained the true value.
     mean_rse = round(summary_data@individuals$D$mean.se / summary_data@individuals$D$mean.Estimate, 3), # the mean standard error of the estimates of abundance
     sd_of_means = round(summary_data@individuals$D$sd.of.means / summary_data@individuals$D$mean.Estimate, 3), # the standard deviation of the estimates
-    mean_ER = round(summary_data@individuals$summary$mean.ER, 3), # mean standard error of the encounter rates cross simulation
+    mean_ER = summary_data@individuals$summary$mean.ER, # mean standard error of the encounter rates cross simulation
     mean_se_ER = summary_data@individuals$summary$mean.se.ER  # standard deviation of the encounter rates across simulation
   )
 }
 
-# inputFilePaths <- list.files(path = here("Output", "Simulation"), pattern = "^simulation.*\\.RData$", full.names = TRUE)
-# load(inputFilePaths[2])
+
+
+inputFilePaths <- list.files(path = here("Output", "Simulation"), pattern = "^simulation.*\\.RData$", full.names = TRUE)
+load(inputFilePaths[2])
+
+test_summary_data <- summary(H_SG_sim, description.summary = FALSE)
+test_summary_data
+test_summary_data@individuals$summary$mean.Effort
 
 # H_SG_metric <- extract_metrics(H_SG_sim)
 # Rnd_metric <- extract_metrics(Rnd_sim)
@@ -74,6 +82,8 @@ for (file in inputFilePaths) {
   # Combine metrics into a single dataframe
   metrics <- data.frame(
       Simulation = c("H-SG", "Rnd", "Sys", "ZZ", "ZZC", "FW-Sys_2C", "FW-ZZ_2C", "FW-Sys_G", "FW-ZZ_G", "QC-Sys"),
+      Mean_estimated_Density = c(H_SG_metric$mean_estimate_density, Rnd_metric$mean_estimate_density, Sys_metric$mean_estimate_density, ZZ_metric$mean_estimate_density, ZZC_metric$mean_estimate_density, FW_Sys_2C_metric$mean_estimate_density, FW_ZZ_2C_metric$mean_estimate_density, FW_Sys_G_metric$mean_estimate_density, FW_ZZ_G_metric$mean_estimate_density, QC_Sys_metric$mean_estimate_density),
+      True_Density = c(H_SG_metric$true_density, Rnd_metric$true_density, Sys_metric$true_density, ZZ_metric$true_density, ZZC_metric$true_density, FW_Sys_2C_metric$true_density, FW_ZZ_2C_metric$true_density, FW_Sys_G_metric$true_density, FW_ZZ_G_metric$true_density, QC_Sys_metric$true_density),
       Mean_relative_Estimate = c(H_SG_metric$relative_mean_estimate, Rnd_metric$relative_mean_estimate, Sys_metric$relative_mean_estimate, ZZ_metric$relative_mean_estimate, ZZC_metric$relative_mean_estimate, FW_Sys_2C_metric$relative_mean_estimate, FW_ZZ_2C_metric$relative_mean_estimate, FW_Sys_G_metric$relative_mean_estimate, FW_ZZ_G_metric$relative_mean_estimate, QC_Sys_metric$relative_mean_estimate),
       Percent_Bias = c(H_SG_metric$percent_bias, Rnd_metric$percent_bias, Sys_metric$percent_bias, ZZ_metric$percent_bias, ZZC_metric$percent_bias, FW_Sys_2C_metric$percent_bias, FW_ZZ_2C_metric$percent_bias, FW_Sys_G_metric$percent_bias, FW_ZZ_G_metric$percent_bias, QC_Sys_metric$percent_bias),
       RRMSE = c(H_SG_metric$rrmse, Rnd_metric$rrmse, Sys_metric$rrmse, ZZ_metric$rrmse, ZZC_metric$rrmse, FW_Sys_2C_metric$rrmse, FW_ZZ_2C_metric$rrmse, FW_Sys_G_metric$rrmse, FW_ZZ_G_metric$rrmse, QC_Sys_metric$rrmse),
@@ -96,6 +106,8 @@ write.csv(comparison_df, file = output_path, row.names = TRUE)
 averaged_df <- comparison_df %>%
   group_by(Simulation) %>%
   summarize(
+    Mean_estimated_Density = round(mean(Mean_estimated_Density, na.rm = TRUE), 3),
+    True_Density = round(mean(True_Density, na.rm = TRUE), 3),
     Mean_relative_Estimate = round(mean(Mean_relative_Estimate, na.rm = TRUE), 3),
     Percent_Bias = round(mean(Percent_Bias, na.rm = TRUE), 3),
     RRMSE = round(mean(RRMSE, na.rm = TRUE), 3),

@@ -29,8 +29,11 @@ wmu_number <- wmu_number_list[1]
 input_path <-  here("Output", "Density", paste0("density",wmu_number,".RData"))
 load(file = input_path)
 total_abundance <- round(total_abundance,0)
-summary_df <- c(total_abundance = round(sum(density@density.surface[[1]]$density),0), average_density = round(mean(density@density.surface[[1]]$density)*4,2)
-)
+summary_df <- as.data.frame(round(summary(density@density.surface[[1]]$density),3))
+summary_df$total_abundance <- total_abundance
+```
+```{r}
+summary(density@density.surface[[1]]$density)
 ```
 ## Density Map
 ```{r, echo = FALSE, fig.cap = paste("Density map of WMU", wmu_number), fig.alt = "Density map of WMU"}

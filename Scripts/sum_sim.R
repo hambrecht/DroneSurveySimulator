@@ -64,30 +64,27 @@ metrics_list <- list()
 for (file in inputFilePaths) {
   load(file)
   sim_name <- sub(".*simulation-(.*)\\.RData", "\\1", file)
-  H_SG_metric <- extract_metrics(H_SG_sim)
-  Rnd_metric <- extract_metrics(Rnd_sim)
-  Sys_metric <- extract_metrics(Sys_sim)
-  ZZ_metric <- extract_metrics(ZZ_sim)
-  ZZC_metric <- extract_metrics(ZZC_sim)
   FW_Sys_2C_metric <- extract_metrics(FW_Sys_2C_sim)
   FW_ZZ_2C_metric <- extract_metrics(FW_ZZ_2C_sim)
   FW_Sys_G_metric <- extract_metrics(FW_Sys_G_sim)
   FW_ZZ_G_metric <- extract_metrics(FW_ZZ_G_sim)
+  QC_Sys_nadir_metric <- extract_metrics(QC_Sys_nadir_sim)
   QC_Sys_metric <- extract_metrics(QC_Sys_sim)
+  H_SG_metric <- extract_metrics(H_SG_sim)
 
   # Combine metrics into a single dataframe
   metrics <- data.frame(
-      Simulation = c("H-SG", "Rnd", "Sys", "ZZ", "ZZC", "FW-Sys_2C", "FW-ZZ_2C", "FW-Sys_G", "FW-ZZ_G", "QC-Sys"),
-      Mean_estimated_Density = c(H_SG_metric$mean_estimate_density, Rnd_metric$mean_estimate_density, Sys_metric$mean_estimate_density, ZZ_metric$mean_estimate_density, ZZC_metric$mean_estimate_density, FW_Sys_2C_metric$mean_estimate_density, FW_ZZ_2C_metric$mean_estimate_density, FW_Sys_G_metric$mean_estimate_density, FW_ZZ_G_metric$mean_estimate_density, QC_Sys_metric$mean_estimate_density),
-      True_Density = c(H_SG_metric$true_density, Rnd_metric$true_density, Sys_metric$true_density, ZZ_metric$true_density, ZZC_metric$true_density, FW_Sys_2C_metric$true_density, FW_ZZ_2C_metric$true_density, FW_Sys_G_metric$true_density, FW_ZZ_G_metric$true_density, QC_Sys_metric$true_density),
-      Mean_relative_Estimate = c(H_SG_metric$relative_mean_estimate, Rnd_metric$relative_mean_estimate, Sys_metric$relative_mean_estimate, ZZ_metric$relative_mean_estimate, ZZC_metric$relative_mean_estimate, FW_Sys_2C_metric$relative_mean_estimate, FW_ZZ_2C_metric$relative_mean_estimate, FW_Sys_G_metric$relative_mean_estimate, FW_ZZ_G_metric$relative_mean_estimate, QC_Sys_metric$relative_mean_estimate),
-      Percent_Bias = c(H_SG_metric$percent_bias, Rnd_metric$percent_bias, Sys_metric$percent_bias, ZZ_metric$percent_bias, ZZC_metric$percent_bias, FW_Sys_2C_metric$percent_bias, FW_ZZ_2C_metric$percent_bias, FW_Sys_G_metric$percent_bias, FW_ZZ_G_metric$percent_bias, QC_Sys_metric$percent_bias),
-      RRMSE = c(H_SG_metric$rrmse, Rnd_metric$rrmse, Sys_metric$rrmse, ZZ_metric$rrmse, ZZC_metric$rrmse, FW_Sys_2C_metric$rrmse, FW_ZZ_2C_metric$rrmse, FW_Sys_G_metric$rrmse, FW_ZZ_G_metric$rrmse, QC_Sys_metric$rrmse),
-      CI_Coverage_Prob = c(H_SG_metric$ci_coverage_pro, Rnd_metric$ci_coverage_pro, Sys_metric$ci_coverage_prob, ZZ_metric$ci_coverage_prob, ZZC_metric$ci_coverage_prob, FW_Sys_2C_metric$ci_coverage_prob, FW_ZZ_2C_metric$ci_coverage_prob, FW_Sys_G_metric$ci_coverage_prob, FW_ZZ_G_metric$ci_coverage_prob, QC_Sys_metric$ci_coverage_prob),
-      Mean_SE = c(H_SG_metric$mean_rse, Rnd_metric$mean_rse, Sys_metric$mean_rse, ZZ_metric$mean_rse, ZZC_metric$mean_rse, FW_Sys_2C_metric$mean_rse, FW_ZZ_2C_metric$mean_rse, FW_Sys_G_metric$mean_rse, FW_ZZ_G_metric$mean_rse, QC_Sys_metric$mean_rse),
-      CV = c(H_SG_metric$sd_of_means, Rnd_metric$sd_of_means, Sys_metric$sd_of_means, ZZ_metric$sd_of_means, ZZC_metric$sd_of_means, FW_Sys_2C_metric$sd_of_means, FW_ZZ_2C_metric$sd_of_means, FW_Sys_G_metric$sd_of_means, FW_ZZ_G_metric$sd_of_means, QC_Sys_metric$sd_of_means),
-      Mean_ER = c(H_SG_metric$mean_ER, Rnd_metric$mean_ER, Sys_metric$mean_ER, ZZ_metric$mean_ER, ZZC_metric$mean_ER, FW_Sys_2C_metric$mean_ER, FW_ZZ_2C_metric$mean_ER, FW_Sys_G_metric$mean_ER, FW_ZZ_G_metric$mean_ER, QC_Sys_metric$mean_ER),
-      Mean_se_ER = c(H_SG_metric$mean_se_ER, Rnd_metric$mean_se_ER, Sys_metric$mean_se_ER, ZZ_metric$mean_se_ER, ZZC_metric$mean_se_ER, FW_Sys_2C_metric$mean_se_ER, FW_ZZ_2C_metric$mean_se_ER, FW_Sys_G_metric$mean_se_ER, FW_ZZ_G_metric$mean_se_ER, QC_Sys_metric$mean_se_ER)
+      Simulation = c("FW-Sys_2C", "FW-ZZ_2C", "FW-Sys_G", "FW-ZZ_G", "QC-Sys_NADIR", "QC-Sys", "H-SG"),
+      Mean_estimated_Density = c(FW_Sys_2C_metric$mean_estimate_density, FW_ZZ_2C_metric$mean_estimate_density, FW_Sys_G_metric$mean_estimate_density, FW_ZZ_G_metric$mean_estimate_density, QC_Sys_nadir_metric$mean_estimate_density, QC_Sys_metric$mean_estimate_density, H_SG_metric$mean_estimate_density),
+      True_Density = c(FW_Sys_2C_metric$true_density, FW_ZZ_2C_metric$true_density, FW_Sys_G_metric$true_density, FW_ZZ_G_metric$true_density, QC_Sys_nadir_metric$true_density, QC_Sys_metric$true_density, H_SG_metric$true_density),
+      Mean_relative_Estimate = c(FW_Sys_2C_metric$relative_mean_estimate, FW_ZZ_2C_metric$relative_mean_estimate, FW_Sys_G_metric$relative_mean_estimate, FW_ZZ_G_metric$relative_mean_estimate, QC_Sys_nadir_metric$relative_mean_estimate, QC_Sys_metric$relative_mean_estimate, H_SG_metric$relative_mean_estimate),
+      Percent_Bias = cFW_Sys_2C_metric$percent_bias, FW_ZZ_2C_metric$percent_bias, FW_Sys_G_metric$percent_bias, FW_ZZ_G_metric$percent_bias, QC_Sys_nadir_metric$percent_bias, QC_Sys_metric$percent_bias, H_SG_metric$percent_bias),
+      RRMSE = c(FW_Sys_2C_metric$rrmse, FW_ZZ_2C_metric$rrmse, FW_Sys_G_metric$rrmse, FW_ZZ_G_metric$rrmse, QC_Sys_nadir_metric$rrmse, QC_Sys_metric$rrmse, H_SG_metric$rrmse),
+      CI_Coverage_Prob = c(FW_Sys_2C_metric$ci_coverage_prob, FW_ZZ_2C_metric$ci_coverage_prob, FW_Sys_G_metric$ci_coverage_prob, FW_ZZ_G_metric$ci_coverage_prob, QC_Sys_nadir_metric$ci_coverage_prob, QC_Sys_metric$ci_coverage_prob, H_SG_metric$ci_coverage_prob),
+      Mean_SE = c(FW_Sys_2C_metric$mean_rse, FW_ZZ_2C_metric$mean_rse, FW_Sys_G_metric$mean_rse, FW_ZZ_G_metric$mean_rse, QC_Sys_nadir_metric$mean_rse, QC_Sys_metric$mean_rse, H_SG_metric$mean_rse),
+      CV = c(FW_Sys_2C_metric$sd_of_means, FW_ZZ_2C_metric$sd_of_means, FW_Sys_G_metric$sd_of_means, FW_ZZ_G_metric$sd_of_means, QC_Sys_nadir_metric$sd_of_means, QC_Sys_metric$sd_of_means, H_SG_metric$sd_of_means),
+      Mean_ER = c(FW_Sys_2C_metric$mean_ER, FW_ZZ_2C_metric$mean_ER, FW_Sys_G_metric$mean_ER, FW_ZZ_G_metric$mean_ER, QC_Sys_nadir_metric$mean_ER, QC_Sys_metric$mean_ER, H_SG_metric$mean_ER),
+      Mean_se_ER = c(FW_Sys_2C_metric$mean_se_ER, FW_ZZ_2C_metric$mean_se_ER, FW_Sys_G_metric$mean_se_ER, FW_ZZ_G_metric$mean_se_ER, QC_Sys_nadir_metric$mean_se_ER, QC_Sys_metric$mean_se_ER, H_SG_metric$mean_se_ER)
     )
   metrics_list[[sim_name]] <- metrics
 }
@@ -115,16 +112,14 @@ averaged_df <- comparison_df %>%
   )
 # Manually set the order of the groups
 averaged_df$Simulation <- factor(averaged_df$Simulation, levels = c(
-  "H-SG",
-  "Sys",
-  "Rnd",
-  "ZZ",
-  "ZZC",
+
   "FW-Sys_2C",
   "FW-ZZ_2C",
   "FW-Sys_G",
   "FW-ZZ_G",
-  "QC-Sys"
+  "QC-Sys_NADIR",
+  "QC-Sys",
+  "H-SG"
 ))
 # Sort the dataframe by the Simulation column
 averaged_df <- averaged_df %>% arrange(Simulation)

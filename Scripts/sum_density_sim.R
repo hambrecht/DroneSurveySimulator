@@ -17,20 +17,14 @@ extract_metrics <- function(sim) {
     mean_rse = round(summary_data@individuals$D$mean.se / summary_data@individuals$D$mean.Estimate, 3), # the mean standard error of the estimates of abundance
     sd_of_means = round(summary_data@individuals$D$sd.of.means / summary_data@individuals$D$mean.Estimate, 3), # the standard deviation of the estimates
     mean_ER = summary_data@individuals$summary$mean.ER, # mean standard error of the encounter rates cross simulation
-    mean_se_ER = summary_data@individuals$summary$mean.se.ER  # standard deviation of the encounter rates across simulation
+    mean_se_ER = summary_data@individuals$summary$mean.se.ER,  # standard deviation of the encounter rates across simulation
+    N = summary_data@individuals$N$Truth # number of individuals in the simulation
   )
 }
 
 # List all files containing 'cover' in folder Output/Simulation
 files <- list.files(path = here("Output", "Simulation"), pattern = "density_sim.*\\.RData$", full.names = TRUE)
-inputFilePaths <- list.files(path = here("Output", "Simulation"), pattern = "^simulation.*\\.RData$", full.names = TRUE)
 # Filter inputFilePaths to include only entries with '503' and '517'
-filteredPaths <- grep("503|517", inputFilePaths, value = TRUE)
-
-# Add filtered paths to files list
-files <- c(files, filteredPaths)
-
-# wmu_path_list <- wmu_path_list[-4]
 
 # Extract the last three digits before the file extension for each file
 wmu_ids <- sapply(files, function(file) {
@@ -66,17 +60,18 @@ for (i in seq_along(files)) {
     metrics <- data.frame(
         WMU = rep(w_suffix,3),
         Density = rep(d_suffix,3),
-        Simulation = c("H-SG", "FW-Sys_G", "QC-Sys"),
-        Mean_estimated_Density = c(H_SG_metric$mean_estimate_density, FW_Sys_G_metric$mean_estimate_density, QC_Sys_metric$mean_estimate_density),
-        True_Density = c(H_SG_metric$true_density,  FW_Sys_G_metric$true_density,  QC_Sys_metric$true_density),
-        Mean_relative_Estimate = c(H_SG_metric$relative_mean_estimate, FW_Sys_G_metric$relative_mean_estimate, QC_Sys_metric$relative_mean_estimate),
-        Percent_Bias = c(H_SG_metric$percent_bias, FW_Sys_G_metric$percent_bias,  QC_Sys_metric$percent_bias),
-        RRMSE = c(H_SG_metric$rrmse, FW_Sys_G_metric$rrmse, QC_Sys_metric$rrmse),
-        CI_Coverage_Prob = c(H_SG_metric$ci_coverage_pro, FW_Sys_G_metric$ci_coverage_prob,  QC_Sys_metric$ci_coverage_prob),
-        Mean_SE = c(H_SG_metric$mean_rse,  FW_Sys_G_metric$mean_rse, QC_Sys_metric$mean_rse),
-        CV = c(H_SG_metric$sd_of_means,  FW_Sys_G_metric$sd_of_means,  QC_Sys_metric$sd_of_means),
-        Mean_ER = c(H_SG_metric$mean_ER, FW_Sys_G_metric$mean_ER,  QC_Sys_metric$mean_ER),
-        Mean_se_ER = c(H_SG_metric$mean_se_ER, FW_Sys_G_metric$mean_se_ER, QC_Sys_metric$mean_se_ER)
+        Simulation = c("FW-Sys_G", "QC-Sys", "H-SG"),
+        Mean_estimated_Density = c(FW_Sys_G_metric$mean_estimate_density, QC_Sys_metric$mean_estimate_density, H_SG_metric$mean_estimate_density),
+        True_Density = c(FW_Sys_G_metric$true_density,  QC_Sys_metric$true_density, H_SG_metric$true_density),
+        Mean_relative_Estimate = c(FW_Sys_G_metric$relative_mean_estimate, QC_Sys_metric$relative_mean_estimate, H_SG_metric$relative_mean_estimate),
+        Percent_Bias = c(FW_Sys_G_metric$percent_bias,  QC_Sys_metric$percent_bias, H_SG_metric$percent_bias),
+        RRMSE = c(FW_Sys_G_metric$rrmse, QC_Sys_metric$rrmse, H_SG_metric$rrmse),
+        CI_Coverage_Prob = c(FW_Sys_G_metric$ci_coverage_prob,  QC_Sys_metric$ci_coverage_prob, H_SG_metric$ci_coverage_pro),
+        Mean_SE = c(FW_Sys_G_metric$mean_rse, QC_Sys_metric$mean_rse, H_SG_metric$mean_rse),
+        CV = c(FW_Sys_G_metric$sd_of_means,  QC_Sys_metric$sd_of_means, H_SG_metric$sd_of_means),
+        Mean_ER = c(FW_Sys_G_metric$mean_ER,  QC_Sys_metric$mean_ER, H_SG_metric$mean_ER),
+        Mean_se_ER = c(FW_Sys_G_metric$mean_se_ER, QC_Sys_metric$mean_se_ER, H_SG_metric$mean_se_ER),
+        N =c(FW_Sys_G_metric$N, QC_Sys_metric$N, H_SG_metric$N)
         )
     metrics_list[[sim_name]] <- metrics
 }

@@ -9,10 +9,6 @@ library(reshape2)
 # Create a named vector with old and new group names
 group_names <- c(
   "H_SG" = "H-SG",
-  "Sys" = "Sys",
-  "Rnd" = "Rnd",
-  "ZZ" = "ZZ",
-  "ZZC" = "ZZC",
   "FW_Sys" = "FW-Sys",
   "FW_ZZ" = "FW-ZZ",
   "QC_Sys" = "QC-Sys"
@@ -36,8 +32,6 @@ file_ids <- sapply(files, function(file) {
 for (i in seq_along(files)) {
     before_load <- ls()
     load(files[i])
-  if (exists("short_zigzag_design")) rm(short_zigzag_design)
-  if (exists("short_zigzag_transects")) rm(short_zigzag_transects)
     load(wmu_path_list[i])
   rm(segdata, distdata, obsdata)
     after_load <- ls()
@@ -194,7 +188,7 @@ coverage_stats$Group <- factor(coverage_stats$Group, levels = c(
   "QC-Sys",
   "H-SG"
 ))
-
+kable(coverage_stats)
 # Save the transposed dataframe as a CSV file
 output_path <- here("Output", "Simulation", "coverage_score.csv")
 write.csv(coverage_stats, file = output_path, row.names = TRUE)

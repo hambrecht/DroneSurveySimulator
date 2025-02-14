@@ -407,16 +407,14 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[5]
+wmu_number <- wmu_number_list[2]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 
 # load cover
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
 load(file = output_path)
-QC_Sys_nadir_design <- QC_Sys_design
-QC_Sys_nadir_transects <- QC_Sys_transects
-rm(Sys_design, Rnd_design, ZZ_design, ZZC_design, QC_Sys_design, Sys_transects, Rnd_transects, ZZ_transects, ZZC_transects, QC_Sys_transects, design_comparison_df)
+
 
 
 
@@ -558,9 +556,10 @@ FW_Sys_design <- make.design(
   spacing = spacing,
   design.angle = 0,
   edge.protocol = "minus",
-  truncation = 400, # IMAGE_WIDTH
+  truncation = 260, # IMAGE_WIDTH
   coverage.grid = cover
 )
+FW_Sys_design@truncation <- 260
 FW_Sys_transects <- generate.transects(FW_Sys_design)
 ### Coverage
 FW_Sys_design <- run.coverage(FW_Sys_design, reps = COV_REPS)
@@ -576,9 +575,10 @@ FW_ZZ_design <- make.design(
   spacing = numeric(0),
   design.angle = 0,
   edge.protocol = "minus",
-  truncation = 400, # IMAGE_WIDTH
+  truncation = 260, # IMAGE_WIDTH
   coverage.grid = cover
 )
+FW_ZZ_design@truncation <- 260
 FW_ZZ_transects <- generate.transects(FW_ZZ_design)
 ### Coverage
 FW_ZZ_design <- run.coverage(FW_ZZ_design, reps = COV_REPS)
@@ -713,9 +713,11 @@ QC_Sys_design <- make.design(
   spacing = spacing, # numeric(0)
   design.angle = 0,
   edge.protocol = "minus",
-  truncation = 50, # IMAGE_WIDTH
+  truncation = 260, # IMAGE_WIDTH
   coverage.grid = cover
 )
+QC_Sys_design@truncation <- 260
+
 QC_Sys_transects <- generate.transects(QC_Sys_design)
 plot(QC_Sys_transects)
 ### Coverage

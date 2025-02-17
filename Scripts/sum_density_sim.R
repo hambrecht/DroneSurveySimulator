@@ -81,4 +81,9 @@ comparison_df <- do.call(rbind, lapply(metrics_list, as.data.frame))
 kable(comparison_df)
 
 output_path <- here("Output", "Simulation", "density_sim_comparison.csv")
-write.csv(comparison_df, file = output_path, row.names = TRUE)
+# Check if comparison_df is not empty before writing to CSV
+if (nrow(comparison_df) > 0) {
+  write.csv(comparison_df, file = output_path, row.names = TRUE)
+} else {
+  message("comparison_df is empty. No CSV file was written.")
+}

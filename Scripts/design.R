@@ -407,7 +407,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[2]
+wmu_number <- wmu_number_list[1]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 
@@ -415,6 +415,8 @@ load(file = input_path)
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
 load(file = output_path)
 
+FW_Sys_G_design <- FW_Sys_design
+FW_ZZ_G_design <- FW_ZZ_design
 
 
 
@@ -547,7 +549,7 @@ FW_plots <- make.region(
 
 # plot(FW_plots)
 # create systematic flight lines withing fixed wing
-FW_Sys_design <- make.design(
+FW_Sys_G_design <- make.design(
   region = FW_plots,
   transect.type = "line",
   design = "systematic",
@@ -559,29 +561,41 @@ FW_Sys_design <- make.design(
   truncation = 260, # IMAGE_WIDTH
   coverage.grid = cover
 )
-FW_Sys_design@truncation <- 260
-FW_Sys_transects <- generate.transects(FW_Sys_design)
+FW_Sys_2C_design <- FW_Sys_G_design
+FW_Sys_G_design@truncation <- 260
+FW_Sys_G_transects <- generate.transects(FW_Sys_G_design)
 ### Coverage
-FW_Sys_design <- run.coverage(FW_Sys_design, reps = COV_REPS)
+FW_Sys_G_design <- run.coverage(FW_Sys_G_design, reps = COV_REPS)
+
+FW_Sys_2C_design@truncation <- 180
+FW_Sys_2C_transects <- generate.transects(FW_Sys_2C_design)
+### Coverage
+FW_Sys_2C_design <- run.coverage(FW_Sys_2C_design, reps = COV_REPS)
 
 
 # Fixed wing zigzag flights
-FW_ZZ_design <- make.design(
+FW_ZZ_G_design <- make.design(
   region = FW_plots,
   transect.type = "line",
   design = "eszigzag",
   samplers = numeric(0), # OR
-  line.length = FW_Sys_design@design.statistics$line.length[2,], # rep(total_length / length(FW_plots@strata.name), length(FW_plots@strata.name)) OR
+  line.length = FW_Sys_G_design@design.statistics$line.length[2,], # rep(total_length / length(FW_plots@strata.name), length(FW_plots@strata.name)) OR
   spacing = numeric(0),
   design.angle = 0,
   edge.protocol = "minus",
   truncation = 260, # IMAGE_WIDTH
   coverage.grid = cover
 )
-FW_ZZ_design@truncation <- 260
-FW_ZZ_transects <- generate.transects(FW_ZZ_design)
+FW_ZZ_2C_design <- FW_ZZ_G_design
+FW_ZZ_G_design@truncation <- 260
+FW_ZZ_G_transects <- generate.transects(FW_ZZ_G_design)
 ### Coverage
-FW_ZZ_design <- run.coverage(FW_ZZ_design, reps = COV_REPS)
+FW_ZZ_G_design <- run.coverage(FW_ZZ_G_design, reps = COV_REPS)
+
+FW_ZZ_2C_design@truncation <- 180
+FW_ZZ_2C_transects <- generate.transects(FW_ZZ_2C_design)
+### Coverage
+FW_ZZ_2C_design <- run.coverage(FW_ZZ_2C_design, reps = COV_REPS)
 
 
 ## Quadcopter
@@ -723,20 +737,25 @@ plot(QC_Sys_transects)
 ### Coverage
 system.time(QC_Sys_design <- run.coverage(QC_Sys_design, reps = COV_REPS))[3] / 60
 
+QC_Sys_nadir_design <- QC_Sys_design
+QC_Sys_nadir_design@truncation <- 50
+QC_Sys_nadir_transects <- generate.transects(QC_Sys_nadir_design)
+system.time(QC_Sys_nadir_design <- run.coverage(QC_Sys_design, reps = COV_REPS))[3] / 60
+
 # hist(get.coverage(H_SG_design))
 # Plot desings
 par(mfrow = c(2, 4))
 plot(region, H_SG_transects, lwd = 0.5, col = 4)
-plot(region, FW_Sys_transects, lwd = 0.5, col = 4)
-plot(region, FW_ZZ_transects, lwd = 0.5, col = 4)
-# plot(region, QC_Sys_nadir_transects, lwd = 0.5, col = 4)
+plot(region, FW_Sys_G_transects, lwd = 0.5, col = 4)
+plot(region, FW_ZZ_G_transects, lwd = 0.5, col = 4)
+plot(region, QC_Sys_nadir_transects, lwd = 0.5, col = 4)
 plot(region, QC_Sys_transects, lwd = 0.5, col = 4)
 par(mfrow = c(1, 1))
 par(mfrow = c(2, 4))
 plot(H_SG_design)
-plot(FW_Sys_design)
-plot(FW_ZZ_design)
-# plot(QC_Sys_nadir_design)
+plot(FW_Sys_G_design)
+plot(FW_ZZ_G_design)
+plot(QC_Sys_nadir_design)
 plot(QC_Sys_design)
 par(mfrow = c(1, 1))
 
@@ -747,125 +766,159 @@ par(mfrow = c(1, 1))
 ## The cyclic trackline length is the trackline length plus the off-effort transit distance required to return from the end of the last transect to the beginning of the first transect.
 # Extract key metrics from each simulation summary
 H_SG_design_metric <- extract_design_metrics(H_SG_design)
-FW_Sys_design_metric <- extract_design_metrics(FW_Sys_design)
-FW_ZZ_design_metric <- extract_design_metrics(FW_ZZ_design)
-# QC_Sys_nadir_design_metric <- extract_design_metrics(QC_Sys_nadir_design)
+FW_Sys_2C_design_metric <- extract_design_metrics(FW_Sys_2C_design)
+FW_ZZ_2C_design_metric <- extract_design_metrics(FW_ZZ_2C_design)
+FW_Sys_G_design_metric <- extract_design_metrics(FW_Sys_G_design)
+FW_ZZ_G_design_metric <- extract_design_metrics(FW_ZZ_G_design)
+QC_Sys_nadir_design_metric <- extract_design_metrics(QC_Sys_nadir_design)
 QC_Sys_design_metric <- extract_design_metrics(QC_Sys_design)
 
 # Combine metrics into a single dataframe
 design_comparison_df <- data.frame(
-  Simulation = c("H-SG", "FW-Sys", "FW-ZZ",  "QC_Sys"),
+  Simulation = c("FW-Sys-2C", "FW-ZZ-2C", "FW-Sys-G", "FW-ZZ-G", "QC-Sys-NADIR", "QC-Sys", "H-SG",),
   Design = c(
-    H_SG_design_metric$design_type,
-    FW_Sys_design_metric$design_type[1],
-    FW_ZZ_design_metric$design_type[1],
-    # QC_Sys_nadir_design_metric$design_type[1],
-    QC_Sys_design_metric$design_type[1]
+    FW_Sys_2C_design_metric$design_type[1],
+    FW_ZZ_2C_design_metric$design_type[1],
+    FW_Sys_G_design_metric$design_type[1],
+    FW_ZZ_G_design_metric$design_type[1],
+    QC_Sys_nadir_design_metric$design_type[1],
+    QC_Sys_design_metric$design_type[1],
+    H_SG_design_metric$design_type
   ),
   Mean_Sampler_Count = c(
-    H_SG_design_metric$mean_sampler_count,
-    FW_Sys_design_metric$mean_sampler_count,
-    FW_ZZ_design_metric$mean_sampler_count,
-    # QC_Sys_nadir_design_metric$mean_sampler_count,
-    QC_Sys_design_metric$mean_sampler_count
+    FW_Sys_2C_design_metric$mean_sampler_count
+    FW_ZZ_2C_design_metric$mean_sampler_count
+    FW_Sys_G_design_metric$mean_sampler_count,
+    FW_ZZ_G_design_metric$mean_sampler_count,
+    QC_Sys_nadir_design_metric$mean_sampler_count,
+    QC_Sys_design_metric$mean_sampler_count,
+    H_SG_design_metric$mean_sampler_count
   ),
   Mean_Cover_Area = c(
-    H_SG_design_metric$mean_cover_area,
-    FW_Sys_design_metric$mean_cover_area,
-    FW_ZZ_design_metric$mean_cover_area,
-    # QC_Sys_nadir_design_metric$mean_cover_area,
-    QC_Sys_design_metric$mean_cover_area
+    FW_Sys_2C_design_metric$mean_cover_area,
+    FW_ZZ_2C_design_metric$mean_cover_area,
+    FW_Sys_G_design_metric$mean_cover_area,
+    FW_ZZ_G_design_metric$mean_cover_area,
+    QC_Sys_nadir_design_metric$mean_cover_area,
+    QC_Sys_design_metric$mean_cover_area,
+    H_SG_design_metric$mean_cover_area
   ),
   Mean_Cover_Percentage = c(
+    FW_Sys_2C_design_metric$mean_cover_percentage,
+    FW_ZZ_2C_design_metric$mean_cover_percentage,
+    FW_Sys_G_design_metric$mean_cover_percentage,
+    FW_ZZ_G_design_metric$mean_cover_percentage,
+    QC_Sys_nadir_design_metric$mean_cover_percentage,
+    QC_Sys_design_metric$mean_cover_percentage,
     H_SG_design_metric$mean_cover_percentage,
-    FW_Sys_design_metric$mean_cover_percentage,
-    FW_ZZ_design_metric$mean_cover_percentage,
-    # QC_Sys_nadir_design_metric$mean_cover_percentage,
-    QC_Sys_design_metric$mean_cover_percentage
   ),
   Mean_Line_Length = c(
+    FW_Sys_2C_design_metric$mean_line_length,
+    FW_ZZ_2C_design_metric$mean_line_length,
+    FW_Sys_G_design_metric$mean_line_length,
+    FW_ZZ_G_design_metric$mean_line_length,
+    QC_Sys_nadir_design_metric$mean_line_length,
+    QC_Sys_design_metric$mean_line_length,
     H_SG_design_metric$mean_line_length,
-    FW_Sys_design_metric$mean_line_length,
-    FW_ZZ_design_metric$mean_line_length,
-    # QC_Sys_nadir_design_metric$mean_line_length,
-    QC_Sys_design_metric$mean_line_length
   ),
   Mean_Trackline_Length = c(
-    H_SG_design_metric$mean_trackline,
-    FW_Sys_design_metric$mean_trackline,
-    FW_ZZ_design_metric$mean_trackline,
-    # QC_Sys_nadir_design_metric$mean_trackline,
-    QC_Sys_design_metric$mean_trackline
+    FW_Sys_2C_design_metric$mean_trackline,
+    FW_ZZ_2C_design_metric$mean_trackline,
+    FW_Sys_G_design_metric$mean_trackline,
+    FW_ZZ_G_design_metric$mean_trackline,
+    QC_Sys_nadir_design_metric$mean_trackline,
+    QC_Sys_design_metric$mean_trackline,
+    H_SG_design_metric$mean_trackline
   ),
   Mean_Cyclic_Trackline_Length = c(
-    H_SG_design_metric$mean_cyclic_trackline,
-    FW_Sys_design_metric$mean_cyclic_trackline,
-    FW_ZZ_design_metric$mean_cyclic_trackline,
-    # QC_Sys_nadir_design_metric$mean_cyclic_trackline,
-    QC_Sys_design_metric$mean_cyclic_trackline
+    FW_Sys_2C_design_metric$mean_cyclic_trackline,
+    FW_ZZ_2C_design_metric$mean_cyclic_trackline,
+    FW_Sys_G_design_metric$mean_cyclic_trackline,
+    FW_ZZ_G_design_metric$mean_cyclic_trackline,
+    QC_Sys_nadir_design_metric$mean_cyclic_trackline,
+    QC_Sys_design_metric$mean_cyclic_trackline,
+    H_SG_design_metric$mean_cyclic_trackline
   ),
   Mean_On_Effort = c(
-    H_SG_design_metric$mean_on_effort,
-    FW_Sys_design_metric$mean_on_effort,
-    FW_ZZ_design_metric$mean_on_effort,
-    # QC_Sys_nadir_design_metric$mean_on_effort,
-    QC_Sys_design_metric$mean_on_effort
+    FW_Sys_2C_design_metric$mean_on_effort,
+    FW_ZZ_2C_design_metric$mean_on_effort,
+    FW_Sys_G_design_metric$mean_on_effort,
+    FW_ZZ_G_design_metric$mean_on_effort,
+    QC_Sys_nadir_design_metric$mean_on_effort,
+    QC_Sys_design_metric$mean_on_effort,
+    H_SG_design_metric$mean_on_effort
   ),
   Mean_Off_Effort = c(
+    FW_Sys_2C_design_metric$mean_off_effort,
+    FW_ZZ_2C_design_metric$mean_off_effort
+    FW_Sys_G_design_metric$mean_off_effort,
+    FW_ZZ_G_design_metric$mean_off_effort,
+    QC_Sys_nadir_design_metric$mean_off_effort,
+    QC_Sys_design_metric$mean_off_effort,
     H_SG_design_metric$mean_off_effort,
-    FW_Sys_design_metric$mean_off_effort,
-    FW_ZZ_design_metric$mean_off_effort,
-    # QC_Sys_nadir_design_metric$mean_off_effort,
-    QC_Sys_design_metric$mean_off_effort
   ),
   Mean_Return_to_Home = c(
-    H_SG_design_metric$mean_return2home,
-    FW_Sys_design_metric$mean_return2home,
-    FW_ZZ_design_metric$mean_return2home,
-    # QC_Sys_nadir_design_metric$mean_return2home,
-    QC_Sys_design_metric$mean_return2home
+    FW_Sys_2C_design_metric$mean_return2home,
+    FW_ZZ_2C_design_metric$mean_return2home,
+    FW_Sys_G_design_metric$mean_return2home,
+    FW_ZZ_G_design_metric$mean_return2home,
+    QC_Sys_nadir_design_metric$mean_return2home,
+    QC_Sys_design_metric$mean_return2home,
+    H_SG_design_metric$mean_return2home
   ),
   Mean_Off_Effort_Return = c(
+    FW_Sys_2C_design_metric$mean_off_effort_return,
+    FW_ZZ_2C_design_metric$mean_off_effort_return,
+    FW_Sys_G_design_metric$mean_off_effort_return,
+    FW_ZZ_G_design_metric$mean_off_effort_return,
+    QC_Sys_nadir_design_metric$mean_off_effort_return,
+    QC_Sys_design_metric$mean_off_effort_return,
     H_SG_design_metric$mean_off_effort_return,
-    FW_Sys_design_metric$mean_off_effort_return,
-    FW_ZZ_design_metric$mean_off_effort_return,
-    # QC_Sys_nadir_design_metric$mean_off_effort_return,
-    QC_Sys_design_metric$mean_off_effort_return
   ),
   On_Effort_Percentage = c(
-    H_SG_design_metric$on_effort_percentage,
-    FW_Sys_design_metric$on_effort_percentage,
-    FW_ZZ_design_metric$on_effort_percentage,
-    # QC_Sys_nadir_design_metric$on_effort_percentage,
-    QC_Sys_design_metric$on_effort_percentage
+    FW_Sys_2C_design_metric$on_effort_percentage,
+    FW_ZZ_2C_design_metric$on_effort_percentage,
+    FW_Sys_G_design_metric$on_effort_percentage,
+    FW_ZZ_G_design_metric$on_effort_percentage,
+    QC_Sys_nadir_design_metric$on_effort_percentage,
+    QC_Sys_design_metric$on_effort_percentage,
+    H_SG_design_metric$on_effort_percentage
   ),
   Off_Effort_Percentage = c(
-    H_SG_design_metric$off_effort_percentage,
-    FW_Sys_design_metric$off_effort_percentage,
-    FW_ZZ_design_metric$off_effort_percentage,
-    # QC_Sys_nadir_design_metric$off_effort_percentage,
-    QC_Sys_design_metric$off_effort_percentage
+    FW_Sys_2C_design_metric$off_effort_percentage,
+    FW_ZZ_2C_design_metric$off_effort_percentage,
+    FW_Sys_G_design_metric$off_effort_percentage,
+    FW_ZZ_G_design_metric$off_effort_percentage,
+    QC_Sys_nadir_design_metric$off_effort_percentage,
+    QC_Sys_design_metric$off_effort_percentage,
+    H_SG_design_metric$off_effort_percentage
   ),
   Return_to_Home_Percentage = c(
-    H_SG_design_metric$return2home_percentage,
-    FW_Sys_design_metric$return2home_percentage,
-    FW_ZZ_design_metric$return2home_percentage,
-    # QC_Sys_nadir_design_metric$return2home_percentage,
-    QC_Sys_design_metric$return2home_percentage
+    FW_Sys_2C_design_metric$return2home_percentage,
+    FW_ZZ_2C_design_metric$return2home_percentage,
+    FW_Sys_G_design_metric$return2home_percentage,
+    FW_ZZ_G_design_metric$return2home_percentage,
+    QC_Sys_nadir_design_metric$return2home_percentage,
+    QC_Sys_design_metric$return2home_percentage,
+    H_SG_design_metric$return2home_percentage
   ),
   Off_Effort_Return_Percentage = c(
-    H_SG_design_metric$off_effort_return_percentage,
-    FW_Sys_design_metric$off_effort_return_percentage,
-    FW_ZZ_design_metric$off_effort_return_percentage,
-    # QC_Sys_nadir_design_metric$off_effort_return_percentage,
-    QC_Sys_design_metric$off_effort_return_percentage
+    FW_Sys_2C_design_metric$off_effort_return_percentage,
+    FW_ZZ_2C_design_metric$off_effort_return_percentage,
+    FW_Sys_G_design_metric$off_effort_return_percentage,
+    FW_ZZ_G_design_metric$off_effort_return_percentage,
+    QC_Sys_nadir_design_metric$off_effort_return_percentage,
+    QC_Sys_design_metric$off_effort_return_percentage,
+    H_SG_design_metric$off_effort_return_percentage
   ),
   Number_of_Plots = c(
-    length(H_SG_design_metric$design_type),
-    length(FW_Sys_design_metric$design_type),
-    length(FW_ZZ_design_metric$design_type),
-    # length(QC_Sys_nadir_design_metric$design_type),
-    length(QC_Sys_design_metric$design_type)
+    length(FW_Sys_2C_design_metric$design_type),
+    length(FW_ZZ_2C_design_metric$design_type),
+    length(FW_Sys_G_design_metric$design_type),
+    length(FW_ZZ_G_design_metric$design_type),
+    length(QC_Sys_nadir_design_metric$design_type),
+    length(QC_Sys_design_metric$design_type),
+    length(H_SG_design_metric$design_type)
   )
 )
 # Print the comparison dataframe
@@ -877,5 +930,5 @@ kable(design_comparison_df)
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H-SG-DF", detectF@key.function, ".RData"))
-save(cover, H_SG_design, FW_Sys_design, FW_ZZ_design, QC_Sys_design, H_SG_transects, FW_Sys_transects, FW_ZZ_transects,  QC_Sys_transects, design_comparison_df, file = output_path)
+save(cover, H_SG_design, FW_Sys_2C_design, FW_ZZ_2C_design, FW_Sys_G_design, FW_ZZ_G_design, QC_Sys_nadir_design, QC_Sys_design, H_SG_transects, FW_Sys_2C_transects, FW_ZZ_2C_transects, FW_Sys_G_transects, FW_ZZ_G_transects,  QC_Sys_nadir_transects, QC_Sys_transects, design_comparison_df, file = output_path)
 

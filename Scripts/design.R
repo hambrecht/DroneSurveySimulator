@@ -663,11 +663,15 @@ FW_ZZ_2C_design <- run.coverage(FW_ZZ_2C_design, reps = COV_REPS)
 
 
 ## Systematic subplot design
+total_length <- H_SG_design@design.statistics$line.length[2]
 number_blocks <- round(total_length / 26000)
-spacing <- 400
+# spacing <- 400
+spacing <- 260*2
+
+poly_dim <- find_best_block_dim(total_length, number_blocks, spacing)
 
 # Checking that blocks fit within region
-if (region@area > (3200 * 3200 * number_blocks)) {
+if (region@area > (poly_dim$x_length * poly_dim$y_length * number_blocks)) {
   # create coverage grid
   grid_center <- make.coverage(region,
                                # spacing = 1000
@@ -694,7 +698,7 @@ if (region@area > (3200 * 3200 * number_blocks)) {
   st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(seq_len(nrow(points_within_1000m)), function(i) st_point(new_coords[i,])))
 
   # Create sub plot polygons
-  polygons <- create_sf_polygons(grid_center@grid, 3200, 3200)
+  polygons <- create_sf_polygons(grid_center@grid, poly_dim$x_length, poly_dim$y_length)
   polygons <- st_intersection(polygons, wmu)
  
   # Convert MULTIPOLYGON to POLYGON
@@ -702,9 +706,13 @@ if (region@area > (3200 * 3200 * number_blocks)) {
 }
 plot(st_geometry(wmu))
 plot(polygons[1], add = TRUE, col = "red")
-
+if(wmu_number = '528'){ # remove last polygon because it caused issue due to uneven shape
+  polygons <- polygons[-nrow(polygons), ]
+}
 number_blocks
 nrow(polygons)
+
+
 
 # create subplot region
 QC_plots <- make.region(
@@ -727,7 +735,7 @@ QC_Sys_design <- make.design(
   truncation = 260, # IMAGE_WIDTH
   coverage.grid = cover
 )
-QC_Sys_design@truncation <- 260
+# QC_Sys_design@truncation <- 260
 
 QC_Sys_transects <- generate.transects(QC_Sys_design)
 plot(QC_Sys_transects)

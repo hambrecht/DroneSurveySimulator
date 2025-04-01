@@ -1,3 +1,8 @@
+library(remotes)
+
+# Install a specific version of the sf package
+install_version("dsims", version = "1.0.4")
+
 # Load necessary libraries
 library(here)
 library(dsims)
@@ -6,7 +11,6 @@ library(RColorBrewer)
 library(dplyr)
 library(sf)
 library(units)
-
 
 # Check if pbapply is installed
 if (!requireNamespace("pbapply", quietly = TRUE, dependencies = TRUE)) {
@@ -70,7 +74,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[2]
+wmu_number <- wmu_number_list[1]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
@@ -419,198 +423,72 @@ summary(QC_Sys_sim, description.summary = FALSE)
 total_abundance
 histogram.N.ests(Rnd_sim, use.max.reps = TRUE)
 
-# Define labels
-labels <- c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")
-xlims <- c(49500, 80000)
-par(mfrow = c(2, 5))
 
-# Plot each histogram and add the corresponding label
-histogram.N.ests(H_SG_sim, xlim = xlims)
-usr <- par("usr")
-text(x = usr[2], y = usr[4], labels = labels[1], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, "-varEffort.RData"))
+load(input_path)
 
-histogram.N.ests(FW_Sys_2C_sim, xlim = c(30000, 33500))
-usr <- par("usr")
-text(x = usr[2], y = usr[4], labels = labels[6], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+# List all objects containing 'QC_Sys_design_'
+loaded_objects <- ls(pattern = "QC_Sys_design_")
+N_factor <- c(0.25, 0.5, 0.75, 1.0, 2, 4, 8)
 
-histogram.N.ests(FW_ZZ_2C_sim, xlim = c(30000, 33500))
-usr <- par("usr")
-text(x = usr[2], y = usr[4], labels = labels[7], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+for (design_name in loaded_objects[5]) {
+  design <- get(design_name)
 
-histogram.N.ests(FW_Sys_G_sim, xlim = c(30000, 33500))
-usr <- par("usr")
-text(x = usr[2], y = usr[4], labels = labels[8], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+  # Perform spatial join to count points within each polygon
+  points_within_QC_polygons <- st_join(points_sf, design@region@region, join = st_within)
 
-histogram.N.ests(FW_ZZ_G_sim, xlim = c(30000, 33500))
-usr <- par("usr")
-text(x = usr[2], y = usr[4], labels = labels[9], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+  # Count the number of points in each polygon
+  QC_points_count <- points_within_QC_polygons %>%
+    group_by(ID) %>%
+    summarise(count = n()) %>%
+    filter(!is.na(ID))
 
-histogram.N.ests(QC_Sys_sim, xlim = c(6500, 8900))
-usr <- par("usr")
-text(x = usr[2], y = usr[4], labels = labels[10], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+  id_df <- data.frame(ID = design@region@strata.name, count = 0)
+  merged_df <- full_join(id_df, QC_points_count, by = "ID")
+  merged_df$count <- ifelse(is.na(merged_df$count.y), merged_df$count.x, merged_df$count.y)
+  QC_pop_count <- merged_df %>% select(ID, count)
 
-histogram.N.ests(QC_Sys_nadir_sim, xlim = c(6500, 8900))
-usr <- par("usr")
-text(x = usr[2], y = usr[4], labels = labels[10], adj = c(1.2, 1.2), col = "black", cex = 1.2, font = 2)
+  QC_Sys_density <- density
+  QC_Sys_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], design@region@region)
+  QC_Sys_density@region.name <- design@region@region.name
+  QC_Sys_density@strata.name <- design@region@strata.name
+  QC_Sys_density@density.surface[[1]] <- QC_Sys_density@density.surface[[1]] %>%
+    mutate(strata = ID) %>%
+    select(-ID)
 
-
-par(mfrow = c(1, 1))
-
-
-
-# Density
-N_factor <- c(1.0, 0.75, 0.5, 0.25)
-FACTOR <- 1
-H_SG_sim_density <- H_SG_sim
-FW_Sys_G_sim_density <- FW_Sys_G_sim
-QC_Sys_sim_density <- QC_Sys_sim
-# Save simulation data
-output_path <- here("Output", "Simulation", paste0("density_sim-WMU", wmu_number, "-D", N_factor[FACTOR], ".RData"))
-# output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
-save(H_SG_sim_density, FW_Sys_G_sim_density, QC_Sys_sim_density, file = output_path)
-
-for (FACTOR in 2:length(N_factor)) {
-  output_path <- here("Output", "Simulation", paste0("density_sim-WMU", wmu_number, "-D", N_factor[FACTOR], ".RData"))
-  load(output_path)
-  #pop_desc_density <- pop_desc
-  #pop_desc_density@N <- pop_desc@N * N_factor[FACTOR]
-  #H_SG_sim_density <- make.simulation(
-  #  reps = SIM_REPS,
-  #  design = H_SG_design,
-  #  population.description = pop_desc_density,
-  #  detectability = detect_H,
-  #  ds.analysis = ddf_analyses
-  #)
-  
-  #pop_desc_FW_density <- pop_desc_FW
-  #pop_desc_FW_density@N <-pop_desc_FW@N * N_factor[FACTOR]
-  #FW_Sys_G_sim_density <- make.simulation(
-  #  reps = SIM_REPS,
-  #  design = FW_Sys_design,
-  #  population.description = pop_desc_FW_density,
-  #  detectability = detect_FWG,
-  #  ds.analysis = ddf_analyses_FW_G
-  #)
-  
-  pop_desc_QC_density <- pop_desc_QC
-  pop_desc_QC_density@N <- pop_desc_QC@N* N_factor[FACTOR]
-  QC_Sys_sim_density <- make.simulation(
-    reps = SIM_REPS,
-    design = QC_Sys_design,
-    population.description = pop_desc_QC_density,
-    detectability = detect_FWG,
-    ds.analysis = ddf_analyses_QC
+  pop_desc_QC <- make.population.description(
+    region = design@region,
+    density = QC_Sys_density,
+    N = QC_pop_count$count,
+    fixed.N = TRUE
   )
-  
-  #H_SG_sim_density <- run.simulation(simulation = H_SG_sim_density, run.parallel = T, max.cores = 20)
-  #FW_Sys_G_sim_density <- run.simulation(simulation = FW_Sys_G_sim_density, run.parallel = T, max.cores = 20)
-  QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = T, max.cores = 20)
-  
-  # Save simulation data
-  # output_path <- here("Output", "Simulation", paste0("density_sim-WMU", wmu_number, "-D", N_factor[FACTOR], ".RData"))
-  # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
-  save(H_SG_sim_density, FW_Sys_G_sim_density, QC_Sys_sim_density, file = output_path)
+
+  ddf_analyses_QC <- make.ds.analysis(
+    dfmodel = ~1,
+    key = "hr",
+    criteria = "AIC",
+    truncation = 260,
+    group.strata = data.frame(design.id = design@region@strata.name, analysis.id = rep("A", length(design@region@strata.name)))
+  )
+
+  for (FACTOR in seq_along(N_factor)) {
+    print(FACTOR)
+    pop_desc_QC_density <- pop_desc_QC
+    pop_desc_QC_density@N <- pop_desc_QC@N * N_factor[FACTOR]
+
+    QC_Sys_sim_density <- make.simulation(
+      reps = SIM_REPS,
+      design = design,
+      population.description = pop_desc_QC_density,
+      detectability = detect_FWG,
+      ds.analysis = ddf_analyses_QC
+    )
+
+    QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 20)
+
+    output_path <- here("Output", "Simulation", paste0(design_name, "-density_sim-WMU", wmu_number, "-D", N_factor[FACTOR], ".RData"))
+    save(QC_Sys_sim_density, file = output_path)
+  }
 }
 
-
-# # Extract metrics for each simulation
-# metrics_H_SG <- extract_metrics(H_SG_sim)
-# metrics_Sys <- extract_metrics(Sys_sim)
-# metrics_ZZ <- extract_metrics(ZZ_sim)
-# metrics_ZZC <- extract_metrics(ZZC_sim)
-
-# # Combine metrics into a single dataframe
-# comparison_df <- data.frame(
-#   Simulation = c("H_SG", "Sys", "Zig", "Zagcom"),
-#   Mean_Estimate = c(metrics_H_SG$mean_estimate, metrics_Sys$mean_estimate, metrics_ZZ$mean_estimate, metrics_ZZC$mean_estimate),
-#   Percent_Bias = c(metrics_H_SG$percent_bias, metrics_Sys$percent_bias, metrics_ZZ$percent_bias, metrics_ZZC$percent_bias),
-#   RMSE = c(metrics_H_SG$rmse, metrics_Sys$rmse, metrics_ZZ$rmse, metrics_ZZC$rmse),
-#   CI_Coverage_Prob = c(metrics_H_SG$ci_coverage_prob, metrics_Sys$ci_coverage_prob, metrics_ZZ$ci_coverage_prob, metrics_ZZC$ci_coverage_prob),
-#   Mean_SE = c(metrics_H_SG$mean_se, metrics_Sys$mean_se, metrics_ZZ$mean_se, metrics_ZZC$mean_se),
-#   SD_of_Means = c(metrics_H_SG$sd_of_means, metrics_Sys$sd_of_means, metrics_ZZ$sd_of_means, metrics_ZZC$sd_of_means),
-#   Mean_Cover_Area = c(metrics_H_SG$mean_cover_area, metrics_Sys$mean_cover_area, metrics_ZZ$mean_cover_area, metrics_ZZC$mean_cover_area),
-#   Mean_Effort = c(metrics_H_SG$mean_effort, metrics_Sys$mean_effort, metrics_ZZ$mean_effort, metrics_ZZC$mean_effort),
-#   Mean_n = c(metrics_H_SG$mean_n, metrics_Sys$mean_n, metrics_ZZ$mean_n, metrics_ZZC$mean_n),
-#   Mean_k = c(metrics_H_SG$mean_k, metrics_Sys$mean_k, metrics_ZZ$mean_k, metrics_ZZC$mean_k),
-#   Mean_ER = c(metrics_H_SG$mean_ER, metrics_Sys$mean_ER, metrics_ZZ$mean_ER, metrics_ZZC$mean_ER),
-#   Mean_se_ER = c(metrics_H_SG$mean_se_ER, metrics_Sys$mean_se_ER, metrics_ZZ$mean_se_ER, metrics_ZZC$mean_se_ER)
-# )
-
-# # Print the comparison dataframe
-# # print(comparison_df)
-# kable(comparison_df)
-
-
-# ## Testing truncation distances. Required with drone???
-# # Investigate truncation distances
-# truncation_distances <- c(
-#   calculate_image_width(100), calculate_image_width(200),
-#   calculate_image_width(300), calculate_image_width(400),
-#   calculate_image_width(500)
-# )
-
-# results_list <- vector("list", length(truncation_distances))
-# summary_list <- vector("list", length(truncation_distances))
-
-# for (i in seq_along(truncation_distances)) {
-#   cat(sprintf("\nRunning for truncation = %d", truncation_distances[i]))
-
-#   new_ds_analyses <- make.ds.analysis(
-#     dfmodel = list(~1, ~1),
-#     key = "hr",
-#     criteria = "AIC",
-#     truncation = truncation_distances[i]
-#   )
-
-#   sim@ds.analysis <- new_ds_analyses
-#   results_list[[i]] <- run.simulation(sim, run.parallel = F)
-#   summary_list[[i]] <- summary(results_list[[i]], description.summary = FALSE)
-# }
-
-# names(results_list) <- paste0("t", truncation_distances)
-# names(summary_list) <- paste0("t", truncation_distances)
-
-
-# # Extracting results statistics
-
-# N <- unlist(lapply(summary_list, function(x) {
-#   x@individuals$N$mean.Estimate
-# }))
-# n <- unlist(lapply(summary_list, function(x) {
-#   x@individuals$summary$mean.n
-# }))
-# se <- unlist(lapply(summary_list, function(x) {
-#   x@individuals$N$mean.se
-# }))
-# sd_N <- unlist(lapply(summary_list, function(x) {
-#   x@individuals$N$sd.of.means
-# }))
-# bias <- unlist(lapply(summary_list, function(x) {
-#   x@individuals$N$percent.bias
-# }))
-# RMSE <- unlist(lapply(summary_list, function(x) {
-#   x@individuals$N$RMSE
-# }))
-# cov <- unlist(lapply(summary_list, function(x) {
-#   x@individuals$N$CI.coverage.prob
-# }))
-
-# sim_data <- data.frame(
-#   trunc = truncation_distances,
-#   n = round(n),
-#   N = round(N),
-#   se = round(se, 2),
-#   sd.N = round(sd_N, 2),
-#   bias = round(bias, 2),
-#   RMSE = round(RMSE, 2),
-#   cov = round(cov * 100, 1)
-# )
-
-# kable(sim_data,
-#   col.names = c("$Truncation$", "$mean\\ n$", "$mean\\ \\hat{N}$", "$mean\\ se$", "$SD(\\hat{N})$", "$\\% Bias$", "$RMSE$", "$\\%\\ CI\\ Coverage$"),
-#   row.names = FALSE,
-#   align = c("c", "c", "c", "c", "c", "c", "c", "c"),
-#   caption = "Simulation Results for the simple half normal detection probability: The truncation distance, mean number of detections, mean estimated population size (N), mean standard error of $\\hat{N}$, the standard deviation of $\\hat{N}$, percentage bias, root mean squared error, percentage of times the true value of N was captured in the confidence intervals.",
-#   table.placement = "!h",
-#   format = "simple"
-# )
+print('Done')

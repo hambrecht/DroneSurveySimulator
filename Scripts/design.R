@@ -407,7 +407,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[5]
+wmu_number <- wmu_number_list[1]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 
@@ -668,7 +668,7 @@ number_blocks <- round(total_length / 26000)
 # spacing <- 400
 spacing <- 260*2
 
-poly_dim <- find_best_block_dim(total_length, number_blocks, spacing)
+poly_dim <- find_best_block_dim(total_length, number_blocks, spacing) # poly_dim, 7 lines, 3715x3640m
 
 # Checking that blocks fit within region
 if (region@area > (poly_dim$x_length * poly_dim$y_length * number_blocks)) {

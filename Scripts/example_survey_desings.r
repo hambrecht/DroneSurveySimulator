@@ -1,9 +1,67 @@
+
 ### Example 1: Creating density and population for study_region and run simulation
 
 # Load the required library
 library(dsims)
 library(sf)
 library(dplyr)
+library(here)
+
+
+#' Create polygons when grid of centroids is provided
+#'
+#' @param center_points A set of center points for the polygons.
+#' @param x_dim Width of each polygon.
+#' @param y_dim Height of each polygon.
+#' @return An sf object containing the created polygons.
+create_sf_polygons <- function(center_points, x_dim, y_dim) {
+  # Extract CRS from the center points
+  crs <- st_crs(center_points)
+
+  # Function to create a single polygon
+  create_polygon <- function(center, x_dim, y_dim) {
+    x_center <- st_coordinates(center)[1]
+    y_center <- st_coordinates(center)[2]
+
+    # Define the vertices of the rectangle
+    vertices <- matrix(c(
+      x_center - x_dim / 2, y_center - y_dim / 2,
+      x_center + x_dim / 2, y_center - y_dim / 2,
+      x_center + x_dim / 2, y_center + y_dim / 2,
+      x_center - x_dim / 2, y_center + y_dim / 2,
+      x_center - x_dim / 2, y_center - y_dim / 2
+    ), ncol = 2, byrow = TRUE)
+
+    # Create the polygon
+    st_polygon(list(vertices))
+  }
+
+  # Create polygons for each center point
+  polygons <- lapply(seq_len(nrow(center_points)), function(i) {
+    create_polygon(center_points[i,], x_dim, y_dim)
+  })
+
+  # Generate IDs based on coordinates
+  generate_id <- function(center) {
+    coords <- st_coordinates(center)
+    paste0(round(coords[1], 0), " ", round(coords[2], 0))
+  }
+
+  ids <- sapply(seq_len(nrow(center_points)), function(i) {
+    generate_id(center_points[i,])
+  })
+
+
+  # Combine polygons into an sf object and add IDs
+  sf_polygons <- st_sf(
+    geometry = st_sfc(polygons),
+    crs = crs,
+    ID = ids
+  )
+
+  sf_polygons
+}
+
 
 # Define the study area
 area_m <- matrix(c(0,0,500,0,500,500,0,500,0,0), ncol=2, byrow=TRUE)
@@ -31,72 +89,8 @@ heli_design <- make.design(
 heli_transects <- generate.transects(heli_design)
 
 heli_transects@line.length
+plot(region, heli_transects, lwd = 0.5, col = 4)
 
-
-## Systematic design
-sys_design <- make.design(
-  region = region,
-  transect.type = "line",
-  design = "systematic",
-  samplers = numeric(0), # OR
-  line.length = heli_transects@line.length, # OR
-  spacing = numeric(0),
-  design.angle = 0,
-  edge.protocol = "minus",
-  truncation = 5, # IMAGE_WIDTH
-)
-sys_transects <- generate.transects(sys_design)
-
-
-
-## Random design
-rnd_design <- make.design(
-  region = region,
-  transect.type = "line",
-  design = "random",
-  samplers = numeric(0), # OR
-  line.length = heli_transects@line.length, # OR
-  spacing = numeric(0),
-  design.angle = 0,
-  edge.protocol = "minus",
-  truncation = 5, # IMAGE_WIDTH
-)
-rnd_transects <- generate.transects(rnd_design)
-
-
-
-## Zigzag design
-zigzag_design <- make.design(
-  region = region,
-  transect.type = "line",
-  design = "eszigzag",
-  samplers = numeric(0), # OR
-  line.length = heli_transects@line.length, # OR
-  spacing = numeric(0),
-  design.angle = 90, # The design angle for the zigzag designs refers to the angle of a line which would run through the middle of each zigzag transect if the zigzags were to be generated within a rectangle. The design angle for zigzags should usually run along the longest dimension of the study region.
-  edge.protocol = "minus",
-  bounding.shape = "convex.hull", # rectangle or convex.hull. convex hull is generally more efficient.
-  truncation = 5, # IMAGE_WIDTH
-)
-zigzag_transects <- generate.transects(zigzag_design)
-
-
-
-
-## Zigzag with complementary line
-zigzagcom_design <- make.design(
-  region = region,
-  transect.type = "line",
-  design = "eszigzagcom", # eszigzag or eszigzagcom
-  samplers = numeric(0), # OR
-  line.length = heli_transects@line.length, # OR
-  spacing = numeric(0),
-  design.angle = 90,
-  edge.protocol = "minus",
-  bounding.shape = "convex.hull",
-  truncation = 5, # IMAGE_WIDTH
-)
-zigzagcom_transects <- generate.transects(zigzagcom_design)
 
 grid_center <- make.coverage(region,
                              # spacing = 1000
@@ -190,31 +184,53 @@ quad_transects <- generate.transects(quad_design)
 plot(region, quad_transects, lwd = 0.5, col = 4)
 
 
+# Helicopter transects
+# Set the output file path using the here package
+output_path <- here("Output", "Plots", "exHeliplot.tiff")
 
-# Plot desings
-par(mfrow = c(3, 3))
-plot(region, heli_transects, lwd = 1, col = 4)
-plot(region, drone_transects, lwd = 1, col = 4)
-plot(region, sys_transects, lwd = 1, col = 4)
-plot(region, rnd_transects, lwd = 1, col = 4)
-plot(region, zigzag_transects, lwd = 1, col = 4)
-plot(region, zigzagcom_transects, lwd = 1, col = 2)
-par(mfrow = c(1, 1))
-par(mfrow = c(3, 3))
-plot(heli_design)
-plot(drone_design)
-plot(sys_design)
-plot(rnd_design)
-plot(zigzag_design)
-plot(zigzagcom_design)
-par(mfrow = c(1, 1))
+# Open a TIFF device
+tiff(filename = output_path, width = 2250, height = 2250, units = "px", res = 300)
+
+# Set graphical parameters for A4 size
+par(mar = c(5, 5, 4, 2) + 0.1, cex = 0.9, cex.lab = 0.9, cex.axis = 0.9, lwd = 1, bty = "n", family = "Arial")
+
+# Plot the data
+plot(region, heli_transects, lwd = 0.5, col = 4)
+
+# Close the TIFF device
+dev.off()
+
+# Fixedwing transects
+# Set the output file path using the here package
+output_path <- here("Output", "Plots", "exFWplot.tiff")
+
+# Open a TIFF device
+tiff(filename = output_path, width = 2250, height = 2250, units = "px", res = 300)
+
+# Set graphical parameters for A4 size
+par(mar = c(5, 5, 4, 2) + 0.1, cex = 0.9, cex.lab = 0.9, cex.axis = 0.9, lwd = 1, bty = "n", family = "Arial")
+
+# Plot the data
+plot(region, fixW_transects, lwd = 0.5, col = 4)
+
+# Close the TIFF device
+dev.off()
+
+# Quadcopter transects
+# Set the output file path using the here package
+output_path <- here("Output", "Plots", "exQCplot.tiff")
+
+# Open a TIFF device
+tiff(filename = output_path, width = 2250, height = 2250, units = "px", res = 300)
+
+# Set graphical parameters for A4 size
+par(mar = c(5, 5, 4, 2) + 0.1, cex = 0.9, cex.lab = 0.9, cex.axis = 0.9, lwd = 1, bty = "n", family = "Arial")
+
+# Plot the data
+plot(region, quad_transects, lwd = 0.5, col = 4)
+
+# Close the TIFF device
+dev.off()
 
 
-# Plot zigzagcom_transects with alternating colors
-plot(area, asp = 0.8, col = rgb(230, 230, 250, maxColorValue = 255))
-colors <- c(4, 3) # Define the colors to alternate between
-for (i in seq(2, length(zigzagcom_transects@samplers$geometry), by = 2)) {
-  color <- colors[((i - 1) %/% 2) %% 2 + 1]
-  plot(zigzagcom_transects@samplers$geometry[i], add = TRUE, col = color, lwd = 1)
-  plot(zigzagcom_transects@samplers$geometry[i + 1], add = TRUE, col = color, lwd = 1)
-}
+

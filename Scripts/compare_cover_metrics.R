@@ -1,3 +1,4 @@
+# load libraries
 library(here)
 library(knitr)
 library(sf)
@@ -8,10 +9,13 @@ library(reshape2)
 
 # Create a named vector with old and new group names
 group_names <- c(
-  "H_SG" = "H-SG",
-  "FW_Sys" = "FW-Sys",
-  "FW_ZZ" = "FW-ZZ",
+  "FW_Sys_2C" = "FW-Sys-2C",
+  "FW_ZZ_2C" = "FW-ZZ-2C",
+  "FW_Sys_G" = "FW-Sys-G",
+  "FW_ZZ_G" = "FW-ZZ-G",
+  "QC_Sys_NADIR" = "QC-Sys-NADIR"
   "QC_Sys" = "QC-Sys"
+  "H_SG" = "H-SG"
 )
 
 # List all files containing 'cover' in folder Output/Simulation
@@ -90,7 +94,7 @@ list_columns <- sapply(merged_df, is.list)
 # Convert list columns to character
 merged_df[list_columns] <- lapply(merged_df[list_columns], as.character)
 
-
+merged_df
 
 # Save the transposed dataframe as a CSV file
 output_path <- here("Output", "Simulation", "cover_overview.csv")
@@ -182,12 +186,12 @@ coverage_stats <- coverage_stats %>%
   mutate(Group = recode(Group, !!!group_names))
 
 # Manually set the order of the groups
-coverage_stats$Group <- factor(coverage_stats$Group, levels = c(
-  "FW-Sys",
-  "FW-ZZ",
-  "QC-Sys",
-  "H-SG"
-))
+# coverage_stats$Group <- factor(coverage_stats$Group, levels = c(
+#   "FW-Sys",
+#   "FW-ZZ",
+#   "QC-Sys",
+#   "H-SG"
+# ))
 kable(coverage_stats)
 # Save the transposed dataframe as a CSV file
 output_path <- here("Output", "Simulation", "coverage_score.csv")

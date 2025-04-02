@@ -4,25 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="913e766a-b688-415c-87cb-6788893021a6" name="Changes" comment="updated naming conversion&#10;added part to produce summary metrics to then plot them&#10;export summuary metrics to CSV to plot with Python">
-      <change afterPath="$PROJECT_DIR$/Scripts/design4densityTest.R" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Scripts/prepQuadcopterFeasability.R" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Scripts/visualisation/vis_quadcopterFesability.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/rAvailablePackageCache.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/rAvailablePackageCache.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/rGraphicsSettings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/rGraphicsSettings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/rSettings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/rSettings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/rpackages.xml" beforeDir="false" />
+    <list default="true" id="913e766a-b688-415c-87cb-6788893021a6" name="Changes" comment="update renv">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Scripts/compare_cover_metrics.R" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/compare_cover_metrics.R" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Scripts/design.R" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/design.R" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Scripts/dsmextra.R" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Scripts/example_survey_desings.r" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/example_survey_desings.r" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Scripts/simulation.R" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/simulation.R" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Scripts/visualisation/vis_cover.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/visualisation/vis_cover.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Scripts/visualisation/vis_example_detectionfunctions.R" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/visualisation/vis_example_detectionfunctions.R" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Scripts/visualisation/vis_simulation_comparison.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/visualisation/vis_simulation_comparison.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renv.lock" beforeDir="false" afterPath="$PROJECT_DIR$/renv.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/renv/activate.R" beforeDir="false" afterPath="$PROJECT_DIR$/renv/activate.R" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/prepQuadcopterFeasability.R" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/prepQuadcopterFeasability.R" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Scripts/visualisation/vis_quadcopterFesability.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/Scripts/visualisation/vis_quadcopterFesability.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -222,20 +207,6 @@
     <option name="CODE_SMELLS_PROFILE" value="Default" />
     <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT_PROFILE" value="Default" />
     <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT" value="true" />
-    <MESSAGE value="added alternative in case of failed attempt" />
-    <MESSAGE value="remove problematic entries" />
-    <MESSAGE value="Code formatted" />
-    <MESSAGE value="fix typo&#10;added more unique stata id&#10;rounded metrix&#10;increases truncation&#10;only include first design entry in comparison df&#10;fixed typo" />
-    <MESSAGE value="Added cover score and histogram" />
-    <MESSAGE value="changes fixW polygon placement to a gridded approach from a random one&#10;Adjusted truncation distances" />
-    <MESSAGE value="added quadcopter desgin" />
-    <MESSAGE value="check for `pbapply` for parallel processing of simulations and install if nessecary&#10;adjusted detection function&#10;each design has its own detection function&#10;adjustes truncation distances&#10;created seperate analyses objects and simulations for different camera angles&#10;included new simulations in comparison" />
-    <MESSAGE value="Create plots with labels" />
-    <MESSAGE value="Change quad desgin to equal spacing rather then length" />
-    <MESSAGE value="address warnings&#10;drone designs adjusted to equal spacing" />
-    <MESSAGE value="adjusted for the Total values of all the mean values to be included&#10;added a shorter drone survey, assuming a one-battery flight&#10;trying to reduce the number of plots of there are too many by removing the smallest&#10;other smaller adjustemsts to complete the changes" />
-    <MESSAGE value="save and load `cover` object to save time" />
-    <MESSAGE value="Included zigzagcom with alternating colours" />
     <MESSAGE value="Change naming conventions for designs and simulations" />
     <MESSAGE value="updated naming" />
     <MESSAGE value="Creating over summary table" />
@@ -247,7 +218,21 @@
     <MESSAGE value="poor quatro support" />
     <MESSAGE value="converted from quatro files to Rmarkdown files" />
     <MESSAGE value="updated naming conversion&#10;added part to produce summary metrics to then plot them&#10;export summuary metrics to CSV to plot with Python" />
-    <option name="LAST_COMMIT_MESSAGE" value="updated naming conversion&#10;added part to produce summary metrics to then plot them&#10;export summuary metrics to CSV to plot with Python" />
+    <MESSAGE value="renv update" />
+    <MESSAGE value="Update simulation names" />
+    <MESSAGE value="lastest run" />
+    <MESSAGE value="no longer needed" />
+    <MESSAGE value="Dataspell used" />
+    <MESSAGE value="Copy of design.R to create QC design with different numbers of subplots" />
+    <MESSAGE value="Added needed cutsom function&#10;added code to write plot to file as TIFF for publication" />
+    <MESSAGE value="Take output from design4densityTest.R and simula&#10; and extra values and save it to csv for Jupyter notebook" />
+    <MESSAGE value="Specify disim verion&#10;&#10;Take input from design4densityTest.R and iteratie over different density levels" />
+    <MESSAGE value="set font type to Arial for publication&#10;change simulation names&#10;select variables of interest &#10;&#10;adjust label and export options" />
+    <MESSAGE value="Export to TIFF file for publication" />
+    <MESSAGE value="Plot design and density for QC in 3d plot" />
+    <MESSAGE value="set font type as aerial&#10;set simulation names&#10;&#10;export as tiff for publication" />
+    <MESSAGE value="update renv" />
+    <option name="LAST_COMMIT_MESSAGE" value="update renv" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />

@@ -445,26 +445,37 @@ COV_REPS <- 100
 
 
 # Define survey design
-## Helicopter design
-# H_SG_design <- make.design(
-#   region = region,
-#   transect.type = "line",
-#   design = "segmentedgrid",
-#   spacing = 1200, # segments seperated by 1.2km
-#   seg.length = 10000, # segements of 10km
-#   design.angle = 0, # align transect with north south
-#   seg.threshold = 10, # any segments less than 10% of the segment length (i.e. 1km) will be discarded.
-#   edge.protocol = "minus",
-#   truncation = 600, # IMAGE_WIDTH
-#   coverage.grid = cover
-# )
-# H_SG_transects <- generate.transects(H_SG_design)
+# Baseline design
+l10_design <- make.design(
+  region = region,
+  transect.type = "line",
+  design = "systematic",
+  samplers = 10,
+  design.angle = 0, # align transect with north south
+  edge.protocol = "minus",
+  truncation = 260, # IMAGE_WIDTH
+  coverage.grid = cover
+)
+l10_transects <- generate.transects(l10_design)
+l10_design <- run.coverage(l10_design, reps = COV_REPS)
 
+l20_design <- make.design(
+  region = region,
+  transect.type = "line",
+  design = "systematic",
+  samplers = 20,
+  design.angle = 0, # align transect with north south
+  edge.protocol = "minus",
+  truncation = 260, # IMAGE_WIDTH
+  coverage.grid = cover
+)
+l20_transects <- generate.transects(l20_design)
 
 ### Coverage
 #### You can re-run the coverage simulation using the following code. Note, your
 #### results should vary slightly from mine, make sure you haven't set a seed!
-# H_SG_design <- run.coverage(H_SG_design, reps = COV_REPS)
+l10_design <- run.coverage(l10_design, reps = COV_REPS)
+l20_design <- run.coverage(l20_design, reps = COV_REPS)
 total_length <- H_SG_design@design.statistics$line.length[2]
 # total_length <- H-SG_transects@line.length
 
@@ -641,6 +652,8 @@ par(mfrow = c(1, 1))
 ## The trackline length is the sum of the lengths of the transects plus the off-effort transit time required to complete the survey from the beginning of the first transect to the end of the last transect. The off-effort transit distance is calculated as the crow flies and may be longer in reality if transit is required around lakes, islands or coastlines etc.
 ## The cyclic trackline length is the trackline length plus the off-effort transit distance required to return from the end of the last transect to the beginning of the first transect.
 # Extract key metrics from each simulation summary
+l10_design_metric <- extract_design_metrics(l10_design)
+l20_design_metric <- extract_design_metrics(l20_design)
 QC_Sys_design_8_metric <- extract_design_metrics(QC_Sys_design_8)
 QC_Sys_design_15_metric <- extract_design_metrics(QC_Sys_design_15)
 QC_Sys_design_30_metric <- extract_design_metrics(QC_Sys_design_30)
@@ -649,8 +662,10 @@ QC_Sys_design_61_metric <- extract_design_metrics(QC_Sys_design_61)
 
 # Combine metrics into a single dataframe
 design_comparison_df <- data.frame(
-  Simulation = c("QC-8", "QC-15", "QC-30", "QC-46", "QC-61"),
+  Simulation = c("10L","20L","QC-8", "QC-15", "QC-30", "QC-46", "QC-61"),
   Design = c(
+    l10_design_metric$design_type[1],
+    l20_design_metric$design_type[1],
     QC_Sys_design_8_metric$design_type[1],
     QC_Sys_design_15_metric$design_type[1],
     QC_Sys_design_30_metric$design_type[1],
@@ -658,6 +673,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$design_type[1]
   ),
   Mean_Sampler_Count = c(
+    l10_design_metric$mean_sampler_count,
+    l20_design_metric$mean_sampler_count,
     QC_Sys_design_8_metric$mean_sampler_count,
     QC_Sys_design_15_metric$mean_sampler_count,
     QC_Sys_design_30_metric$mean_sampler_count,
@@ -666,6 +683,8 @@ design_comparison_df <- data.frame(
 
   ),
   Mean_Cover_Area = c(
+    l10_design_metric$mean_cover_area,
+    l20_design_metric$mean_cover_area,
     QC_Sys_design_8_metric$mean_cover_area,
     QC_Sys_design_15_metric$mean_cover_area,
     QC_Sys_design_30_metric$mean_cover_area,
@@ -673,6 +692,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$mean_cover_area
   ),
   Mean_Cover_Percentage = c(
+    l10_design_metric$mean_cover_percentage,
+    l20_design_metric$mean_cover_percentage,
     QC_Sys_design_8_metric$mean_cover_percentage,
     QC_Sys_design_15_metric$mean_cover_percentage,
     QC_Sys_design_30_metric$mean_cover_percentage,
@@ -680,6 +701,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$mean_cover_percentage
   ),
   Mean_Line_Length = c(
+    l10_design_metric$mean_line_length,
+    l20_design_metric$mean_line_length,
     QC_Sys_design_8_metric$mean_line_length,
     QC_Sys_design_15_metric$mean_line_length,
     QC_Sys_design_30_metric$mean_line_length,
@@ -687,6 +710,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$mean_line_length
   ),
   Mean_Trackline_Length = c(
+    l10_design_metric$mean_trackline,
+    l20_design_metric$mean_trackline,
     QC_Sys_design_8_metric$mean_trackline,
     QC_Sys_design_15_metric$mean_trackline,
     QC_Sys_design_30_metric$mean_trackline,
@@ -694,6 +719,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$mean_trackline
   ),
   Mean_Cyclic_Trackline_Length = c(
+    l10_design_metric$mean_cyclic_trackline,
+    l20_design_metric$mean_cyclic_trackline,
     QC_Sys_design_8_metric$mean_cyclic_trackline,
     QC_Sys_design_15_metric$mean_cyclic_trackline,
     QC_Sys_design_30_metric$mean_cyclic_trackline,
@@ -701,6 +728,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$mean_cyclic_trackline
   ),
   Mean_On_Effort = c(
+    l10_design_metric$mean_on_effort,
+    l20_design_metric$mean_on_effort,
     QC_Sys_design_8_metric$mean_on_effort,
     QC_Sys_design_15_metric$mean_on_effort,
     QC_Sys_design_30_metric$mean_on_effort,
@@ -708,6 +737,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$mean_on_effort
   ),
   Mean_Off_Effort = c(
+    l10_design_metric$mean_off_effort,
+    l20_design_metric$mean_off_effort,
     QC_Sys_design_8_metric$mean_off_effort,
     QC_Sys_design_15_metric$mean_off_effort,
     QC_Sys_design_30_metric$mean_off_effort,
@@ -715,6 +746,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$mean_off_effort
   ),
   Mean_Return_to_Home = c(
+    l10_design_metric$mean_return2home,
+    l20_design_metric$mean_return2home,
     QC_Sys_design_8_metric$mean_return2home,
     QC_Sys_design_15_metric$mean_return2home,
     QC_Sys_design_30_metric$mean_return2home,
@@ -722,6 +755,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$mean_return2home
   ),
   Mean_Off_Effort_Return = c(
+    l10_design_metric$mean_off_effort_return,
+    l20_design_metric$mean_off_effort_return,
     QC_Sys_design_8_metric$mean_off_effort_return,
     QC_Sys_design_15_metric$mean_off_effort_return,
     QC_Sys_design_30_metric$mean_off_effort_return,
@@ -729,6 +764,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$mean_off_effort_return
   ),
   On_Effort_Percentage = c(
+    l10_design_metric$on_effort_percentage,
+    l20_design_metric$on_effort_percentage,
     QC_Sys_design_8_metric$on_effort_percentage,
     QC_Sys_design_15_metric$on_effort_percentage,
     QC_Sys_design_30_metric$on_effort_percentage,
@@ -736,6 +773,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$on_effort_percentage
   ),
   Off_Effort_Percentage = c(
+    l10_design_metric$off_effort_percentage,
+    l20_design_metric$off_effort_percentage,
     QC_Sys_design_8_metric$off_effort_percentage,
     QC_Sys_design_15_metric$off_effort_percentage,
     QC_Sys_design_30_metric$off_effort_percentage,
@@ -743,6 +782,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$off_effort_percentage
   ),
   Return_to_Home_Percentage = c(
+    l10_design_metric$return2home_percentage,
+    l20_design_metric$return2home_percentage,
     QC_Sys_design_8_metric$return2home_percentage,
     QC_Sys_design_15_metric$return2home_percentage,
     QC_Sys_design_30_metric$return2home_percentage,
@@ -750,6 +791,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$return2home_percentage
   ),
   Off_Effort_Return_Percentage = c(
+    l10_design_metric$off_effort_return_percentage,
+    l20_design_metric$off_effort_return_percentage,
     QC_Sys_design_8_metric$off_effort_return_percentage,
     QC_Sys_design_15_metric$off_effort_return_percentage,
     QC_Sys_design_30_metric$off_effort_return_percentage,
@@ -757,6 +800,8 @@ design_comparison_df <- data.frame(
     QC_Sys_design_61_metric$off_effort_return_percentage
   ),
   Number_of_Plots = c(
+    length(l10_design_metric$design_type),
+    length(l20_design_metric$design_type),
     length(QC_Sys_design_8_metric$design_type),
     length(QC_Sys_design_15_metric$design_type),
     length(QC_Sys_design_30_metric$design_type),
@@ -773,6 +818,6 @@ kable(design_comparison_df)
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, "-varEffort.RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H-SG-DF", detectF@key.function, ".RData"))
-save(QC_Sys_design_8, QC_Sys_design_15, QC_Sys_design_30, QC_Sys_design_46, QC_Sys_design_61, design_comparison_df, file = output_path)
+save(l10_design, l20_design, QC_Sys_design_8, QC_Sys_design_15, QC_Sys_design_30, QC_Sys_design_46, QC_Sys_design_61, design_comparison_df, file = output_path)
 
 

@@ -125,7 +125,7 @@ extract_design_metrics <- function(design) {
     mean_sampler_count = design@design.statistics$sampler.count[2, "Total"],
     mean_cover_area = design@design.statistics$cov.area[2, "Total"],
     # mean_cover_percentage = design@design.statistics$p.cov.area[2, 'Total'],
-    mean_cover_percentage = design@design.statistics$cov.area[2, "Total"] / region@area * 100,
+    mean_cover_percentage = round(design@design.statistics$cov.area[2, "Total"] / region@area * 100, 2),
     mean_line_length = design@design.statistics$line.length[2, "Total"],
     mean_trackline = design@design.statistics$trackline[2, "Total"],
     mean_cyclic_trackline = design@design.statistics$cyclictrackline[2, "Total"],
@@ -559,6 +559,7 @@ poly_dim <- find_best_block_dim(total_length, number_blocks, spacing) # poly_dim
 # Loop to reduce number_blocks by a quarter each time
 # Create a list of block counts by reducing the original number of blocks by a factor of 2^(i-1)
 block_counts <- lapply(1:4, function(i) round(number_blocks * (1 / (2^(i - 1)))))
+block_counts[[5]] <- 46
 
 # Iterate over the list of block counts
 for (current_number_blocks in block_counts) {

@@ -1,3 +1,61 @@
+#' Drone Survey Simulator: Design and Coverage Analysis
+#'
+#' This script is part of the Drone Survey Simulator project and is used to
+#' design and analyze survey coverage for wildlife management units (WMUs).
+#' It includes functions for calculating image dimensions, extracting design
+#' metrics, generating polygons, and creating systematic survey designs.
+#' The script also performs coverage simulations and compares different survey
+#' designs based on key metrics.
+#'
+#' ## Key Features:
+#' - **Image Width Calculation**: Calculates the width of an image captured
+#'   from a given altitude and camera field of view.
+#' - **Design Metrics Extraction**: Extracts key metrics such as mean sampler
+#'   count, coverage area, and effort percentages from survey designs.
+#' - **Polygon Generation**: Generates random or grid-based polygons within
+#'   a specified area, ensuring no overlap and adherence to buffer constraints.
+#' - **Systematic Survey Design**: Creates systematic line transect designs
+#'   for drone surveys, including baseline and quadcopter designs.
+#' - **Coverage Simulation**: Simulates survey coverage and evaluates
+#'   performance metrics for different designs.
+#' - **Design Comparison**: Compares multiple survey designs based on metrics
+#'   such as on-effort and off-effort percentages, trackline lengths, and
+#'   coverage area.
+#'
+#' ## Workflow:
+#' 1. **Load Libraries and Data**: Loads necessary R libraries and input data
+#'    for density and coverage.
+#' 2. **Define Constants**: Sets parameters such as altitude, camera field of
+#'    view, and grid spacing.
+#' 3. **Calculate Image Width**: Computes the image width based on altitude
+#'    and camera specifications.
+#' 4. **Generate Coverage Grid**: Creates a grid for coverage analysis.
+#' 5. **Design Survey**: Defines systematic survey designs with varying
+#'    numbers of samplers and transects.
+#' 6. **Run Coverage Simulation**: Simulates coverage for each design and
+#'    extracts key metrics.
+#' 7. **Compare Designs**: Combines metrics into a dataframe for comparison
+#'    and visualization.
+#' 8. **Save Results**: Saves simulation data and comparison results to files.
+#'
+#' ## Outputs:
+#' - **Coverage Simulation Data**: Saved as RData files for further analysis.
+#' - **Comparison Table**: A CSV file summarizing design metrics for different
+#'   survey designs.
+#'
+#' ## Notes:
+#' - The script uses the `dsims` package for survey design and coverage
+#'   simulation.
+#' - Ensure that the input data files for density and coverage are available
+#'   in the specified paths.
+#' - The script includes functions for both random and grid-based polygon
+#'   placement, with checks for overlap and boundary constraints.
+#' - Coverage simulations are run with a specified number of repetitions
+#'   (`COV_REPS`) to ensure robust results.
+#'
+#' ## References:
+#' - Distance Sampling: https://examples.distancesampling.org/dssd-getting-started/
+#' - `dsims` Package Documentation: https://cran.r-project.org/web/packages/dsims/
 # Load necessary libraries
 library(here)
 library(dsims)
@@ -40,6 +98,9 @@ calculate_image_width <- function(ALTITUDE, CAMERA_FOV = 25, CAMERA_ANGLE = 0) {
     CAMERA_ANGLE < 0) {
     stop("Altitude and camera FOV must be positive numbers, and camera angle must be non-negative")
   }
+  if (CAMERA_ANGLE > CAMERA_FOV) {
+    stop("Camera angle must not exceed the camera field of view")
+  }
 
   # Adjust the FOV by doubling the adjustment and adding it to the FOV
   adjusted_FOV <- CAMERA_FOV + 2 * CAMERA_ANGLE
@@ -61,20 +122,21 @@ calculate_image_width <- function(ALTITUDE, CAMERA_FOV = 25, CAMERA_ANGLE = 0) {
 extract_design_metrics <- function(design) {
   list(
     design_type = design@design,
-    mean_sampler_count = design@design.statistics$sampler.count[2, 'Total'],
-    mean_cover_area = design@design.statistics$cov.area[2, 'Total'],
-    mean_cover_percentage = design@design.statistics$p.cov.area[2, 'Total'],
-    mean_line_length = design@design.statistics$line.length[2, 'Total'],
-    mean_trackline = design@design.statistics$trackline[2, 'Total'],
-    mean_cyclic_trackline = design@design.statistics$cyclictrackline[2, 'Total'],
-    mean_on_effort = design@design.statistics$line.length[2, 'Total'],
-    mean_off_effort = design@design.statistics$trackline[2, 'Total'] - design@design.statistics$line.length[2, 'Total'],
-    mean_return2home = design@design.statistics$cyclictrackline[2, 'Total'] - design@design.statistics$trackline[2, 'Total'],
-    mean_off_effort_return = design@design.statistics$cyclictrackline[2, 'Total'] - design@design.statistics$line.length[2, 'Total'],
-    on_effort_percentage = round((design@design.statistics$line.length[2, 'Total'] / design@design.statistics$cyclictrackline[2, 'Total']) * 100, 2),
-    off_effort_percentage = round(((design@design.statistics$trackline[2, 'Total'] - design@design.statistics$line.length[2, 'Total']) / design@design.statistics$cyclictrackline[2, 'Total']) * 100, 2),
-    return2home_percentage = round(((design@design.statistics$cyclictrackline[2, 'Total'] - design@design.statistics$trackline[2, 'Total']) / design@design.statistics$cyclictrackline[2, 'Total']) * 100, 2),
-    off_effort_return_percentage = round(((design@design.statistics$cyclictrackline[2, 'Total'] - design@design.statistics$line.length[2, 'Total']) / design@design.statistics$cyclictrackline[2, 'Total']) * 100, 2)
+    mean_sampler_count = design@design.statistics$sampler.count[2, "Total"],
+    mean_cover_area = design@design.statistics$cov.area[2, "Total"],
+    # mean_cover_percentage = design@design.statistics$p.cov.area[2, 'Total'],
+    mean_cover_percentage = design@design.statistics$cov.area[2, "Total"] / region@area * 100,
+    mean_line_length = design@design.statistics$line.length[2, "Total"],
+    mean_trackline = design@design.statistics$trackline[2, "Total"],
+    mean_cyclic_trackline = design@design.statistics$cyclictrackline[2, "Total"],
+    mean_on_effort = design@design.statistics$line.length[2, "Total"],
+    mean_off_effort = design@design.statistics$trackline[2, "Total"] - design@design.statistics$line.length[2, "Total"],
+    mean_return2home = design@design.statistics$cyclictrackline[2, "Total"] - design@design.statistics$trackline[2, "Total"],
+    mean_off_effort_return = design@design.statistics$cyclictrackline[2, "Total"] - design@design.statistics$line.length[2, "Total"],
+    on_effort_percentage = round((design@design.statistics$line.length[2, "Total"] / design@design.statistics$cyclictrackline[2, "Total"]) * 100, 2),
+    off_effort_percentage = round(((design@design.statistics$trackline[2, "Total"] - design@design.statistics$line.length[2, "Total"]) / design@design.statistics$cyclictrackline[2, "Total"]) * 100, 2),
+    return2home_percentage = round(((design@design.statistics$cyclictrackline[2, "Total"] - design@design.statistics$trackline[2, "Total"]) / design@design.statistics$cyclictrackline[2, "Total"]) * 100, 2),
+    off_effort_return_percentage = round(((design@design.statistics$cyclictrackline[2, "Total"] - design@design.statistics$line.length[2, "Total"]) / design@design.statistics$cyclictrackline[2, "Total"]) * 100, 2)
   )
 }
 
@@ -234,7 +296,7 @@ create_grid <- function(area, x, y) {
   cell_size_y <- y / 2
   grid <- st_make_grid(area, cellsize = c(cell_size_x, cell_size_y), what = "centers")
   grid <- st_as_sf(grid)
-  grid <- grid[st_within(grid, area, sparse = FALSE),]
+  grid <- grid[st_within(grid, area, sparse = FALSE), ]
   return(grid)
 }
 
@@ -255,7 +317,11 @@ place_polygons_grid <- function(N, x, y, area, buffer_distance, max_attempts = 1
       }
 
       # Select a random grid cell
-      center <- grid[sample(nrow(grid), 1),]
+      if (nrow(grid) > 0) {
+        center <- grid[sample(nrow(grid), 1), ]
+      } else {
+        stop("The grid is empty. Cannot sample a random grid cell.")
+      }
       center_x <- st_coordinates(center)[1]
       center_y <- st_coordinates(center)[2]
       coords <- matrix(c(
@@ -315,18 +381,18 @@ create_sf_polygons <- function(center_points, x_dim, y_dim) {
   }
 
   # Create polygons for each center point
-  polygons <- lapply(seq_len(nrow(center_points)), function(i) {
-    create_polygon(center_points[i,], x_dim, y_dim)
-  })
-
-  # Generate IDs based on coordinates
-  generate_id <- function(center) {
+  # Generate unique IDs based on coordinates and row index
+  generate_id <- function(center, index) {
     coords <- st_coordinates(center)
-    paste0(round(coords[1], 0), " ", round(coords[2], 0))
+    paste0("ID_", index, "_", format(coords[1], scientific = FALSE), "_", format(coords[2], scientific = FALSE))
   }
 
   ids <- sapply(seq_len(nrow(center_points)), function(i) {
-    generate_id(center_points[i,])
+    generate_id(center_points[i, ], i)
+  })
+
+  ids <- sapply(seq_len(nrow(center_points)), function(i) {
+    generate_id(center_points[i, ])
   })
 
 
@@ -360,11 +426,11 @@ find_longest_dimension_angle <- function(coords) {
   # Calculate distances between all pairs of vertices
   for (i in 1:(nrow(coords) - 1)) {
     for (j in (i + 1):nrow(coords)) {
-      dist <- distance(coords[i,], coords[j,])
+      dist <- distance(coords[i, ], coords[j, ])
       if (dist > max_distance) {
         max_distance <- dist
-        point1 <- coords[i,]
-        point2 <- coords[j,]
+        point1 <- coords[i, ]
+        point2 <- coords[j, ]
       }
     }
   }
@@ -489,125 +555,55 @@ spacing <- 260 * 2
 
 poly_dim <- find_best_block_dim(total_length, number_blocks, spacing) # poly_dim, 7 lines, 3715x3640m
 
-# Checking that blocks fit within region
-if (region@area > (poly_dim$x_length *
-  poly_dim$y_length *
-  number_blocks)) {
-  # create coverage grid
-  grid_center <- make.coverage(region,
-                               # spacing = 1000
-                               n.grid.points = number_blocks
-  )
-  # plot(region, grid_center)
-  # remove coverage.scores column
-  grid_center@grid <- grid_center@grid %>% select(-coverage.scores)
-
-
-  # Create a buffer around the polygon boundary
-  buffer_1000m <- st_buffer(region@region, dist = -1001)
-
-  # Identify points within 1000 meters of the boundary
-  selection_index <- st_disjoint(grid_center@grid, buffer_1000m, sparse = FALSE)
-  points_within_1000m <- grid_center@grid[selection_index,]
-
-  # Find the nearest points on the polygon for each point in the grid
-  nearest_lines <- st_nearest_points(points_within_1000m, buffer_1000m)
-  nearest_points <- st_cast(nearest_lines, "POINT")
-  new_coords <- st_coordinates(nearest_points[seq(2, length(nearest_points), 2)])
-
-  # Replace the coordinates in points1 with the new coordinates
-  st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(seq_len(nrow(points_within_1000m)), function(i) st_point(new_coords[i,])))
-
-  # Create sub plot polygons
-  polygons <- create_sf_polygons(grid_center@grid, poly_dim$x_length, poly_dim$y_length)
-  polygons <- st_intersection(polygons, wmu)
-
-  # Convert MULTIPOLYGON to POLYGON
-  polygons <- st_cast(polygons, "POLYGON")
-}
-plot(st_geometry(wmu))
-plot(polygons[1], add = TRUE, col = "red")
-number_blocks
-nrow(polygons)
-
-
-# create subplot region
-QC_plots <- make.region(
-  region.name = "study area",
-  shape = polygons,
-  strata.name = polygons$ID
-)
-
-# plot(QC_plots)
-# create flight lines withing quadcopterplots
-QC_Sys_design <- make.design(
-  region = QC_plots,
-  transect.type = "line",
-  design = "systematic",
-  samplers = numeric(0), # OR
-  line.length = numeric(0), # rep(total_length / length(QC_plots@strata.name), length(QC_plots@strata.name)) OR
-  spacing = spacing, # numeric(0)
-  design.angle = 0,
-  edge.protocol = "minus",
-  truncation = 260, # IMAGE_WIDTH
-  coverage.grid = cover
-)
-# QC_Sys_design@truncation <- 260
-
-QC_Sys_transects <- generate.transects(QC_Sys_design)
-plot(QC_Sys_transects)
-### Coverage
-system.time(QC_Sys_design <- run.coverage(QC_Sys_design, reps = COV_REPS))[3] / 60
-
-QC_Sys_transects_61 <- QC_Sys_transects
-QC_Sys_design_61 <- QC_Sys_design
-
 # less effort
 # Loop to reduce number_blocks by a quarter each time
-for (i in 4:4) {
-  current_number_blocks <- round(number_blocks * (1 / (2^(i - 1))))
+# Create a list of block counts by reducing the original number of blocks by a factor of 2^(i-1)
+block_counts <- lapply(1:4, function(i) round(number_blocks * (1 / (2^(i - 1)))))
+
+# Iterate over the list of block counts
+for (current_number_blocks in block_counts) {
   print(current_number_blocks)
 
-  # Checking that blocks fit within region
+  # Check if the current number of blocks fits within the region's area
   if (region@area > (poly_dim$x_length *
     poly_dim$y_length *
     current_number_blocks)) {
-    # Create coverage grid
+    # Create a coverage grid with the current number of blocks
     grid_center <- make.coverage(region, n.grid.points = current_number_blocks)
     grid_center@grid <- grid_center@grid %>% select(-coverage.scores)
 
-    # Create a buffer around the polygon boundary
+    # Create a buffer around the polygon boundary to exclude points near the edges
     buffer_1000m <- st_buffer(region@region, dist = -1001)
 
     # Identify points within 1000 meters of the boundary
     selection_index <- st_disjoint(grid_center@grid, buffer_1000m, sparse = FALSE)
-    points_within_1000m <- grid_center@grid[selection_index,]
+    points_within_1000m <- grid_center@grid[selection_index, ]
 
     # Check if there are points within the boundary
-    if (nrow(points_within_1000m) > 0) {
+    if (exists("grid_center") && !is.null(grid_center@grid) && exists("selection_index") && !is.null(selection_index) && nrow(points_within_1000m) > 0) {
       # Find the nearest points on the polygon for each point in the grid
       nearest_lines <- st_nearest_points(points_within_1000m, buffer_1000m)
       nearest_points <- st_cast(nearest_lines, "POINT")
       new_coords <- st_coordinates(nearest_points[seq(2, length(nearest_points), 2)])
 
       # Replace the coordinates in points1 with the new coordinates
-      st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(seq_len(nrow(points_within_1000m)), function(i) st_point(new_coords[i,])))
+      st_geometry(grid_center@grid)[selection_index] <- st_sfc(lapply(seq_len(nrow(points_within_1000m)), function(i) st_point(new_coords[i, ])))
     }
 
-    # Create sub plot polygons
+    # Create sub plot polygons using the adjusted grid
     polygons <- create_sf_polygons(grid_center@grid, poly_dim$x_length, poly_dim$y_length)
     polygons <- st_intersection(polygons, wmu)
     polygons <- st_cast(polygons, "POLYGON")
   }
 
-  # Create subplot region
+  # Create a subplot region using the generated polygons
   QC_plots <- make.region(
     region.name = "study area",
     shape = polygons,
     strata.name = polygons$ID
   )
 
-  # Create flight lines within quadcopter plots
+  # Create flight lines within the quadcopter plots
   assign(paste0("QC_Sys_design_", current_number_blocks), make.design(
     region = QC_plots,
     transect.type = "line",
@@ -621,11 +617,11 @@ for (i in 4:4) {
     coverage.grid = cover
   ))
 
-  # Generate transects
+  # Generate transects for the current design
   assign(paste0("QC_Sys_transects_", current_number_blocks), generate.transects(get(paste0("QC_Sys_design_", current_number_blocks))))
 
-  # Run coverage
-  system.time(assign(paste0("QC_Sys_design_", current_number_blocks), run.coverage(get(paste0("QC_Sys_design_", current_number_blocks)), reps = COV_REPS)))[3] / 60
+  # Run coverage simulation for the current design
+  assign(paste0("QC_Sys_design_", current_number_blocks), run.coverage(get(paste0("QC_Sys_design_", current_number_blocks)), reps = COV_REPS))
 }
 
 
@@ -662,7 +658,7 @@ QC_Sys_design_61_metric <- extract_design_metrics(QC_Sys_design_61)
 
 # Combine metrics into a single dataframe
 design_comparison_df <- data.frame(
-  Simulation = c("10L","20L","QC-8", "QC-15", "QC-30", "QC-46", "QC-61"),
+  Simulation = c("10L", "20L", "QC-8", "QC-15", "QC-30", "QC-46", "QC-61"),
   Design = c(
     l10_design_metric$design_type[1],
     l20_design_metric$design_type[1],
@@ -680,7 +676,6 @@ design_comparison_df <- data.frame(
     QC_Sys_design_30_metric$mean_sampler_count,
     QC_Sys_design_46_metric$mean_sampler_count,
     QC_Sys_design_61_metric$mean_sampler_count
-
   ),
   Mean_Cover_Area = c(
     l10_design_metric$mean_cover_area,
@@ -811,13 +806,17 @@ design_comparison_df <- data.frame(
 )
 # Print the comparison dataframe
 # print(comparison_df)
+# Display a comparison table of design metrics for different survey designs
+# This table summarizes key metrics such as mean sampler count, coverage area,
+# line length, and effort percentages for each design.
 kable(design_comparison_df)
 # drop all but the first 8 rows
 
 
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, "-varEffort.RData"))
-# output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H-SG-DF", detectF@key.function, ".RData"))
 save(l10_design, l20_design, QC_Sys_design_8, QC_Sys_design_15, QC_Sys_design_30, QC_Sys_design_46, QC_Sys_design_61, design_comparison_df, file = output_path)
 
-
+# save comparison_df
+output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, "-varEffort-comparsiondf.csv"))
+write.csv(design_comparison_df, file = output_path, row.names = FALSE)

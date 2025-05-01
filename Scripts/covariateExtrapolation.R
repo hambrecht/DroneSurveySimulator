@@ -1,3 +1,84 @@
+#' ---
+#' title: "Covariate Extrapolation and Density Surface Modeling"
+#' author: "Leonard Hambrecht"
+#' date: "`r Sys.Date()`"
+#' output: html_document
+#' ---
+#'
+#' ## Overview
+#' This script performs covariate extrapolation and density surface modeling for ecological data. 
+#' It includes data preparation, raster manipulation, probability calculations, and distance sampling analysis.
+#'
+#' ## Libraries
+#' The script uses the following libraries:
+#' - `here`: For constructing file paths.
+#' - `dsims`: For simulating distance sampling surveys.
+#' - `raster`: For raster data manipulation.
+#' - `sf`: For handling spatial data.
+#' - `units`: For unit conversions in spatial data.
+#' - `Distance`: For distance sampling analysis.
+#' - `dplyr`: For data manipulation.
+#' - `purrr`: For functional programming.
+#' - `dsmextra`: For extrapolation metrics in ecological models.
+#'
+#' ## Functions
+#' - `rescale_raster`: Rescales raster values between 0 and 1.
+#' - `calculate_probability`: Calculates probabilities based on raster values or distances using hazard-rate decline functions.
+#' - `split_into_segments`: Splits LINESTRING geometries into equal-length segments.
+#' - `check_columns_present`: Ensures required columns are present in a dataframe.
+#'
+#' ## Data Loading
+#' - Loads density and cover data for specified Wildlife Management Units (WMUs).
+#' - Sets coordinate reference systems (CRS) for spatial data.
+#'
+#' ## Population Simulation
+#' - Simulates a population based on density data using `dsims`.
+#' - Generates example population and extracts individual locations.
+#'
+#' ## Raster Manipulation
+#' - Creates raster layers with skewed random data.
+#' - Applies smoothing filters and rescales raster layers.
+#' - Stacks raster layers for further analysis.
+#'
+#' ## Covariate Extraction
+#' - Extracts raster values for spatial points and adds them as attributes.
+#' - Filters points based on calculated probabilities.
+#'
+#' ## Distance Sampling Preparation
+#' - Clips points to the study region.
+#' - Calculates distances between points and transect segments.
+#' - Prepares data for distance sampling analysis, including segment, distance, and observation data.
+#'
+#' ## Extrapolation Analysis
+#' - Computes extrapolation metrics using `dsmextra`.
+#' - Calculates Gower's distances and nearby metrics.
+#' - Maps extrapolation results and covariate comparisons.
+#'
+#' ## Density Surface Modeling
+#' - Defines multiple density surface models with varying smoothness parameters and covariates.
+#' - Evaluates model performance using deviance explained and diagnostic checks.
+#'
+#' ## Prediction
+#' - Predicts density surfaces using the fitted models.
+#' - Visualizes predicted density surfaces as rasters.
+#'
+#' ## Notes
+#' - Ensure all required columns are present in dataframes before analysis.
+#' - Adjust smoothing parameters (`k`) in density surface models for optimal performance.
+#' - Validate raster data before prediction to avoid missing columns.
+#'
+#' ## Outputs
+#' - Histograms of distances before and after filtering.
+#' - Maps of extrapolation metrics and density surfaces.
+#' - Predicted density values for the study area.
+#'
+#' ## References
+#' - `dsims` and `dsm` documentation for population simulation and density surface modeling.
+#' - `dsmextra` for extrapolation metrics and mapping.
+#'
+#' ## Disclaimer
+#' This script assumes the availability of input data and appropriate CRS settings. Ensure all dependencies are installed and data paths are correct.
+
 # Load libraries ====
 library(here)
 library(dsims)
@@ -13,7 +94,7 @@ library(dsmextra)     # Extrapolation toolkit for ecological models
 # Define functions ====
 # Function to rescale raster values between 0 and 1
 rescale_raster <- function(raster_layer) {
-  min_val <- cellStats(raster_layer, stat = "min", na.rm = TRUE)
+  min_val <- raster::cellStats(raster_layer, stat = "min", na.rm = TRUE)
   max_val <- cellStats(raster_layer, stat = "max", na.rm = TRUE)
   (raster_layer - min_val) / (max_val - min_val)
 }
@@ -41,14 +122,19 @@ calculate_probability <- function(input, type = "value", lambda = 1, k = 1) {
 
 split_into_segments <- function(linestring) {
   total_length <- st_length(linestring)
-  total_length <- if (!inherits(total_length, "units")) set_units(total_length, "m") else total_length
+  total_length <- if (!inherits(total_length, "units")) units::set_units(total_length, "m") else total_length
 
   num_segments <- ceiling(as.numeric(set_units(total_length, "km")))
+  
+  if (num_segments <= 0) {
+    stop("The number of segments must be greater than 0. Check the input linestring.")
+  }
+  
   equal_segment_length <- set_units(total_length, "km") / num_segments
   segment_lengths <- rep(equal_segment_length, num_segments)
   segment_lengths[num_segments] <- set_units(total_length, "km") - sum(segment_lengths[1:(num_segments - 1)])
 
-  points <- st_line_sample(linestring, sample = seq(0, 1, length.out = num_segments + 1)) %>%
+  points <- sf::st_line_sample(linestring, sample = seq(0, 1, length.out = num_segments + 1)) %>%
     st_cast("POINT")
 
   segments <- map2(points[-length(points)], points[-1], ~{
@@ -131,10 +217,9 @@ values(raster_layer2) <- rbeta(ncell(raster_layer2), shape1 = 2, shape2 = 5)  # 
 raster_layer3 <- raster_template
 values(raster_layer3) <- rbeta(ncell(raster_layer3), shape1 = 2, shape2 = 5)  # Skewed toward 0
 
-# Define a smoothing filter (3x3 mean filter)
+# Define a smoothing filter (5x5 mean filter)
 smoothing_filter <- matrix(1 / 9, nrow = 5, ncol = 5)
 
-# Apply the smoothing filter to each raster layer
 # Apply the smoothing filter to all raster layers in one line
 raster_layer1_smooth <- focal(raster_layer1, w = smoothing_filter, fun = sum, na.rm = TRUE)
 raster_layer2_smooth <- focal(raster_layer2, w = smoothing_filter, fun = sum, na.rm = TRUE)
@@ -218,8 +303,8 @@ distances <- st_distance(points_within_region, transects_segments)
 # For each moose point, find the nearest transect segment and the distance to it.
 closest_segments <- tibble(
   moose_id = seq_len(nrow(points_within_region)),
-  Sample.Label = map_int(seq_len(nrow(points_within_region)), ~which.min(distances[.,])),
-  distance = map_dbl(seq_len(nrow(points_within_region)), ~min(distances[.,]))
+  Sample.Label = apply(distances, 1, which.min),
+  distance = apply(distances, 1, min)
 )
 
 
@@ -252,7 +337,12 @@ hist(points_within_region$distance, breaks = 20, col = "blue", main = "Histogram
 points_with_filter <- points_within_region
 
 # Apply the probability function to calculate probabilities for each point
-points_with_filter$distance_probability <- sapply(points_with_filter$distance, calculate_probability, type = "distance", lambda = 10, k = 1)
+# Check for NA values and handle them before applying the function
+points_with_filter$distance_probability <- ifelse(
+  is.na(points_with_filter$distance),
+  NA,
+  sapply(points_with_filter$distance, calculate_probability, type = "distance", lambda = 10, k = 1)
+)
 
 # Filter points based on the calculated probabilities
 points_with_filter <- points_with_filter[runif(nrow(points_with_filter)) < points_with_filter$distance_probability,]
@@ -322,23 +412,23 @@ check_columns_present(obsdata, obsdata_required)
 
 
 # DSMExtra ====
-
+#' documentation: https://densitymodelling.github.io/dsmextra/articles/dsmextra.html#quantifying-extrapolation-1
 # Convert the raster stack to points (x, y, and values)
 raster_points <- rasterToPoints(raster_stack)
 
 # Convert the points to a dataframe
 raster_df <- as.data.frame(raster_points, stringsAsFactors = FALSE)
+# add the area of each cell, use later as offset
+# Calculate the area of each raster cell in square kilometers
+raster_df$area <- (resolution / 1000) * (resolution / 1000)
 
 # Rename columns for clarity
-colnames(raster_df) <- c("x", "y", "layer1", "layer2", "layer3")
-
-# View the first few rows of the dataframe
-head(raster_df)
-
+colnames(raster_df) <- c("x", "y", "layer1", "layer2", "layer3", "area")
 
 # Convert sfc_GEOMETRY to sf object
 sf_object <- st_sf(geometry = FW_Sys_G_transects@samplers$geometry)
-sf_object <- st_crs(3400)
+# Assign the CRS to the sf object
+st_crs(sf_object) <- 3400
 
 # Convert sf object to SpatialLines
 spatial_lines <- sf::as_Spatial(sf_object)
@@ -373,11 +463,20 @@ points(pts, pch = 16)
 #'---------------------------------------------
 predictive_covariates <- c("layer2", "layer3")
 
+# Compute extrapolation for the study area
+# This function calculates extrapolation metrics for the given samples and prediction grid.
+# Inputs:
+#   - samples: A dataframe containing sample data (e.g., transect segments with covariates).
+#   - covariate.names: A vector of covariate names to be used in the extrapolation.
+#   - prediction.grid: A dataframe representing the prediction grid with covariate values.
+#   - coordinate.system: The coordinate reference system (CRS) for spatial data.
+# Output:
+#   - An object containing extrapolation metrics for the prediction grid.
 moose_extrapolation <- compute_extrapolation(samples = segdata,
                                              covariate.names = predictive_covariates,
                                              prediction.grid = raster_df,
                                              coordinate.system = CRSsp)
-head(moose_extrapolation)
+# Removed duplicate or incomplete line to avoid confusion or errors
 
 # Number of cells subject to univariate extrapolation (see below for definition)
 raster_df %>%
@@ -385,10 +484,10 @@ raster_df %>%
                   !dplyr::between(layer2, min(segdata$layer2), max(segdata$layer2)) |
                   !dplyr::between(layer3, min(segdata$layer3), max(segdata$layer3))) %>%
   nrow()
-str(moose.extrapolation, 2)
+str(moose_extrapolation, 2)
 
 compare_covariates(extrapolation.type = "both",
-                   extrapolation.object = moose.extrapolation,
+                   extrapolation.object = moose_extrapolation,
                    n.covariates = NULL,
                    create.plots = TRUE,
                    display.percent = TRUE)
@@ -430,6 +529,8 @@ map_extrapolation(map.type = "nearby",
                   tracks = spatial_lines)
 
 
+
+# everything in on of DSMextra
 moose_analysis <- extrapolation_analysis(samples = segdata,
                                          covariate.names = predictive_covariates,
                                          prediction.grid = raster_df,
@@ -442,31 +543,45 @@ moose_analysis <- extrapolation_analysis(samples = segdata,
                                          nearby.compute = TRUE,
                                          nearby.nearby = 1,
                                          map.generate = TRUE,
-                                         map.sightings = obs_spT,
+                                         map.sightings = obs_sp,
                                          map.tracks = NULL)
 
 
 ## Distance Sampling Analysis ====
+#' documentation: https://distancesampling.org/dsm/articles/lines_gomex/mexico-analysis.html
 # Model detection function including covariates ----
-# detfc_hr <- Distance::ds(data = distdata, truncation = max(distdata$distance), transect = "line", key = "hr", formula=~as.factor(layer1))
-# gof_ds(detfc_hr)
-detfc_hn <- Distance::ds(data = distdata, truncation = max(distdata$distance), transect = "line", key = "hn", formula = ~as.factor(layer1))
-gof_ds(detfc_hn)
+detfc_hr <- Distance::ds(data = distdata, truncation = max(distdata$distance), transect = "line", key = "hr", formula=~as.factor(layer1))
+detfc_hn <- Distance::ds(data = distdata, truncation = max(distdata$distance), transect = "line", key = "hn", formula=~as.factor(layer1))
+detfc <- detfc_hn
+gof_ds(detfc)
+# Define density surface models with varying smoothness parameters (k) and basis types (bs)
+# The k parameter controls the complexity of the smooth terms, ensuring sufficient flexibility.
 
-# Compute density surface model inlcuding covariates ----
-dsm1 <- dsm::dsm(abundance.est ~ s(x, y), detfc_hn, segdata, obsdata, method = "REML")
-dsm2 <- dsm::dsm(abundance.est ~ s(x, y, k = 10) + s(layer2, k = 20) + s(layer3, k = 20), detfc_hn, segdata, obsdata, method = "REML")
+# Model 0: Simple smooth over x and y without specifying k (default k is used)
+dsm0 <- dsm::dsm(count ~ s(x, y), detfc, segdata, obsdata, method = "REML")
+
+# Model 1: Simple smooth over x and y without specifying k (default k is used)
+dsm1 <- dsm::dsm(abundance.est ~ s(x, y, k = 10), detfc, segdata, obsdata, method = "REML")
+
+# Model 2: Smooth over x, y, and covariates layer2 and layer3 with specified k values
+dsm2 <- dsm::dsm(abundance.est ~ s(x, y, k = 10) + s(layer2, k = 20) + s(layer3, k = 20), detfc, segdata, obsdata, method = "REML")
+
+# Model 3: Separate smooths for x, y, and covariates with specified k values
 dsm3 <- dsm::dsm(abundance.est ~ s(x, k = 10) +
   s(y, k = 10) +
   s(layer2, k = 20) +
-  s(layer3, k = 20), detfc_hn, segdata, obsdata, method = "REML")
-dsm4 <- dsm::dsm(abundance.est ~ s(x, y, bs = "ts") +
-  s(layer2, bs = "ts") +
-  s(layer3, bs = "ts"), detfc_hn, segdata, obsdata, method = "REML")
-dsm5 <- dsm::dsm(abundance.est ~ s(x, bs = "ts") +
-  s(y, bs = "ts") +
-  s(layer2, bs = "ts") +
-  s(layer3, bs = "ts"), detfc_hn, segdata, obsdata, method = "REML")
+  s(layer3, k = 20), detfc, segdata, obsdata, method = "REML")
+
+# Model 4: Tensor product smooths for x, y, and covariates with basis type "ts"
+dsm4 <- dsm::dsm(abundance.est ~ s(x, y, bs = "ts", k = 10) +
+  s(layer2, bs = "ts", k = 20) +
+  s(layer3, bs = "ts", k = 20), detfc, segdata, obsdata, method = "REML")
+
+# Model 5: Separate tensor product smooths for x, y, and covariates with basis type "ts"
+dsm5 <- dsm::dsm(abundance.est ~ s(x, bs = "ts", k = 10) +
+  s(y, bs = "ts", k = 10) +
+  s(layer2, bs = "ts", k = 20) +
+  s(layer3, bs = "ts", k = 20), detfc, segdata, obsdata, method = "REML")
 
 
 # The k parameter provided to s (and te) terms in dsm controls the complexity of the smooths in the model.
@@ -484,50 +599,42 @@ round(summary(dsm3)$dev.expl * 100, 2)
 round(summary(dsm4)$dev.expl * 100, 2)
 round(summary(dsm5)$dev.expl * 100, 2)
 
-
-# region <- make.region(
-#   region.name = "study area",
-#   shape = wmu
-# )
-
-# Create density surface
-density <- dsims::make.density(
-  region = region,
-  x.space = 1000
-)
-
-# Combine the three rasters into a multi-layer raster
-raster_stack <- stack(raster_layer1_rescaled, raster_layer2_rescaled, raster_layer3_rescaled)
-
-# Crop the reference raster to the extent of the target raster
-reference_raster_cropped <- crop(raster_stack, extent(density@density.surface[[1]]))
-
-# Convert the sf object to a raster
-density_raster <- rasterize(
-  density@density.surface[[1]],  # sf object
-  merged_raster,                 # Template raster for extent and resolution
-  field = "density",             # Field to rasterize
-  background = NA                # Background value
-)
-
-# Resample the target raster to match the reference raster's resolution and alignment
-target_raster_resampled <- resample(reference_raster_cropped, density_raster, method = "bilinear")
-
-
-# Extract coordinates and values
-raster_points <- rasterToPoints(target_raster_resampled)
-
-# Convert to a data frame for easier handling
-raster_df <- as.data.frame(raster_points, stringsAsFactors = FALSE)
-raster_df$offset <- 0.5^2
-colnames(raster_df) <- c("x", "y", "layer1", "layer2", "layer3", "offset")
-head(raster_df)
+# Ensure required columns exist in raster_df
+required_columns <- c("layer2", "layer3", "area")
+missing_columns <- setdiff(required_columns, colnames(raster_df))
+if (length(missing_columns) > 0) {
+  stop("Missing required columns in raster_df: ", paste(missing_columns, collapse = ", "))
+}
 
 # Predict density surface using the dsm object
-dsm_xy_pred <- predict(dsm2, raster_df, raster_df$offset)
 
-# Update density object with predicted values
-density@density.surface[[1]]$density <- dsm_xy_pred
+pred0 <- predict(dsm0, raster_df, off.set = raster_df$area)
+pred1 <- predict(dsm1, raster_df, off.set = raster_df$area)
+pred2 <- predict(dsm2, raster_df, off.set = raster_df$area)
+pred3 <- predict(dsm3, raster_df, off.set = raster_df$area)
+pred4 <- predict(dsm4, raster_df, off.set = raster_df$area)
+pred5 <- predict(dsm5, raster_df, off.set = raster_df$area)
+raster_df$pred_density0 <- pred0
+raster_df$pred_density1 <- pred1
+raster_df$pred_density2 <- pred2
+raster_df$pred_density3 <- pred3
+raster_df$pred_density4 <- pred4
+raster_df$pred_density5 <- pred5
+# Create a raster stack from the predicted density columns in raster_df
+raster_obj <- stack(
+  # rasterFromXYZ(raster_df[, c("x", "y", "pred_density0")]),
+  rasterFromXYZ(raster_df[, c("x", "y", "pred_density1")]),
+  rasterFromXYZ(raster_df[, c("x", "y", "pred_density2")]),
+  rasterFromXYZ(raster_df[, c("x", "y", "pred_density3")]),
+  rasterFromXYZ(raster_df[, c("x", "y", "pred_density4")]),
+  rasterFromXYZ(raster_df[, c("x", "y", "pred_density5")])
+)
 
-
-
+# Plot the raster layers
+# plot(raster_obj[[1]], main = "Predicted Density 0")
+plot(raster_obj[[1]], main = "Predicted Density 1")
+plot(raster_obj[[2]], main = "Predicted Density 2")
+plot(raster_obj[[3]], main = "Predicted Density 3")
+plot(raster_obj[[4]], main = "Predicted Density 4")
+plot(raster_obj[[5]], main = "Predicted Density 5")
+plot(density)

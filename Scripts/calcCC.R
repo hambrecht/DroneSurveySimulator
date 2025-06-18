@@ -51,3 +51,17 @@ writeRaster(ccRaster$pzabovemean, filename = file.path(output_dir, "ccraster.tif
 #plot(ccHex$pzabovemean)
 #writeRaster(ccHex$pzabovemean, filename = file.path(output_dir, "cchex.tif"), filetype = "GTiff", overwrite = TRUE)
 #writeRaster(ccHex$pzabovemean, filename = "cchex.tif", filetype = "GTiff", overwrite = TRUE)
+
+# retrieve canopy cover values for horse locations
+# load horse locations
+horseLocations <- vect("D:/Sync/2_Areas/MooseProject/Data/DL_development/Hinton2025/GPS/HorseLocations.shp")
+# create 3m buffer around horse locations
+horseLocationsBuffer <- buffer(horseLocations, width = 3)
+# extract mean values from raster cells within the buffer
+valsBuffer <- extract(ccRaster$pzabove2, horseLocationsBuffer, fun= "mean", method = "simple", na.rm = TRUE)
+# add names to the locations
+rownames(valsBuffer) <- values(horseLocations)$name
+print(valsBuffer)
+
+# save values to csv
+write.csv(valsBuffer, file = file.path(output_dir, "horseCC.csv"), row.names = TRUE)

@@ -22,8 +22,9 @@ extracted_numbers <- lapply(files, function(file) {
   true_D <- round(summary_data@individuals$D$Truth * 1e9, 3)
   area <- round(summary_data@individuals$summary$mean.Cover.Area / 1e6, 0)
   subplots <- length(summary_data@design.summary$design.type)
+  sd_of_means = round(summary_data@individuals$D$sd.of.means / summary_data@individuals$D$mean.Estimate, 3)
 
-  data.frame(subplots = subplots, mean_n = mean_n, area = area, trueDensity = true_D, d_number = d_number)
+  data.frame(subplots = subplots, mean_n = mean_n, area = area, trueDensity = true_D, d_number = d_number, CV = sd_of_means)
 })
 
 # Combine the list of data frames into a single data frame

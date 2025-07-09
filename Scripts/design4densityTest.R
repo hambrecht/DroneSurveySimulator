@@ -177,9 +177,10 @@ extract_metrics <- function(sim) {
 # Define the 10x10km study area
 area_m <- matrix(c(0,0,10000,0,10000,10000,0,10000,0,0), ncol=2, byrow=TRUE)
 area <- sf::st_polygon(list(area_m))
+st_crs(area) <- 4326 
 
 # Plot the study area and the polygons
-plot(area)
+# plot(area)
 
 # Create regions for the study area and subplots
 region <- make.region(region.name = "study area", shape = area)
@@ -203,7 +204,7 @@ cover <- make.coverage(region,
                        spacing = COV_SPACE # OR
                        # n.grid.points = 1000
 )
-plot(region, cover)
+# plot(region, cover)
 
 
 # Define survey design
@@ -252,6 +253,7 @@ for (current_number_blocks in block_counts) {
 
   # Convert to sf object
   subplots_sf <- st_sf(geometry = st_sfc(plots))
+  st_crs(subplots_sf) <- st_crs(region) # Set the same CRS as the region
 
 
   # Create a subplot region using the generated polygons
@@ -283,7 +285,7 @@ for (current_number_blocks in block_counts) {
     spacing = 200,
     design.angle = 0,
     edge.protocol = "minus",
-    truncation = IMAGE_WIDTH/2,
+    truncation = IMAGE_WIDTH,
     coverage.grid = cover
   ))
 
@@ -296,7 +298,7 @@ for (current_number_blocks in block_counts) {
     spacing = IMAGE_WIDTH,
     design.angle = 0,
     edge.protocol = "minus",
-    truncation = IMAGE_WIDTH/2,
+    truncation = IMAGE_WIDTH,
     coverage.grid = cover
   ))
     assign(paste0("QC_10_design_", current_number_blocks), make.design(
@@ -308,7 +310,7 @@ for (current_number_blocks in block_counts) {
     spacing = IMAGE_WIDTH*(1-0.1),
     design.angle = 0,
     edge.protocol = "minus",
-    truncation = IMAGE_WIDTH/2,
+    truncation = IMAGE_WIDTH,
     coverage.grid = cover
   ))
 
@@ -321,7 +323,7 @@ for (current_number_blocks in block_counts) {
     spacing = IMAGE_WIDTH*(1-0.65),
     design.angle = 0,
     edge.protocol = "minus",
-    truncation = IMAGE_WIDTH/2,
+    truncation = IMAGE_WIDTH,
     coverage.grid = cover
   ))
 
@@ -344,18 +346,18 @@ for (current_number_blocks in block_counts) {
 
 # hist(get.coverage(H_SG_design))
 # Plot desings
-par(mfrow = c(2, 3))
-plot(region, QC_0_transects_4, lwd = 0.5, col = 4)
-plot(region, QC_0_transects_9, lwd = 0.5, col = 4)
-plot(region, QC_0_transects_16, lwd = 0.5, col = 4)
-plot(region, QC_0_transects_25, lwd = 0.5, col = 4)
-par(mfrow = c(1, 1))
-par(mfrow = c(2, 3))
-plot(QC_0_design_4)
-plot(QC_0_design_9)
-plot(QC_0_design_16)
-plot(QC_0_design_25)
-par(mfrow = c(1, 1))
+# par(mfrow = c(2, 3))
+# plot(region, QC_0_transects_4, lwd = 0.5, col = 4)
+# plot(region, QC_0_transects_9, lwd = 0.5, col = 4)
+# plot(region, QC_0_transects_16, lwd = 0.5, col = 4)
+# plot(region, QC_0_transects_25, lwd = 0.5, col = 4)
+# par(mfrow = c(1, 1))
+# par(mfrow = c(2, 3))
+# plot(QC_0_design_4)
+# plot(QC_0_design_9)
+# plot(QC_0_design_16)
+# plot(QC_0_design_25)
+# par(mfrow = c(1, 1))
 
 ## design stats
 ## For details see: https://examples.distancesampling.org/dssd-getting-started/GettingStarted-distill.html#appendix-trackline-and-cyclic-trackline-lengths
@@ -770,8 +772,10 @@ save(QC_gimbal_design_4,
     QC_65_design_4,
     QC_65_design_9,
     QC_65_design_16,
-    QC_65_design_25, file = output_path)
+    QC_65_design_25,
+    cover,
+    region, file = output_path)
 
 # save comparison_df
-output_path <- here("Output", "Simulation", paste0("desingsQC-comparsiondf.csv"))
+output_path <- here("Output", "Simulation", paste0("designsQC-comparsiondf.csv"))
 write.csv(design_comparison_df, file = output_path, row.names = FALSE)

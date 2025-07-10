@@ -273,7 +273,7 @@ for (design_name in loaded_objects) {
       ds.analysis = ddf_analyses
     )
     survey <- run.survey(QC_Sys_sim_density)
-    QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = F, max.cores = 20)
+    QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 20)
 
     output_path <- here("Output", "Simulation", paste0(design_name, "-density_sim-WMU", wmu_number, "-D", N_factor[FACTOR], ".RData"))
     save(QC_Sys_sim_density, file = output_path)

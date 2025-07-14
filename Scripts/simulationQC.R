@@ -1,8 +1,3 @@
-library(remotes)
-
-# Install a specific version of the sf package
-# install_version("dsims", version = "1.0.4")
-
 # Load necessary libraries
 library(here)
 library(dsims)
@@ -89,6 +84,7 @@ SIM_REPS <- 999
 input_path <- here("Output", "Simulation", paste0("designsQC.RData"))
 load(input_path)
 st_crs(region@region) <- 32633 # Set the CRS for the region
+region@units <- "m"
 
 # Define a curved path (e.g., a semi-ellipse or arc)
 centres <- list(
@@ -134,7 +130,7 @@ plot(density, region, scale = 2)
 pop_desc <- make.population.description(
       region = region,
       density = density,
-      N = ABUNDANCE, # Total population size
+      N = 200, # Total population size
       fixed.N = T
     )
 
@@ -161,22 +157,26 @@ ddf_analyses_G <- make.ds.analysis(
   dfmodel = ~1,
   key = "hr",
   criteria = "AIC",
-  truncation = 260
+  truncation = 260,
+  group.strata = data.frame(design.id = QC_Sys_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_design@region@strata.name)))
 )
 ddf_analyses_nadir <- make.ds.analysis(
   dfmodel = ~1,
   key = "hr",
   criteria = "AIC",
-  truncation = IMAGE_WIDTH
+  truncation = IMAGE_WIDTH,
+  group.strata = data.frame(design.id = QC_Sys_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_design@region@strata.name)))
 )
 
-ABUNDANCE_LIST <- c(20,30,40,50,60,70,80,90,100)
+ABUNDANCE_LIST <- c(5,10,20,30,40)
 
 loaded_objects <- ls(pattern = "^QC_")
-
+dev.off() # clear plots from memory
 for (design_name in loaded_objects) {
+  print(design_name)
   design <- get(design_name)
   st_crs(design@region@region) <- 32633 # Set the CRS for the region
+  design@region@units <- "m"
 
   # create design density
   design_density <- make.density(region = design@region,
@@ -194,23 +194,25 @@ for (design_name in loaded_objects) {
                         centre = c(5000, 8000),
                         sigma = 1500,
                         amplitude = -4)
-  plot(design_density, design@region, scale = 2)
+  # plot(design_density, design@region, scale = 2)
+  design_density@density.surface[[1]]$density <- design_density@density.surface[[1]]$density * 0.01 # fixes memory issues
 
-  # clip density to design
-  # design_density <- density
-  # design_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], design@region@region)
-  # design_density@region.name <- design@region@region.name
-  # design_density@strata.name <- design@region@strata.name
+  ddf_analyses <- make.ds.analysis(
+  dfmodel = ~1,
+  key = "hr",
+  criteria = "AIC",
+  truncation = IMAGE_WIDTH,
+  group.strata = data.frame(design.id = design@region@strata.name, analysis.id = rep("A", length(design@region@strata.name)))
+  )
 
 
   # If design_name does contain "gimbal" then use detect_G, otherwise use detect_NADIR
 
   if (grepl("gimbal", design_name, ignore.case = TRUE)) {
     detect_fun <- detect_G
-    ddf_analyses <- ddf_analyses_G
+    ddf_analyses@truncation <- detect_G@truncation # set truncation distance suitable for gimbal
   } else {
     detect_fun <- detect_NADIR
-    ddf_analyses <- ddf_analyses_nadir
   }
 
   for (ABUNDANCE in ABUNDANCE_LIST) {
@@ -255,7 +257,7 @@ for (design_name in loaded_objects) {
       summarise(count = n()) %>%
       st_drop_geometry()
 
-    print(points_count)
+    # print(points_count)
 
     # Create population description
     pop_desc <- make.population.description(
@@ -272,11 +274,16 @@ for (design_name in loaded_objects) {
       detectability = detect_fun,
       ds.analysis = ddf_analyses
     )
-    survey <- run.survey(QC_Sys_sim_density)
+    stop()
+    # survey <- run.survey(QC_Sys_sim_density)
     QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 20)
 
-    output_path <- here("Output", "Simulation", paste0(design_name, "-density_sim-WMU", wmu_number, "-D", N_factor[FACTOR], ".RData"))
+    output_path <- here("Output", "Simulation", paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))
     save(QC_Sys_sim_density, file = output_path)
+    # clear memory
+    rm(QC_Sys_sim_density, points_sf, points_within_design, within_list, points_count, pop_desc, ex_pop_desc, example_population)
+    gc()
+    
   }
 }
 

@@ -1,8 +1,3 @@
-library(remotes)
-
-# Install a specific version of the sf package
-install_version("dsims", version = "1.0.4")
-
 # Load necessary libraries
 library(here)
 library(dsims)

@@ -183,7 +183,7 @@ st_crs(area) <- 4326
 # plot(area)
 
 # Create regions for the study area and subplots
-region <- make.region(region.name = "study area", shape = area)
+region <- make.region(region.name = "study area", shape = area, units = "m")
 
 # H30T Equivalent Focal Length: 52mm, DFOV: 45.2°, Photo Resolution: 1280×1024, assumed HFOV: 35
 # H20T DFOV: 40°, Resolution: 640×512, 

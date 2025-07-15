@@ -177,13 +177,13 @@ extract_metrics <- function(sim) {
 # Define the 10x10km study area
 area_m <- matrix(c(0,0,10000,0,10000,10000,0,10000,0,0), ncol=2, byrow=TRUE)
 area <- sf::st_polygon(list(area_m))
-st_crs(area) <- 4326 
 
 # Plot the study area and the polygons
 # plot(area)
 
 # Create regions for the study area and subplots
 region <- make.region(region.name = "study area", shape = area, units = "m")
+st_crs(region@region) <- 32633
 
 # H30T Equivalent Focal Length: 52mm, DFOV: 45.2°, Photo Resolution: 1280×1024, assumed HFOV: 35
 # H20T DFOV: 40°, Resolution: 640×512, 
@@ -200,10 +200,11 @@ COV_SPACE <- 500
 COV_REPS <- 100
 
 # create coverage grid
-cover <- make.coverage(region,
+# cover <- make.coverage(region,
                        spacing = COV_SPACE # OR
-                       # n.grid.points = 1000
-)
+                      #  n.grid.points = 1000
+# )
+cover <- NULL
 # plot(region, cover)
 
 
@@ -253,13 +254,15 @@ for (current_number_blocks in block_counts) {
 
   # Convert to sf object
   subplots_sf <- st_sf(geometry = st_sfc(plots))
-  st_crs(subplots_sf) <- st_crs(region) # Set the same CRS as the region
+  st_crs(subplots_sf) <- st_crs(region@region) # Set the same CRS as the region
 
 
   # Create a subplot region using the generated polygons
   QC_plots <- make.region(
     region.name = "study area",
-    shape = subplots_sf
+    strata.name = as.character(seq(1,current_number_blocks,1)),
+    shape = subplots_sf,
+    units = "m"
   )
 
   # Create flight lines within the quadcopter plots
@@ -328,18 +331,18 @@ for (current_number_blocks in block_counts) {
   ))
 
     # Generate transects for the current design
-    assign(paste0("QC_gimbal_transects_", current_number_blocks), generate.transects(get(paste0("QC_gimbal_design_", current_number_blocks))))
-    assign(paste0("QC_200_transects_", current_number_blocks), generate.transects(get(paste0("QC_200_design_", current_number_blocks))))
-    assign(paste0("QC_0_transects_", current_number_blocks), generate.transects(get(paste0("QC_0_design_", current_number_blocks))))
-    assign(paste0("QC_10_transects_", current_number_blocks), generate.transects(get(paste0("QC_10_design_", current_number_blocks))))
-    assign(paste0("QC_65_transects_", current_number_blocks), generate.transects(get(paste0("QC_65_design_", current_number_blocks))))
+    # assign(paste0("QC_gimbal_transects_", current_number_blocks), generate.transects(get(paste0("QC_gimbal_design_", current_number_blocks))))
+    # assign(paste0("QC_200_transects_", current_number_blocks), generate.transects(get(paste0("QC_200_design_", current_number_blocks))))
+    # assign(paste0("QC_0_transects_", current_number_blocks), generate.transects(get(paste0("QC_0_design_", current_number_blocks))))
+    # assign(paste0("QC_10_transects_", current_number_blocks), generate.transects(get(paste0("QC_10_design_", current_number_blocks))))
+    # assign(paste0("QC_65_transects_", current_number_blocks), generate.transects(get(paste0("QC_65_design_", current_number_blocks))))
 
-    # Run coverage simulation for the current design
-    assign(paste0("QC_gimbal_design_", current_number_blocks), run.coverage(get(paste0("QC_gimbal_design_", current_number_blocks)), reps = COV_REPS))
-    assign(paste0("QC_200_design_", current_number_blocks), run.coverage(get(paste0("QC_200_design_", current_number_blocks)), reps = COV_REPS))
-    assign(paste0("QC_0_design_", current_number_blocks), run.coverage(get(paste0("QC_0_design_", current_number_blocks)), reps = COV_REPS))
-    assign(paste0("QC_10_design_", current_number_blocks), run.coverage(get(paste0("QC_10_design_", current_number_blocks)), reps = COV_REPS))
-    assign(paste0("QC_65_design_", current_number_blocks), run.coverage(get(paste0("QC_65_design_", current_number_blocks)), reps = COV_REPS))
+    # # Run coverage simulation for the current design
+    # assign(paste0("QC_gimbal_design_", current_number_blocks), run.coverage(get(paste0("QC_gimbal_design_", current_number_blocks)), reps = COV_REPS))
+    # assign(paste0("QC_200_design_", current_number_blocks), run.coverage(get(paste0("QC_200_design_", current_number_blocks)), reps = COV_REPS))
+    # assign(paste0("QC_0_design_", current_number_blocks), run.coverage(get(paste0("QC_0_design_", current_number_blocks)), reps = COV_REPS))
+    # assign(paste0("QC_10_design_", current_number_blocks), run.coverage(get(paste0("QC_10_design_", current_number_blocks)), reps = COV_REPS))
+    # assign(paste0("QC_65_design_", current_number_blocks), run.coverage(get(paste0("QC_65_design_", current_number_blocks)), reps = COV_REPS))
 
 }
 

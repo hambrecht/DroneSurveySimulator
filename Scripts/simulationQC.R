@@ -83,8 +83,6 @@ SIM_REPS <- 999
 # List all objects containing 'QC_Sys_design_'
 input_path <- here("Output", "Simulation", paste0("designsQC.RData"))
 load(input_path)
-st_crs(region@region) <- 32633 # Set the CRS for the region
-region@units <- "m"
 
 # Define a curved path (e.g., a semi-ellipse or arc)
 centres <- list(
@@ -153,20 +151,6 @@ detect_NADIR <- make.detectability(
 )
 plot(detect_NADIR, pop_desc)
 
-ddf_analyses_G <- make.ds.analysis(
-  dfmodel = ~1,
-  key = "hr",
-  criteria = "AIC",
-  truncation = 260,
-  group.strata = data.frame(design.id = QC_Sys_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_design@region@strata.name)))
-)
-ddf_analyses_nadir <- make.ds.analysis(
-  dfmodel = ~1,
-  key = "hr",
-  criteria = "AIC",
-  truncation = IMAGE_WIDTH,
-  group.strata = data.frame(design.id = QC_Sys_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_design@region@strata.name)))
-)
 
 ABUNDANCE_LIST <- c(5,10,20,30,40)
 
@@ -175,8 +159,8 @@ dev.off() # clear plots from memory
 for (design_name in loaded_objects) {
   print(design_name)
   design <- get(design_name)
-  st_crs(design@region@region) <- 32633 # Set the CRS for the region
-  design@region@units <- "m"
+  # st_crs(design@region@region) <- 32633 # Set the CRS for the region
+  # design@region@units <- "m"
 
   # create design density
   design_density <- make.density(region = design@region,
@@ -222,49 +206,45 @@ for (design_name in loaded_objects) {
     ex_pop_desc <- make.population.description(
       region = region,
       density = density,
-      N = 200, # Total population size
+      N = ABUNDANCE, # Total population size
       fixed.N = T
     )
 
     example_population <- generate.population(object = ex_pop_desc, detectability = detect_NADIR, region = region)
     # termine abundance in each subplot
-    # Convert points dataframe to sf object
+    # Convert points to sf
     points_sf <- st_as_sf(example_population@population, coords = c("x", "y"), crs = st_crs(region@region))
-    plot(design@region@region)
-    plot(points_sf$geometry, add = T, col = "red", pch = 20)
-
-
-    # Perform spatial join to count points within each polygon
-    points_within_design <- st_join(points_sf, design@region@region, join = st_within, crs = st_crs(region@region))
-    # Filter out points that do not fall within any polygon (i.e., remove NAs)
-    points_within_design <- points_within_design[!is.na(points_within_design[[ncol(points_within_design)]]), ]
-
-    within_idx <- lengths(st_within(points_sf, design@region@region)) > 0
-    points_within_design <- points_sf[within_idx, ]
-
-    # Find which polygon each point falls within
+    
+    # Determine which polygon each point falls into
     within_list <- st_within(points_sf, design@region@region)
-
-    # Assign polygon index (or NA) to each point
+    
+    # Assign polygon (strata) name to each point
     strata_names <- design@region@strata.name
     points_sf$strata.name <- sapply(within_list, function(x) if(length(x) > 0) strata_names[x[1]] else NA)
-
-
-    # Count points per polygon
+    
+    # Count points per polygon (excluding NAs)
     points_count <- points_sf %>%
       filter(!is.na(strata.name)) %>%
       group_by(strata.name) %>%
       summarise(count = n()) %>%
       st_drop_geometry()
-
-    # print(points_count)
+    
+    # Create a full list of all strata with 0 as default
+    all_strata <- data.frame(strata.name = strata_names)
+    
+    # Left join to ensure all polygons are included, filling NAs with 0
+    points_count_full <- all_strata %>%
+      left_join(points_count, by = "strata.name") %>%
+      mutate(count = ifelse(is.na(count), 0, count))
+    
+    # print(points_count_full)
 
     # Create population description
     pop_desc <- make.population.description(
       region = design@region,
       density = design_density,
-      N = points_count$count, # Total population size
-      fixed.N = F
+      N = points_count_full$count, # Total population size
+      fixed.N = T
     )
 
     QC_Sys_sim_density <- make.simulation(
@@ -274,9 +254,9 @@ for (design_name in loaded_objects) {
       detectability = detect_fun,
       ds.analysis = ddf_analyses
     )
-    stop()
+
     # survey <- run.survey(QC_Sys_sim_density)
-    QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 20)
+    QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 24)
 
     output_path <- here("Output", "Simulation", paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))
     save(QC_Sys_sim_density, file = output_path)

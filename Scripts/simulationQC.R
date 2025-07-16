@@ -200,70 +200,76 @@ for (design_name in loaded_objects) {
   }
 
   for (ABUNDANCE in ABUNDANCE_LIST) {
-    print(ABUNDANCE)
-
-    # Create population description
-    ex_pop_desc <- make.population.description(
-      region = region,
-      density = density,
-      N = ABUNDANCE, # Total population size
-      fixed.N = T
-    )
-
-    example_population <- generate.population(object = ex_pop_desc, detectability = detect_NADIR, region = region)
-    # termine abundance in each subplot
-    # Convert points to sf
-    points_sf <- st_as_sf(example_population@population, coords = c("x", "y"), crs = st_crs(region@region))
-    
-    # Determine which polygon each point falls into
-    within_list <- st_within(points_sf, design@region@region)
-    
-    # Assign polygon (strata) name to each point
-    strata_names <- design@region@strata.name
-    points_sf$strata.name <- sapply(within_list, function(x) if(length(x) > 0) strata_names[x[1]] else NA)
-    
-    # Count points per polygon (excluding NAs)
-    points_count <- points_sf %>%
-      filter(!is.na(strata.name)) %>%
-      group_by(strata.name) %>%
-      summarise(count = n()) %>%
-      st_drop_geometry()
-    
-    # Create a full list of all strata with 0 as default
-    all_strata <- data.frame(strata.name = strata_names)
-    
-    # Left join to ensure all polygons are included, filling NAs with 0
-    points_count_full <- all_strata %>%
-      left_join(points_count, by = "strata.name") %>%
-      mutate(count = ifelse(is.na(count), 0, count))
-    
-    # print(points_count_full)
-
-    # Create population description
-    pop_desc <- make.population.description(
-      region = design@region,
-      density = design_density,
-      N = points_count_full$count, # Total population size
-      fixed.N = T
-    )
-
-    QC_Sys_sim_density <- make.simulation(
-      reps = SIM_REPS,
-      design = design,
-      population.description = pop_desc,
-      detectability = detect_fun,
-      ds.analysis = ddf_analyses
-    )
-
-    # survey <- run.survey(QC_Sys_sim_density)
-    QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 24)
-
     output_path <- here("Output", "Simulation", paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))
-    save(QC_Sys_sim_density, file = output_path)
-    # clear memory
-    rm(QC_Sys_sim_density, points_sf, points_within_design, within_list, points_count, pop_desc, ex_pop_desc, example_population)
-    gc()
-    
+    # Check if file exists
+    if (file.exists(file_path)) {
+      print(paste("File", file_path, "exists. Skipping loop..."))
+      # Do nothing or perform any other actions that you don't want to execute when the file exists
+    } else {
+      print(paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))
+
+      # Create population description
+      ex_pop_desc <- make.population.description(
+        region = region,
+        density = density,
+        N = ABUNDANCE, # Total population size
+        fixed.N = T
+      )
+
+      example_population <- generate.population(object = ex_pop_desc, detectability = detect_NADIR, region = region)
+      # termine abundance in each subplot
+      # Convert points to sf
+      points_sf <- st_as_sf(example_population@population, coords = c("x", "y"), crs = st_crs(region@region))
+      
+      # Determine which polygon each point falls into
+      within_list <- st_within(points_sf, design@region@region)
+      
+      # Assign polygon (strata) name to each point
+      strata_names <- design@region@strata.name
+      points_sf$strata.name <- sapply(within_list, function(x) if(length(x) > 0) strata_names[x[1]] else NA)
+      
+      # Count points per polygon (excluding NAs)
+      points_count <- points_sf %>%
+        filter(!is.na(strata.name)) %>%
+        group_by(strata.name) %>%
+        summarise(count = n()) %>%
+        st_drop_geometry()
+      
+      # Create a full list of all strata with 0 as default
+      all_strata <- data.frame(strata.name = strata_names)
+      
+      # Left join to ensure all polygons are included, filling NAs with 0
+      points_count_full <- all_strata %>%
+        left_join(points_count, by = "strata.name") %>%
+        mutate(count = ifelse(is.na(count), 0, count))
+      
+      # print(points_count_full)
+
+      # Create population description
+      pop_desc <- make.population.description(
+        region = design@region,
+        density = design_density,
+        N = points_count_full$count, # Total population size
+        fixed.N = T
+      )
+
+      QC_Sys_sim_density <- make.simulation(
+        reps = SIM_REPS,
+        design = design,
+        population.description = pop_desc,
+        detectability = detect_fun,
+        ds.analysis = ddf_analyses
+      )
+
+      # survey <- run.survey(QC_Sys_sim_density)
+      QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 24)
+
+      
+      save(QC_Sys_sim_density, file = output_path)
+      # clear memory
+      rm(QC_Sys_sim_density, points_sf, points_within_design, within_list, points_count, pop_desc, ex_pop_desc, example_population)
+      gc()
+    }
   }
 }
 

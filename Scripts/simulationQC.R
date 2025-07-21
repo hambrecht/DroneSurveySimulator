@@ -202,8 +202,8 @@ for (design_name in loaded_objects) {
   for (ABUNDANCE in ABUNDANCE_LIST) {
     output_path <- here("Output", "Simulation", paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))
     # Check if file exists
-    if (file.exists(file_path)) {
-      print(paste("File", file_path, "exists. Skipping loop..."))
+    if (file.exists(output_path)) {
+      print(paste("File", output_path, "exists. Skipping loop..."))
       # Do nothing or perform any other actions that you don't want to execute when the file exists
     } else {
       print(paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))

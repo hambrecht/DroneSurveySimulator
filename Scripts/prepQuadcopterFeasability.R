@@ -7,24 +7,36 @@ library(scales)
 folder_path <- here("Output", "Simulation")
 
 # List all files starting with 'QC_Sys_design_'
-files <- list.files(path = folder_path, pattern = "^QC_Sys_design_", full.names = TRUE)
+files <- list.files(path = folder_path, pattern = "density_sim-A.*\\.RData$", full.names = TRUE)
 
 # Extract the required numbers from each file name and load the file to extract the summary value
 extracted_numbers <- lapply(files, function(file) {
-  d_number <- sub(".*-D(\\d+\\.\\d+|\\d+).*", "\\1", file)
+
+  # Regular expression to extract the desired components
+  matches <- regmatches(file, regexec("QC_([^_]+)_design_([^\\-]+)-density_sim-A(\\d+)", file))
+
+  # Convert to data frame for clarity
+  simConfigs <- do.call(rbind, lapply(matches, function(x) data.frame(Overlap = x[2], NSubplots = x[3], Abundance = x[4])))
 
   # Load the file
   load(file)
 
   # Extract the summary value
-  summary_data <- summary(QC_Sys_sim_density, description.summary = FALSE)
-  mean_n <- round(summary_data@individuals$summary$mean.n, 0)
-  true_D <- round(summary_data@individuals$D$Truth * 1e9, 3)
-  area <- round(summary_data@individuals$summary$mean.Cover.Area / 1e6, 0)
-  subplots <- length(summary_data@design.summary$design.type)
-  sd_of_means = round(summary_data@individuals$D$sd.of.means / summary_data@individuals$D$mean.Estimate, 3)
-
-  data.frame(subplots = subplots, mean_n = mean_n, area = area, trueDensity = true_D, d_number = d_number, CV = sd_of_means)
+  if(is.na(QC_Sys_sim_density)){
+    mean_n <- NA
+    true_D <- NA
+    area <- NA
+    subplots <- NA
+    sd_of_means = NA
+  }else{
+    summary_data <- summary(QC_Sys_sim_density, description.summary = FALSE)
+    mean_n <- round(summary_data@individuals$summary$mean.n, 0)
+    true_D <- round(summary_data@individuals$D$Truth * 1e9, 3)
+    area <- round(summary_data@individuals$summary$mean.Cover.Area / 1e6, 0)
+    subplots <- length(summary_data@design.summary$design.type)
+    sd_of_means = round(summary_data@individuals$D$sd.of.means / summary_data@individuals$D$mean.Estimate, 3)
+  }
+  data.frame(subplots = subplots, mean_n = mean_n, area = area, trueDensity = true_D, Overlap = simConfigs[1,1], NSubplots = simConfigs[1,2], Abundance = simConfigs[1,3], CV = sd_of_means)
 })
 
 # Combine the list of data frames into a single data frame
@@ -33,17 +45,15 @@ extracted_df <- do.call(rbind, extracted_numbers)
 # Convert all columns in extracted_df to numeric
 extracted_df[] <- lapply(extracted_df, as.numeric)
 
-# Remove rows with density > 8
-filtered_df <- subset(extracted_df, d_number < 9)
 
 # Scale the area column so that 0 remains 0 and other values are scaled between 0 and 1
-max_area <- max(filtered_df$area)
-filtered_df$area_p <- round(filtered_df$area / max_area, 2)
+max_area <- max(extracted_df$area, na.rm = TRUE)
+extracted_df$area_p <- round(extracted_df$area / max_area, 2)
 
 # Print the resulting data frame to verify the changes
-print(filtered_df)
+print(extracted_df)
 
 
 # Write the dataframe to a CSV file
 output_path <- here("Output", "Simulation", "quadcopterFeasability.csv")
-write.csv(filtered_df, file = output_path, row.names = FALSE)
+write.csv(extracted_df, file = output_path, row.names = FALSE)

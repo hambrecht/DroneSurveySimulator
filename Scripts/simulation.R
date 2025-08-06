@@ -179,7 +179,7 @@ example_population <- generate.population(object = pop_desc, detectability = det
 points_sf <- st_as_sf(example_population@population, coords = c("x", "y"), crs = st_crs(wmu))
 
 # Perform spatial join to count points within each polygon
-points_within_FW_polygons <- st_join(points_sf, FW_Sys_design@region@region, join = st_within)
+points_within_FW_polygons <- st_join(points_sf, FW_Sys_G_design@region@region, join = st_within)
 
 # Count the number of points in each polygon
 FW_points_count <- points_within_FW_polygons %>%
@@ -192,15 +192,15 @@ print(FW_points_count)
 FW_points_count$count
 
 FW_density <- density
-FW_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], FW_Sys_design@region@region)
-FW_density@region.name <- FW_Sys_design@region@region.name
-FW_density@strata.name <- FW_Sys_design@region@strata.name
+FW_density@density.surface[[1]] <- st_intersection(density@density.surface[[1]], FW_Sys_G_design@region@region)
+FW_density@region.name <- FW_Sys_G_design@region@region.name
+FW_density@strata.name <- FW_Sys_G_design@region@strata.name
 FW_density@density.surface[[1]] <- FW_density@density.surface[[1]] %>%
   mutate(strata = ID) %>%
   select(-ID)
 
 pop_desc_FW <- make.population.description(
-  region = FW_Sys_design@region,
+  region = FW_Sys_G_design@region,
   density = FW_density,
   N = FW_points_count$count,
   fixed.N = TRUE
@@ -211,7 +211,7 @@ ddf_analyses_FW_2C <- make.ds.analysis(
   key = "hr",
   criteria = "AIC",
   truncation = 180,
-  group.strata = data.frame(design.id = FW_Sys_design@region@strata.name, analysis.id = rep("A", length(FW_Sys_design@region@strata.name)))
+  group.strata = data.frame(design.id = FW_Sys_G_design@region@strata.name, analysis.id = rep("A", length(FW_Sys_G_design@region@strata.name)))
 )
 
 ddf_analyses_FW_G <- make.ds.analysis(
@@ -219,13 +219,13 @@ ddf_analyses_FW_G <- make.ds.analysis(
   key = "hr",
   criteria = "AIC",
   truncation = 260,
-  group.strata = data.frame(design.id = FW_Sys_design@region@strata.name, analysis.id = rep("A", length(FW_Sys_design@region@strata.name)))
+  group.strata = data.frame(design.id = FW_Sys_G_design@region@strata.name, analysis.id = rep("A", length(FW_Sys_G_design@region@strata.name)))
 )
-FW_Sys_design@truncation <- 180
-FW_ZZ_design@truncation <- 180
+FW_Sys_G_design@truncation <- 180
+FW_ZZ_G_design@truncation <- 180
 FW_Sys_2C_sim <- make.simulation(
   reps = SIM_REPS,
-  design = FW_Sys_design,
+  design = FW_Sys_G_design,
   population.description = pop_desc_FW,
   detectability = detect_FW2,
   ds.analysis = ddf_analyses_FW_2C
@@ -233,16 +233,16 @@ FW_Sys_2C_sim <- make.simulation(
 
 FW_ZZ_2C_sim <- make.simulation(
   reps = SIM_REPS,
-  design = FW_ZZ_design,
+  design = FW_ZZ_G_design,
   population.description = pop_desc_FW,
   detectability = detect_FW2,
   ds.analysis = ddf_analyses_FW_2C
 )
-FW_Sys_design@truncation <- 260
-FW_ZZ_design@truncation <- 260
+FW_Sys_G_design@truncation <- 260
+FW_ZZ_G_design@truncation <- 260
 FW_Sys_G_sim <- make.simulation(
   reps = SIM_REPS,
-  design = FW_Sys_design,
+  design = FW_Sys_G_design,
   population.description = pop_desc_FW,
   detectability = detect_FWG,
   ds.analysis = ddf_analyses_FW_G
@@ -250,7 +250,7 @@ FW_Sys_G_sim <- make.simulation(
 
 FW_ZZ_G_sim <- make.simulation(
   reps = SIM_REPS,
-  design = FW_ZZ_design,
+  design = FW_ZZ_G_design,
   population.description = pop_desc_FW,
   detectability = detect_FWG,
   ds.analysis = ddf_analyses_FW_G
@@ -387,7 +387,29 @@ plot(FW_ZZ_survey_2C, region)
 plot(FW_Sys_survey_G, region)
 plot(FW_ZZ_survey_G, region)
 plot(QC_Sys_nadir_survey, region)
-plot(QC_Sys_survey, region)
+plot(QC_Sys_survey, region, main = "hallo!!!!!!!!!!!!!")
+print(plot)
+
+
+#create gif
+iterate_count <- 99
+for (i in 1:iterate_count) {
+  print(i)
+  QC_Sys_survey <- run.survey(QC_Sys_sim)
+    
+  # Create a filename for saving the plot
+  filename <- here("Output", "Plots", "sim_gif", paste0("plot_", i, ".jpg"))
+  
+  # open png object
+  png(filename, width = 1644, height = 682)
+  # Plot the results
+  plot(QC_Sys_survey, region)
+  
+  
+
+  # Save the plot as a JPEG file
+  dev.off()
+}
 
 
 # Run the full simulation

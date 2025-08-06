@@ -156,6 +156,7 @@ ABUNDANCE_LIST <- c(5,10,20,30,40)
 
 loaded_objects <- ls(pattern = "^QC_")
 dev.off() # clear plots from memory
+counter <- 0
 for (design_name in loaded_objects) {
   print(design_name)
   design <- get(design_name)
@@ -194,7 +195,7 @@ for (design_name in loaded_objects) {
 
   if (grepl("gimbal", design_name, ignore.case = TRUE)) {
     detect_fun <- detect_G
-    ddf_analyses@truncation <- detect_G@truncation # set truncation distance suitable for gimbal
+    ddf_analyses@truncation[[1]] <- detect_G@truncation # set truncation distance suitable for gimbal
   } else {
     detect_fun <- detect_NADIR
   }
@@ -203,11 +204,13 @@ for (design_name in loaded_objects) {
     output_path <- here("Output", "Simulation", paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))
     # Check if file exists
     if (file.exists(output_path)) {
-      print(paste("File", output_path, "exists. Skipping loop..."))
+      counter <- counter + 1
+      print(paste("File", output_path, "exists. Skipping loop... ", counter,"%"))
       # Do nothing or perform any other actions that you don't want to execute when the file exists
     } else {
+      print(paste0(counter,"%"))
       print(paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))
-
+      
       # Create population description
       ex_pop_desc <- make.population.description(
         region = region,
@@ -264,8 +267,9 @@ for (design_name in loaded_objects) {
       # survey <- run.survey(QC_Sys_sim_density)
       QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 24)
 
-      
+      # QC_Sys_sim_density <- NA
       save(QC_Sys_sim_density, file = output_path)
+      counter <- counter + 1
       # clear memory
       rm(QC_Sys_sim_density, points_sf, points_within_design, within_list, points_count, pop_desc, ex_pop_desc, example_population)
       gc()

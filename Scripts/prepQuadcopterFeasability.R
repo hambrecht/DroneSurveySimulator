@@ -17,6 +17,7 @@ extracted_numbers <- lapply(files, function(file) {
 
   # Convert to data frame for clarity
   simConfigs <- do.call(rbind, lapply(matches, function(x) data.frame(Overlap = x[2], NSubplots = x[3], Abundance = x[4])))
+  # if(is.na(simConfigs[1,1])){simConfigs[1,1] <- "gimbal"}
 
   # Load the file
   load(file)
@@ -36,14 +37,14 @@ extracted_numbers <- lapply(files, function(file) {
     subplots <- length(summary_data@design.summary$design.type)
     sd_of_means = round(summary_data@individuals$D$sd.of.means / summary_data@individuals$D$mean.Estimate, 3)
   }
-  data.frame(subplots = subplots, mean_n = mean_n, area = area, trueDensity = true_D, Overlap = simConfigs[1,1], NSubplots = simConfigs[1,2], Abundance = simConfigs[1,3], CV = sd_of_means)
+  data.frame(subplots = subplots, mean_n = mean_n, area = area, trueDensity = true_D, CV = sd_of_means, NSubplots = simConfigs[1,2], Abundance = simConfigs[1,3], Overlap = simConfigs[1,1])
 })
 
 # Combine the list of data frames into a single data frame
 extracted_df <- do.call(rbind, extracted_numbers)
 
 # Convert all columns in extracted_df to numeric
-extracted_df[] <- lapply(extracted_df, as.numeric)
+extracted_df[,1:7] <- lapply(extracted_df[,1:7], as.numeric)
 
 
 # Scale the area column so that 0 remains 0 and other values are scaled between 0 and 1

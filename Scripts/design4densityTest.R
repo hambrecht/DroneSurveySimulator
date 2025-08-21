@@ -331,11 +331,11 @@ for (current_number_blocks in block_counts) {
   ))
 
     # Generate transects for the current design
-    # assign(paste0("QC_gimbal_transects_", current_number_blocks), generate.transects(get(paste0("QC_gimbal_design_", current_number_blocks))))
-    # assign(paste0("QC_200_transects_", current_number_blocks), generate.transects(get(paste0("QC_200_design_", current_number_blocks))))
-    # assign(paste0("QC_0_transects_", current_number_blocks), generate.transects(get(paste0("QC_0_design_", current_number_blocks))))
-    # assign(paste0("QC_10_transects_", current_number_blocks), generate.transects(get(paste0("QC_10_design_", current_number_blocks))))
-    # assign(paste0("QC_65_transects_", current_number_blocks), generate.transects(get(paste0("QC_65_design_", current_number_blocks))))
+    assign(paste0("QC_gimbal_transects_", current_number_blocks), generate.transects(get(paste0("QC_gimbal_design_", current_number_blocks))))
+    assign(paste0("QC_200_transects_", current_number_blocks), generate.transects(get(paste0("QC_200_design_", current_number_blocks))))
+    assign(paste0("QC_0_transects_", current_number_blocks), generate.transects(get(paste0("QC_0_design_", current_number_blocks))))
+    assign(paste0("QC_10_transects_", current_number_blocks), generate.transects(get(paste0("QC_10_design_", current_number_blocks))))
+    assign(paste0("QC_65_transects_", current_number_blocks), generate.transects(get(paste0("QC_65_design_", current_number_blocks))))
 
     # # Run coverage simulation for the current design
     # assign(paste0("QC_gimbal_design_", current_number_blocks), run.coverage(get(paste0("QC_gimbal_design_", current_number_blocks)), reps = COV_REPS))
@@ -350,10 +350,10 @@ for (current_number_blocks in block_counts) {
 # hist(get.coverage(H_SG_design))
 # Plot desings
 # par(mfrow = c(2, 3))
-# plot(region, QC_0_transects_4, lwd = 0.5, col = 4)
-# plot(region, QC_0_transects_9, lwd = 0.5, col = 4)
-# plot(region, QC_0_transects_16, lwd = 0.5, col = 4)
-# plot(region, QC_0_transects_25, lwd = 0.5, col = 4)
+plot(region, QC_0_transects_4, lwd = 0.5, col = 4)
+plot(region, QC_0_transects_9, lwd = 0.5, col = 4)
+plot(region, QC_0_transects_16, lwd = 0.5, col = 4)
+plot(region, QC_0_transects_25, lwd = 0.5, col = 4)
 # par(mfrow = c(1, 1))
 # par(mfrow = c(2, 3))
 # plot(QC_0_design_4)

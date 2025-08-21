@@ -347,20 +347,20 @@ for (current_number_blocks in block_counts) {
 }
 
 
-# hist(get.coverage(H_SG_design))
+hist(get.coverage(QC_0_design_4))
 # Plot desings
-# par(mfrow = c(2, 3))
-plot(region, QC_0_transects_4, lwd = 0.5, col = 4)
-plot(region, QC_0_transects_9, lwd = 0.5, col = 4)
-plot(region, QC_0_transects_16, lwd = 0.5, col = 4)
-plot(region, QC_0_transects_25, lwd = 0.5, col = 4)
-# par(mfrow = c(1, 1))
-# par(mfrow = c(2, 3))
-# plot(QC_0_design_4)
-# plot(QC_0_design_9)
-# plot(QC_0_design_16)
-# plot(QC_0_design_25)
-# par(mfrow = c(1, 1))
+par(mfrow = c(2, 3))
+plot(region, QC_0_transects_4, lwd = 1.5, color = 'black')
+plot(region, QC_0_transects_9, lwd = 2, col = 4)
+plot(region, QC_0_transects_16, lwd = 2, col = 4)
+plot(region, QC_0_transects_25, lwd = 2, col = 4)
+par(mfrow = c(1, 1))
+par(mfrow = c(2, 3))
+plot(QC_0_design_4)
+plot(QC_0_design_9)
+plot(QC_0_design_16)
+plot(QC_0_design_25)
+par(mfrow = c(1, 1))
 
 ## design stats
 ## For details see: https://examples.distancesampling.org/dssd-getting-started/GettingStarted-distill.html#appendix-trackline-and-cyclic-trackline-lengths

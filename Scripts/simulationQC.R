@@ -152,7 +152,7 @@ detect_NADIR <- make.detectability(
 plot(detect_NADIR, pop_desc)
 
 
-ABUNDANCE_LIST <- c(5,10,20,30,40)
+ABUNDANCE_LIST <- c(50,60,70,80,90)
 
 loaded_objects <- ls(pattern = "^QC_")
 dev.off() # clear plots from memory

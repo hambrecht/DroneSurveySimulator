@@ -9,10 +9,10 @@ library(units)
 
 # Check if pbapply is installed
 if (!requireNamespace("pbapply", quietly = TRUE, dependencies = TRUE)) {
- message("The 'pbapply' package is not installed. Installing it now...")
- install.packages("pbapply")
+  message("The 'pbapply' package is not installed. Installing it now...")
+  install.packages("pbapply")
 } else {
- message("The 'pbapply' package is already installed.")
+  message("The 'pbapply' package is already installed.")
 }
 
 # Define functions
@@ -108,29 +108,35 @@ centres <- list(
   c(4999, 3000)
 )
 
-density <- make.density(region = region,
-                        x.space = 500,
-                        constant = 1)
+density <- make.density(
+  region = region,
+  x.space = 500,
+  constant = 1
+)
 
 # Add each hotspot along the curve
 for (centre in centres) {
-  density <- add.hotspot(object = density,
-                         centre = centre,
-                         sigma = 1500,
-                         amplitude = 2)
+  density <- add.hotspot(
+    object = density,
+    centre = centre,
+    sigma = 1500,
+    amplitude = 2
+  )
 }
-density <- add.hotspot(object = density,
-                       centre = c(5000, 8000),
-                       sigma = 1500,
-                       amplitude = -4)
+density <- add.hotspot(
+  object = density,
+  centre = c(5000, 8000),
+  sigma = 1500,
+  amplitude = -4
+)
 plot(density, region, scale = 2)
 
 pop_desc <- make.population.description(
-      region = region,
-      density = density,
-      N = 200, # Total population size
-      fixed.N = T
-    )
+  region = region,
+  density = density,
+  N = 200, # Total population size
+  fixed.N = T
+)
 
 
 
@@ -152,10 +158,11 @@ detect_NADIR <- make.detectability(
 plot(detect_NADIR, pop_desc)
 
 
-ABUNDANCE_LIST <- c(50,60,70,80,90)
+ABUNDANCE_LIST <- c(50, 60, 70, 80, 90)
 
 loaded_objects <- ls(pattern = "^QC_")
 dev.off() # clear plots from memory
+TOTAL_COUNT <- length(ABUNDANCE_LIST) * length(loaded_objects)
 counter <- 0
 for (design_name in loaded_objects) {
   print(design_name)
@@ -164,30 +171,36 @@ for (design_name in loaded_objects) {
   # design@region@units <- "m"
 
   # create design density
-  design_density <- make.density(region = design@region,
-                        x.space = 500,
-                        constant = 1)
+  design_density <- make.density(
+    region = design@region,
+    x.space = 500,
+    constant = 1
+  )
 
   # Add each hotspot along the curve
   for (centre in centres) {
-    design_density <- add.hotspot(object = design_density,
-                          centre = centre,
-                          sigma = 1500,
-                          amplitude = 2)
+    design_density <- add.hotspot(
+      object = design_density,
+      centre = centre,
+      sigma = 1500,
+      amplitude = 2
+    )
   }
-  design_density <- add.hotspot(object = design_density,
-                        centre = c(5000, 8000),
-                        sigma = 1500,
-                        amplitude = -4)
+  design_density <- add.hotspot(
+    object = design_density,
+    centre = c(5000, 8000),
+    sigma = 1500,
+    amplitude = -4
+  )
   # plot(design_density, design@region, scale = 2)
   design_density@density.surface[[1]]$density <- design_density@density.surface[[1]]$density * 0.01 # fixes memory issues
 
   ddf_analyses <- make.ds.analysis(
-  dfmodel = ~1,
-  key = "hr",
-  criteria = "AIC",
-  truncation = IMAGE_WIDTH,
-  group.strata = data.frame(design.id = design@region@strata.name, analysis.id = rep("A", length(design@region@strata.name)))
+    dfmodel = ~1,
+    key = "hr",
+    criteria = "AIC",
+    truncation = IMAGE_WIDTH,
+    group.strata = data.frame(design.id = design@region@strata.name, analysis.id = rep("A", length(design@region@strata.name)))
   )
 
 
@@ -202,15 +215,16 @@ for (design_name in loaded_objects) {
 
   for (ABUNDANCE in ABUNDANCE_LIST) {
     output_path <- here("Output", "Simulation", paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))
+    counter <- counter + 1
+    counterPer <- (counter / TOTAL_COUNT) * 100
     # Check if file exists
     if (file.exists(output_path)) {
-      counter <- counter + 1
-      print(paste("File", output_path, "exists. Skipping loop... ", counter,"%"))
+      print(paste("File", output_path, "exists. Skipping loop... ", counterPer, "%"))
       # Do nothing or perform any other actions that you don't want to execute when the file exists
     } else {
-      print(paste0(counter,"%"))
+      print(paste0(counterPer, "%"))
       print(paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))
-      
+
       # Create population description
       ex_pop_desc <- make.population.description(
         region = region,
@@ -223,29 +237,29 @@ for (design_name in loaded_objects) {
       # termine abundance in each subplot
       # Convert points to sf
       points_sf <- st_as_sf(example_population@population, coords = c("x", "y"), crs = st_crs(region@region))
-      
+
       # Determine which polygon each point falls into
       within_list <- st_within(points_sf, design@region@region)
-      
+
       # Assign polygon (strata) name to each point
       strata_names <- design@region@strata.name
-      points_sf$strata.name <- sapply(within_list, function(x) if(length(x) > 0) strata_names[x[1]] else NA)
-      
+      points_sf$strata.name <- sapply(within_list, function(x) if (length(x) > 0) strata_names[x[1]] else NA)
+
       # Count points per polygon (excluding NAs)
       points_count <- points_sf %>%
         filter(!is.na(strata.name)) %>%
         group_by(strata.name) %>%
         summarise(count = n()) %>%
         st_drop_geometry()
-      
+
       # Create a full list of all strata with 0 as default
       all_strata <- data.frame(strata.name = strata_names)
-      
+
       # Left join to ensure all polygons are included, filling NAs with 0
       points_count_full <- all_strata %>%
         left_join(points_count, by = "strata.name") %>%
         mutate(count = ifelse(is.na(count), 0, count))
-      
+
       # print(points_count_full)
 
       # Create population description
@@ -277,4 +291,4 @@ for (design_name in loaded_objects) {
   }
 }
 
-print('Done')
+print("Done")

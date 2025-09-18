@@ -11,7 +11,6 @@ files <- list.files(path = folder_path, pattern = "density_sim-A.*\\.RData$", fu
 
 # Extract the required numbers from each file name and load the file to extract the summary value
 extracted_numbers <- lapply(files, function(file) {
-
   # Regular expression to extract the desired components
   matches <- regmatches(file, regexec("QC_([^_]+)_design_([^\\-]+)-density_sim-A(\\d+)", file))
 
@@ -23,28 +22,30 @@ extracted_numbers <- lapply(files, function(file) {
   load(file)
 
   # Extract the summary value
-  if(is.na(QC_Sys_sim_density)){
+  if (is.na(QC_Sys_sim_density)) {
     mean_n <- NA
     true_D <- NA
     area <- NA
     subplots <- NA
-    sd_of_means = NA
-  }else{
+    sd_of_means <- NA
+    effortKM <- NA
+  } else {
     summary_data <- summary(QC_Sys_sim_density, description.summary = FALSE)
     mean_n <- round(summary_data@individuals$summary$mean.n, 0)
     true_D <- round(summary_data@individuals$D$Truth * 1e9, 3)
     area <- round(summary_data@individuals$summary$mean.Cover.Area / 1e6, 0)
     subplots <- length(summary_data@design.summary$design.type)
-    sd_of_means = round(summary_data@individuals$D$sd.of.means / summary_data@individuals$D$mean.Estimate, 3)
+    sd_of_means <- round(summary_data@individuals$D$sd.of.means / summary_data@individuals$D$mean.Estimate, 3)
+    effortKM <- round((summary_data@individuals$summary$mean.Effort) / 1000, 2)
   }
-  data.frame(subplots = subplots, mean_n = mean_n, area = area, trueDensity = true_D, CV = sd_of_means, NSubplots = simConfigs[1,2], Abundance = simConfigs[1,3], Overlap = simConfigs[1,1])
+  data.frame(subplots = subplots, mean_n = mean_n, area = area, trueDensity = true_D, CV = sd_of_means, NSubplots = simConfigs[1, 2], Abundance = simConfigs[1, 3], EffortKM = effortKM, Overlap = simConfigs[1, 1])
 })
 
 # Combine the list of data frames into a single data frame
 extracted_df <- do.call(rbind, extracted_numbers)
 
 # Convert all columns in extracted_df to numeric
-extracted_df[,1:7] <- lapply(extracted_df[,1:7], as.numeric)
+extracted_df[, 1:8] <- lapply(extracted_df[, 1:8], as.numeric)
 
 
 # Scale the area column so that 0 remains 0 and other values are scaled between 0 and 1

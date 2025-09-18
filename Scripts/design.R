@@ -107,6 +107,8 @@ find_best_block_dim <- function(total_length, number_blocks, spacing) {
   }
 }
 
+find_best_block_dim(1170000, 1, 600)
+
 #' Function to generate a random square polygon with random orientation
 #'
 #' @param x Width of the polygon.
@@ -654,7 +656,7 @@ FW_ZZ_2C_design <- run.coverage(FW_ZZ_2C_design, reps = COV_REPS)
 #   spacing = spacing, # numeric(0)
 #   design.angle = 0,
 #   edge.protocol = "minus",
-#   truncation = 50, # IMAGE_WIDTH
+#   truncation = 40, # IMAGE_WIDTH
 #   coverage.grid = cover
 # )
 # QC_Sys_nadir_transects <- generate.transects(QC_Sys_nadir_design)
@@ -743,7 +745,7 @@ plot(QC_Sys_transects)
 system.time(QC_Sys_design <- run.coverage(QC_Sys_design, reps = COV_REPS))[3] / 60
 
 QC_Sys_nadir_design <- QC_Sys_design
-QC_Sys_nadir_design@truncation <- 50
+QC_Sys_nadir_design@truncation <- 40
 QC_Sys_nadir_transects <- generate.transects(QC_Sys_nadir_design)
 system.time(QC_Sys_nadir_design <- run.coverage(QC_Sys_nadir_design, reps = COV_REPS))[3] / 60
 

@@ -200,12 +200,12 @@ COV_SPACE <- 500
 COV_REPS <- 100
 
 # create coverage grid
-# cover <- make.coverage(region,
+cover <- make.coverage(region,
                        spacing = COV_SPACE # OR
                       #  n.grid.points = 1000
-# )
-cover <- NULL
-# plot(region, cover)
+)
+# cover <- NULL
+plot(region, cover)
 
 
 # Define survey design
@@ -288,7 +288,7 @@ for (current_number_blocks in block_counts) {
     spacing = 200,
     design.angle = 0,
     edge.protocol = "minus",
-    truncation = IMAGE_WIDTH,
+    truncation = IMAGE_WIDTH/2,
     coverage.grid = cover
   ))
 
@@ -301,7 +301,7 @@ for (current_number_blocks in block_counts) {
     spacing = IMAGE_WIDTH,
     design.angle = 0,
     edge.protocol = "minus",
-    truncation = IMAGE_WIDTH,
+    truncation = IMAGE_WIDTH/2,
     coverage.grid = cover
   ))
     assign(paste0("QC_10_design_", current_number_blocks), make.design(
@@ -313,7 +313,7 @@ for (current_number_blocks in block_counts) {
     spacing = IMAGE_WIDTH*(1-0.1),
     design.angle = 0,
     edge.protocol = "minus",
-    truncation = IMAGE_WIDTH,
+    truncation = IMAGE_WIDTH/2,
     coverage.grid = cover
   ))
 
@@ -326,41 +326,41 @@ for (current_number_blocks in block_counts) {
     spacing = IMAGE_WIDTH*(1-0.65),
     design.angle = 0,
     edge.protocol = "minus",
-    truncation = IMAGE_WIDTH,
+    truncation = IMAGE_WIDTH/2,
     coverage.grid = cover
   ))
 
     # Generate transects for the current design
-    assign(paste0("QC_gimbal_transects_", current_number_blocks), generate.transects(get(paste0("QC_gimbal_design_", current_number_blocks))))
-    assign(paste0("QC_200_transects_", current_number_blocks), generate.transects(get(paste0("QC_200_design_", current_number_blocks))))
-    assign(paste0("QC_0_transects_", current_number_blocks), generate.transects(get(paste0("QC_0_design_", current_number_blocks))))
-    assign(paste0("QC_10_transects_", current_number_blocks), generate.transects(get(paste0("QC_10_design_", current_number_blocks))))
-    assign(paste0("QC_65_transects_", current_number_blocks), generate.transects(get(paste0("QC_65_design_", current_number_blocks))))
+    # assign(paste0("QC_gimbal_transects_", current_number_blocks), generate.transects(get(paste0("QC_gimbal_design_", current_number_blocks))))
+    # assign(paste0("QC_200_transects_", current_number_blocks), generate.transects(get(paste0("QC_200_design_", current_number_blocks))))
+    # assign(paste0("QC_0_transects_", current_number_blocks), generate.transects(get(paste0("QC_0_design_", current_number_blocks))))
+    # assign(paste0("QC_10_transects_", current_number_blocks), generate.transects(get(paste0("QC_10_design_", current_number_blocks))))
+    # assign(paste0("QC_65_transects_", current_number_blocks), generate.transects(get(paste0("QC_65_design_", current_number_blocks))))
 
-    # # Run coverage simulation for the current design
-    # assign(paste0("QC_gimbal_design_", current_number_blocks), run.coverage(get(paste0("QC_gimbal_design_", current_number_blocks)), reps = COV_REPS))
-    # assign(paste0("QC_200_design_", current_number_blocks), run.coverage(get(paste0("QC_200_design_", current_number_blocks)), reps = COV_REPS))
-    # assign(paste0("QC_0_design_", current_number_blocks), run.coverage(get(paste0("QC_0_design_", current_number_blocks)), reps = COV_REPS))
-    # assign(paste0("QC_10_design_", current_number_blocks), run.coverage(get(paste0("QC_10_design_", current_number_blocks)), reps = COV_REPS))
-    # assign(paste0("QC_65_design_", current_number_blocks), run.coverage(get(paste0("QC_65_design_", current_number_blocks)), reps = COV_REPS))
+    # Run coverage simulation for the current design
+    assign(paste0("QC_gimbal_design_", current_number_blocks), run.coverage(get(paste0("QC_gimbal_design_", current_number_blocks)), reps = COV_REPS))
+    assign(paste0("QC_200_design_", current_number_blocks), run.coverage(get(paste0("QC_200_design_", current_number_blocks)), reps = COV_REPS))
+    assign(paste0("QC_0_design_", current_number_blocks), run.coverage(get(paste0("QC_0_design_", current_number_blocks)), reps = COV_REPS))
+    assign(paste0("QC_10_design_", current_number_blocks), run.coverage(get(paste0("QC_10_design_", current_number_blocks)), reps = COV_REPS))
+    assign(paste0("QC_65_design_", current_number_blocks), run.coverage(get(paste0("QC_65_design_", current_number_blocks)), reps = COV_REPS))
 
 }
 
 
-hist(get.coverage(QC_0_design_4))
-# Plot desings
-par(mfrow = c(2, 3))
-plot(region, QC_0_transects_4, lwd = 1.5, color = 'black')
-plot(region, QC_0_transects_9, lwd = 2, col = 4)
-plot(region, QC_0_transects_16, lwd = 2, col = 4)
-plot(region, QC_0_transects_25, lwd = 2, col = 4)
-par(mfrow = c(1, 1))
-par(mfrow = c(2, 3))
-plot(QC_0_design_4)
-plot(QC_0_design_9)
-plot(QC_0_design_16)
-plot(QC_0_design_25)
-par(mfrow = c(1, 1))
+# hist(get.coverage(QC_0_design_4))
+# # Plot desings
+# par(mfrow = c(2, 3))
+# plot(region, QC_0_transects_4, lwd = 1.5, color = 'black')
+# plot(region, QC_0_transects_9, lwd = 2, col = 4)
+# plot(region, QC_0_transects_16, lwd = 2, col = 4)
+# plot(region, QC_0_transects_25, lwd = 2, col = 4)
+# par(mfrow = c(1, 1))
+# par(mfrow = c(2, 3))
+# plot(QC_0_design_4)
+# plot(QC_0_design_9)
+# plot(QC_0_design_16)
+# plot(QC_0_design_25)
+# par(mfrow = c(1, 1))
 
 ## design stats
 ## For details see: https://examples.distancesampling.org/dssd-getting-started/GettingStarted-distill.html#appendix-trackline-and-cyclic-trackline-lengths

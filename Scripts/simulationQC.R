@@ -129,7 +129,7 @@ density <- add.hotspot(
   sigma = 1500,
   amplitude = -4
 )
-plot(density, region, scale = 2)
+plot(density, region, scale = 1)
 
 pop_desc <- make.population.description(
   region = region,
@@ -153,12 +153,12 @@ plot(detect_G, pop_desc, legend = FALSE)
 detect_NADIR <- make.detectability(
   key.function = "uf",
   scale.param = 1, # accounting for canopy cover
-  truncation = IMAGE_WIDTH
+  truncation = IMAGE_WIDTH / 2
 )
 plot(detect_NADIR, pop_desc)
 
 
-ABUNDANCE_LIST <- c(50, 60, 70, 80, 90)
+ABUNDANCE_LIST <- c(5, 10, 20, 30, 40, 50, 60, 70, 80, 90)
 
 loaded_objects <- ls(pattern = "^QC_")
 dev.off() # clear plots from memory
@@ -199,7 +199,7 @@ for (design_name in loaded_objects) {
     dfmodel = ~1,
     key = "hr",
     criteria = "AIC",
-    truncation = IMAGE_WIDTH,
+    truncation = IMAGE_WIDTH / 2,
     group.strata = data.frame(design.id = design@region@strata.name, analysis.id = rep("A", length(design@region@strata.name)))
   )
 
@@ -214,15 +214,15 @@ for (design_name in loaded_objects) {
   }
 
   for (ABUNDANCE in ABUNDANCE_LIST) {
-    output_path <- here("Output", "Simulation", paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))
+    output_path <- here("Output", "Simulation", paste0(design_name, "-density_sim-A", ABUNDANCE, "_adjust.RData"))
     counter <- counter + 1
     counterPer <- (counter / TOTAL_COUNT) * 100
     # Check if file exists
     if (file.exists(output_path)) {
-      print(paste("File", output_path, "exists. Skipping loop... ", counterPer, "%"))
+      print(paste("File", output_path, "exists. Skipping loop... ", round(counterPer, 2), "%"))
       # Do nothing or perform any other actions that you don't want to execute when the file exists
     } else {
-      print(paste0(counterPer, "%"))
+      print(paste0(round(counterPer, 2), "%"))
       print(paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"))
 
       # Create population description
@@ -279,7 +279,7 @@ for (design_name in loaded_objects) {
       )
 
       # survey <- run.survey(QC_Sys_sim_density)
-      QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 24)
+      QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 28)
 
       # QC_Sys_sim_density <- NA
       save(QC_Sys_sim_density, file = output_path)

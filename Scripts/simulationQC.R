@@ -163,6 +163,7 @@ ABUNDANCE_LIST <- c(5, 10, 20, 30, 40, 50, 60, 70, 80, 90)
 loaded_objects <- ls(pattern = "^QC_")
 dev.off() # clear plots from memory
 TOTAL_COUNT <- length(ABUNDANCE_LIST) * length(loaded_objects)
+
 counter <- 0
 for (design_name in loaded_objects) {
   print(design_name)
@@ -211,6 +212,7 @@ for (design_name in loaded_objects) {
     ddf_analyses@truncation[[1]] <- detect_G@truncation # set truncation distance suitable for gimbal
   } else {
     detect_fun <- detect_NADIR
+    ddf_analyses@truncation[[1]] <- detect_NADIR@truncation # ensure detection object truncation is set correctly
   }
 
   for (ABUNDANCE in ABUNDANCE_LIST) {
@@ -278,8 +280,21 @@ for (design_name in loaded_objects) {
         ds.analysis = ddf_analyses
       )
 
+      # Try to catch error and contine with loop
+      QC_Sys_sim_density <- tryCatch(
+        {
+          # Your code that might throw an error
+          run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 28)
+        },
+        error = function(e) {
+          # Print error message and continue
+          cat("Error at iteration", paste0(design_name, "-density_sim-A", ABUNDANCE, ".RData"), ":", conditionMessage(e), "\n")
+          return(NA) # or some default value
+        }
+      )
+
       # survey <- run.survey(QC_Sys_sim_density)
-      QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 28)
+      # QC_Sys_sim_density <- run.simulation(simulation = QC_Sys_sim_density, run.parallel = TRUE, max.cores = 28)
 
       # QC_Sys_sim_density <- NA
       save(QC_Sys_sim_density, file = output_path)

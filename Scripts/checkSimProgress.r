@@ -35,7 +35,7 @@ for (design_name in loaded_objects) {
     } else {
       missing_files <- c(missing_files, output_path)
       missing_designs <- c(missing_designs, design_name)
-      print(paste("Missing:", design_name))
+      print(paste("Missing:", design_name, ABUNDANCE))
     }
   }
 }

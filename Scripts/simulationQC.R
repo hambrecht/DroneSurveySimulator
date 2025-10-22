@@ -10,7 +10,7 @@ library(units)
 # Check if pbapply is installed
 if (!requireNamespace("pbapply", quietly = TRUE, dependencies = TRUE)) {
   message("The 'pbapply' package is not installed. Installing it now...")
-  install.packages("pbapply")
+  renv::install("pbapply")
 } else {
   message("The 'pbapply' package is already installed.")
 }
@@ -126,6 +126,7 @@ detect_G <- make.detectability(
   scale.param = 170,
   # shape.param = 3,
   truncation = 155
+  truncation = 155
 )
 plot(detect_G, pop_desc, legend = FALSE)
 
@@ -138,9 +139,9 @@ detect_NADIR <- make.detectability(
 plot(detect_NADIR, pop_desc)
 
 
-ABUNDANCE_LIST <- c(5, 10, 20, 30, 40, 50, 60, 70, 80, 90)
+ABUNDANCE_LIST <- rev(c(5, 10, 20, 30, 40, 50, 60, 70, 80, 90))
 
-loaded_objects <- ls(pattern = "^QC_")
+loaded_objects <- rev(ls(pattern = "^QC_"))
 dev.off() # clear plots from memory
 TOTAL_COUNT <- length(ABUNDANCE_LIST) * length(loaded_objects)
 

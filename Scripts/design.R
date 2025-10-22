@@ -958,4 +958,5 @@ kable(design_comparison_df)
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H-SG-DF", detectF@key.function, ".RData"))
 save(cover, H_SG_design, FW_Sys_2C_design, FW_ZZ_2C_design, FW_Sys_G_design, FW_ZZ_G_design, QC_Sys_nadir_design, QC_Sys_design, design_comparison_df, file = output_path)
+save(cover, H_SG_design, FW_Sys_2C_design, FW_ZZ_2C_design, FW_Sys_G_design, FW_ZZ_G_design, QC_Sys_nadir_design, QC_Sys_design, design_comparison_df, file = output_path)
 

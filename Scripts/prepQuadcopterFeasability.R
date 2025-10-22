@@ -11,6 +11,7 @@ files <- list.files(path = folder_path, pattern = "density_sim-A.*\\.RData$", fu
 
 # Extract the required numbers from each file name and load the file to extract the summary value
 stats <- lapply(files, function(file) {
+stats <- lapply(files, function(file) {
   # Regular expression to extract the desired components
   matches <- regmatches(file, regexec("QC_([^_]+)_design_([^\\-]+)-density_sim-A(\\d+)", file))
 
@@ -43,16 +44,21 @@ stats <- lapply(files, function(file) {
 
 # Combine the list of data frames into a single data frame
 sum_stats_df <- do.call(rbind, stats)
+sum_stats_df <- do.call(rbind, stats)
 
 # Convert all columns in extracted_df to numeric
+sum_stats_df[, 1:8] <- lapply(sum_stats_df[, 1:8], as.numeric)
 sum_stats_df[, 1:8] <- lapply(sum_stats_df[, 1:8], as.numeric)
 
 
 # Scale the area column so that 0 remains 0 and other values are scaled between 0 and 1
 max_area <- max(sum_stats_df$area, na.rm = TRUE)
 sum_stats_df$area_p <- round(sum_stats_df$area / max_area, 2)
+max_area <- max(sum_stats_df$area, na.rm = TRUE)
+sum_stats_df$area_p <- round(sum_stats_df$area / max_area, 2)
 
 # Print the resulting data frame to verify the changes
+print(sum_stats_df)
 print(sum_stats_df)
 
 

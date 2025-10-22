@@ -46,6 +46,7 @@ vignettes/*.pdf
 */figure-html/*
 # R Environment Variables
 .Renviron
+renv/
 # pkgdown site
 docs/
 # translation temp files

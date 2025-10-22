@@ -175,7 +175,7 @@ extract_metrics <- function(sim) {
 }
 
 # Define the 10x10km study area
-area_m <- matrix(c(0,0,10000,0,10000,10000,0,10000,0,0), ncol=2, byrow=TRUE)
+area_m <- matrix(c(0, 0, 10000, 0, 10000, 10000, 0, 10000, 0, 0), ncol = 2, byrow = TRUE)
 area <- sf::st_polygon(list(area_m))
 
 # Plot the study area and the polygons
@@ -186,8 +186,8 @@ region <- make.region(region.name = "study area", shape = area, units = "m")
 st_crs(region@region) <- 32633
 
 # H30T Equivalent Focal Length: 52mm, DFOV: 45.2°, Photo Resolution: 1280×1024, assumed HFOV: 35
-# H20T DFOV: 40°, Resolution: 640×512, 
-# Mavic 3T DFOV: 61°, Equivalent Focal Length: 40mm, Resolution 640 × 512 
+# H20T DFOV: 40°, Resolution: 640×512,
+# Mavic 3T DFOV: 61°, Equivalent Focal Length: 40mm, Resolution 640 × 512
 # Define constants
 ALTITUDE <- 120 # Height in meters
 CAMERA_HFOV <- 35 # Horizontal FOV in degrees. Max adjustment of 25 degrees. If more than 25 degrees then a third camera or gimbal would be needed to cover 0. Proposed intervals for adjustments are 0, 10, 20, 25
@@ -195,15 +195,18 @@ CAMERA_ANGLE <- 0 # Adjustment in degrees; max 25 with two fix cameras or 35 wit
 IMAGE_WIDTH <- calculate_image_width(ALTITUDE, CAMERA_HFOV, CAMERA_ANGLE)
 print(paste0("Half swath width is: ", IMAGE_WIDTH, " m"))
 
+output_path <- here("Output", "Simulation", paste0("designsQC.RData"))
+load(output_path)
+
 # Define cover grid spacing and repetition
 COV_SPACE <- 500
 COV_REPS <- 100
 
 # create coverage grid
-cover <- make.coverage(region,
-                       spacing = COV_SPACE # OR
-                      #  n.grid.points = 1000
-)
+# cover <- make.coverage(region,
+#   spacing = COV_SPACE # OR
+#   #  n.grid.points = 1000
+# )
 # cover <- NULL
 plot(region, cover)
 
@@ -222,7 +225,7 @@ block_counts <- (2:5)^2
 # Iterate over the list of block counts
 for (current_number_blocks in block_counts) {
   print(current_number_blocks)
-  
+
   # Compute grid dimensions
   n_side <- sqrt(current_number_blocks)
   if (n_side != floor(n_side)) stop("Number of plots must be a perfect square.")
@@ -260,7 +263,7 @@ for (current_number_blocks in block_counts) {
   # Create a subplot region using the generated polygons
   QC_plots <- make.region(
     region.name = "study area",
-    strata.name = as.character(seq(1,current_number_blocks,1)),
+    strata.name = as.character(seq(1, current_number_blocks, 1)),
     shape = subplots_sf,
     units = "m"
   )
@@ -272,78 +275,77 @@ for (current_number_blocks in block_counts) {
     design = "systematic",
     samplers = numeric(0),
     line.length = numeric(0),
-    spacing = 260*2,
+    spacing = 155 * 2,
     design.angle = 0,
     edge.protocol = "minus",
-    truncation = 260,
+    truncation = 155,
     coverage.grid = cover
   ))
 
-    assign(paste0("QC_200_design_", current_number_blocks), make.design(
-    region = QC_plots,
-    transect.type = "line",
-    design = "systematic",
-    samplers = numeric(0),
-    line.length = numeric(0),
-    spacing = 200,
-    design.angle = 0,
-    edge.protocol = "minus",
-    truncation = IMAGE_WIDTH/2,
-    coverage.grid = cover
-  ))
+  # assign(paste0("QC_200_design_", current_number_blocks), make.design(
+  #   region = QC_plots,
+  #   transect.type = "line",
+  #   design = "systematic",
+  #   samplers = numeric(0),
+  #   line.length = numeric(0),
+  #   spacing = 200,
+  #   design.angle = 0,
+  #   edge.protocol = "minus",
+  #   truncation = IMAGE_WIDTH / 2,
+  #   coverage.grid = cover
+  # ))
 
-    assign(paste0("QC_0_design_", current_number_blocks), make.design(
-    region = QC_plots,
-    transect.type = "line",
-    design = "systematic",
-    samplers = numeric(0),
-    line.length = numeric(0),
-    spacing = IMAGE_WIDTH,
-    design.angle = 0,
-    edge.protocol = "minus",
-    truncation = IMAGE_WIDTH/2,
-    coverage.grid = cover
-  ))
-    assign(paste0("QC_10_design_", current_number_blocks), make.design(
-    region = QC_plots,
-    transect.type = "line",
-    design = "systematic",
-    samplers = numeric(0),
-    line.length = numeric(0),
-    spacing = IMAGE_WIDTH*(1-0.1),
-    design.angle = 0,
-    edge.protocol = "minus",
-    truncation = IMAGE_WIDTH/2,
-    coverage.grid = cover
-  ))
+  # assign(paste0("QC_0_design_", current_number_blocks), make.design(
+  #   region = QC_plots,
+  #   transect.type = "line",
+  #   design = "systematic",
+  #   samplers = numeric(0),
+  #   line.length = numeric(0),
+  #   spacing = IMAGE_WIDTH,
+  #   design.angle = 0,
+  #   edge.protocol = "minus",
+  #   truncation = IMAGE_WIDTH / 2,
+  #   coverage.grid = cover
+  # ))
+  # assign(paste0("QC_10_design_", current_number_blocks), make.design(
+  #   region = QC_plots,
+  #   transect.type = "line",
+  #   design = "systematic",
+  #   samplers = numeric(0),
+  #   line.length = numeric(0),
+  #   spacing = IMAGE_WIDTH * (1 - 0.1),
+  #   design.angle = 0,
+  #   edge.protocol = "minus",
+  #   truncation = IMAGE_WIDTH / 2,
+  #   coverage.grid = cover
+  # ))
 
-    assign(paste0("QC_65_design_", current_number_blocks), make.design(
-    region = QC_plots,
-    transect.type = "line",
-    design = "systematic",
-    samplers = numeric(0),
-    line.length = numeric(0),
-    spacing = IMAGE_WIDTH*(1-0.65),
-    design.angle = 0,
-    edge.protocol = "minus",
-    truncation = IMAGE_WIDTH/2,
-    coverage.grid = cover
-  ))
+  # assign(paste0("QC_65_design_", current_number_blocks), make.design(
+  #   region = QC_plots,
+  #   transect.type = "line",
+  #   design = "systematic",
+  #   samplers = numeric(0),
+  #   line.length = numeric(0),
+  #   spacing = IMAGE_WIDTH * (1 - 0.65),
+  #   design.angle = 0,
+  #   edge.protocol = "minus",
+  #   truncation = IMAGE_WIDTH / 2,
+  #   coverage.grid = cover
+  # ))
 
-    # Generate transects for the current design
-    # assign(paste0("QC_gimbal_transects_", current_number_blocks), generate.transects(get(paste0("QC_gimbal_design_", current_number_blocks))))
-    # assign(paste0("QC_200_transects_", current_number_blocks), generate.transects(get(paste0("QC_200_design_", current_number_blocks))))
-    # assign(paste0("QC_0_transects_", current_number_blocks), generate.transects(get(paste0("QC_0_design_", current_number_blocks))))
-    # assign(paste0("QC_10_transects_", current_number_blocks), generate.transects(get(paste0("QC_10_design_", current_number_blocks))))
-    # assign(paste0("QC_65_transects_", current_number_blocks), generate.transects(get(paste0("QC_65_design_", current_number_blocks))))
+  # # Generate transects for the current design
+  # # assign(paste0("QC_gimbal_transects_", current_number_blocks), generate.transects(get(paste0("QC_gimbal_design_", current_number_blocks))))
+  # # assign(paste0("QC_200_transects_", current_number_blocks), generate.transects(get(paste0("QC_200_design_", current_number_blocks))))
+  # # assign(paste0("QC_0_transects_", current_number_blocks), generate.transects(get(paste0("QC_0_design_", current_number_blocks))))
+  # # assign(paste0("QC_10_transects_", current_number_blocks), generate.transects(get(paste0("QC_10_design_", current_number_blocks))))
+  # # assign(paste0("QC_65_transects_", current_number_blocks), generate.transects(get(paste0("QC_65_design_", current_number_blocks))))
 
-    # Run coverage simulation for the current design
-    assign(paste0("QC_gimbal_design_", current_number_blocks), run.coverage(get(paste0("QC_gimbal_design_", current_number_blocks)), reps = COV_REPS))
-    assign(paste0("QC_200_design_", current_number_blocks), run.coverage(get(paste0("QC_200_design_", current_number_blocks)), reps = COV_REPS))
-    assign(paste0("QC_0_design_", current_number_blocks), run.coverage(get(paste0("QC_0_design_", current_number_blocks)), reps = COV_REPS))
-    assign(paste0("QC_10_design_", current_number_blocks), run.coverage(get(paste0("QC_10_design_", current_number_blocks)), reps = COV_REPS))
-    assign(paste0("QC_65_design_", current_number_blocks), run.coverage(get(paste0("QC_65_design_", current_number_blocks)), reps = COV_REPS))
-
+  # # Run coverage simulation for the current design
+  assign(paste0("QC_gimbal_design_", current_number_blocks), run.coverage(get(paste0("QC_gimbal_design_", current_number_blocks)), reps = COV_REPS))
+  # assign(paste0("QC_200_design_", current_number_blocks), run.coverage(get(paste0("QC_200_design_", current_number_blocks)), reps = COV_REPS))
+  # assign(paste0("QC_0_design_", current_number_blocks), run.coverage(get(paste0("QC_0_design_", current_number_blocks)), reps = COV_REPS))
+  # assign(paste0("QC_10_design_", current_number_blocks), run.coverage(get(paste0("QC_10_design_", current_number_blocks)), reps = COV_REPS))
+  # assign(paste0("QC_65_design_", current_number_blocks), run.coverage(get(paste0("QC_65_design_", current_number_blocks)), reps = COV_REPS))
 }
 
 
@@ -391,7 +393,7 @@ QC_65_design_25_metric <- extract_design_metrics(QC_65_design_25)
 
 # Combine metrics into a single dataframe
 design_comparison_df <- data.frame(
-  Simulation = c("gimbal4","gimbal9","gimbal16","gimba25","2004","2009","20016","20025","04","09","016","025","104","109","1016","1025","654","659","6516","6525"),
+  Simulation = c("gimbal4", "gimbal9", "gimbal16", "gimba25", "2004", "2009", "20016", "20025", "04", "09", "016", "025", "104", "109", "1016", "1025", "654", "659", "6516", "6525"),
   Design = c(
     QC_gimbal_design_4_metric$design_type[1],
     QC_gimbal_design_9_metric$design_type[1],
@@ -743,6 +745,28 @@ design_comparison_df <- data.frame(
     length(QC_65_design_9_metric$design_type),
     length(QC_65_design_16_metric$design_type),
     length(QC_65_design_25_metric$design_type)
+  ),
+  Overlap = c(
+    "gimbal",
+    "gimbal", 
+    "gimbal", 
+    "gimbal", 
+    200,
+    200,
+    200,
+    200,
+    0,
+    0,
+    0,
+    0,
+    10,
+    10,
+    10,
+    10,
+    65,
+    65,
+    65,
+    65
   )
 )
 # Print the comparison dataframe
@@ -757,27 +781,29 @@ kable(design_comparison_df)
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("designsQC.RData"))
 save(QC_gimbal_design_4,
-    QC_gimbal_design_9,
-    QC_gimbal_design_16,
-    QC_gimbal_design_25,
-    QC_200_design_4,
-    QC_200_design_9,
-    QC_200_design_16,
-    QC_200_design_25,
-    QC_0_design_4,
-    QC_0_design_9,
-    QC_0_design_16,
-    QC_0_design_25,
-    QC_10_design_4,
-    QC_10_design_9,
-    QC_10_design_16,
-    QC_10_design_25,
-    QC_65_design_4,
-    QC_65_design_9,
-    QC_65_design_16,
-    QC_65_design_25,
-    cover,
-    region, file = output_path)
+  QC_gimbal_design_9,
+  QC_gimbal_design_16,
+  QC_gimbal_design_25,
+  QC_200_design_4,
+  QC_200_design_9,
+  QC_200_design_16,
+  QC_200_design_25,
+  QC_0_design_4,
+  QC_0_design_9,
+  QC_0_design_16,
+  QC_0_design_25,
+  QC_10_design_4,
+  QC_10_design_9,
+  QC_10_design_16,
+  QC_10_design_25,
+  QC_65_design_4,
+  QC_65_design_9,
+  QC_65_design_16,
+  QC_65_design_25,
+  cover,
+  region,
+  file = output_path
+)
 
 # save comparison_df
 output_path <- here("Output", "Simulation", paste0("designsQC-comparsiondf.csv"))

@@ -409,7 +409,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[1]
+wmu_number <- wmu_number_list[3]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 
@@ -441,6 +441,26 @@ cover <- make.coverage(region,
                        # n.grid.points = 1000
 )
 # plot(region, cover)
+
+H_SG_design@coverage.grid <- cover
+H_SG_design <- run.coverage(H_SG_design, reps = COV_REPS)
+FW_Sys_G_design@coverage.grid <- cover
+FW_Sys_G_design <- run.coverage(FW_Sys_G_design, reps = COV_REPS)
+
+FW_Sys_2C_design@coverage.grid <- cover
+FW_Sys_2C_design <- run.coverage(FW_Sys_2C_design, reps = COV_REPS)
+
+FW_ZZ_G_design@coverage.grid <- cover
+FW_ZZ_G_design <- run.coverage(FW_ZZ_G_design, reps = COV_REPS)
+
+FW_ZZ_2C_design@coverage.grid <- cover
+FW_ZZ_2C_design <- run.coverage(FW_ZZ_2C_design, reps = COV_REPS)
+
+QC_Sys_design@coverage.grid <- cover
+system.time(QC_Sys_design <- run.coverage(QC_Sys_design, reps = COV_REPS))[3] / 60
+QC_Sys_nadir_design@coverage.grid <- cover
+system.time(QC_Sys_nadir_design <- run.coverage(QC_Sys_nadir_design, reps = COV_REPS))[3] / 60
+
 
 
 # Define survey design
@@ -937,5 +957,5 @@ kable(design_comparison_df)
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H-SG-DF", detectF@key.function, ".RData"))
-save(cover, H_SG_design, FW_Sys_2C_design, FW_ZZ_2C_design, FW_Sys_G_design, FW_ZZ_G_design, QC_Sys_nadir_design, QC_Sys_design, H_SG_transects, FW_Sys_2C_transects, FW_ZZ_2C_transects, FW_Sys_G_transects, FW_ZZ_G_transects,  QC_Sys_nadir_transects, QC_Sys_transects, design_comparison_df, file = output_path)
+save(cover, H_SG_design, FW_Sys_2C_design, FW_ZZ_2C_design, FW_Sys_G_design, FW_ZZ_G_design, QC_Sys_nadir_design, QC_Sys_design, design_comparison_df, file = output_path)
 

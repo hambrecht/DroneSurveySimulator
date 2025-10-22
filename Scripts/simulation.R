@@ -392,24 +392,24 @@ print(plot)
 
 
 #create gif
-iterate_count <- 99
-for (i in 1:iterate_count) {
-  print(i)
-  QC_Sys_survey <- run.survey(QC_Sys_sim)
+# iterate_count <- 99
+# for (i in 1:iterate_count) {
+#   print(i)
+#   QC_Sys_survey <- run.survey(QC_Sys_sim)
     
-  # Create a filename for saving the plot
-  filename <- here("Output", "Plots", "sim_gif", paste0("plot_", i, ".jpg"))
+#   # Create a filename for saving the plot
+#   filename <- here("Output", "Plots", "sim_gif", paste0("plot_", i, ".jpg"))
   
-  # open png object
-  png(filename, width = 1644, height = 682)
-  # Plot the results
-  plot(QC_Sys_survey, region)
+#   # open png object
+#   png(filename, width = 1644, height = 682)
+#   # Plot the results
+#   plot(QC_Sys_survey, region)
   
   
 
-  # Save the plot as a JPEG file
-  dev.off()
-}
+#   # Save the plot as a JPEG file
+#   dev.off()
+# }
 
 
 # Run the full simulation
@@ -441,12 +441,12 @@ total_abundance
 histogram.N.ests(Rnd_sim, use.max.reps = TRUE)
 
 
-input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, "-varEffort.RData"))
-load(input_path)
-
+# input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, "-varEffort.RData")) # nothing can be removed
+load(output_path)
+ls()
 # List all objects containing 'QC_Sys_design_'
 loaded_objects <- ls(pattern = "QC_Sys_design_")
-N_factor <- c(0.25, 0.5, 0.75, 1.0, 2, 4, 8)
+N_factor <- c(0.25, 0.5, 0.75, 1)
 
 for (design_name in loaded_objects[5]) {
   design <- get(design_name)

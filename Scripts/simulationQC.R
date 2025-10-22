@@ -10,7 +10,7 @@ library(units)
 # Check if pbapply is installed
 if (!requireNamespace("pbapply", quietly = TRUE, dependencies = TRUE)) {
   message("The 'pbapply' package is not installed. Installing it now...")
-  install.packages("pbapply")
+  renv::install("pbapply")
 } else {
   message("The 'pbapply' package is already installed.")
 }
@@ -45,26 +45,6 @@ calculate_image_width <- function(ALTITUDE, CAMERA_FOV = 25, CAMERA_ANGLE = 0) {
 
   # Calculate and round the image width
   round(2 * ALTITUDE * tan((adjusted_FOV * pi / 180) / 2), -1)
-}
-
-# Extract key metrics from each simulation summary
-extract_metrics <- function(sim) {
-  summary_data <- summary(sim, description.summary = FALSE)
-
-  list(
-    mean_estimate = summary_data@individuals$N$mean.Estimate,
-    percent_bias = summary_data@individuals$N$percent.bias,
-    rmse = summary_data@individuals$N$RMSE,
-    ci_coverage_prob = summary_data@individuals$N$CI.coverage.prob,
-    mean_se = summary_data@individuals$N$mean.se,
-    sd_of_means = summary_data@individuals$N$sd.of.means,
-    mean_cover_area = summary_data@individuals$summary$mean.Cover.Area,
-    mean_effort = summary_data@individuals$summary$mean.Effort,
-    mean_n = summary_data@individuals$summary$mean.n,
-    mean_k = summary_data@individuals$summary$mean.k,
-    mean_ER = summary_data@individuals$summary$mean.ER,
-    mean_se_ER = summary_data@individuals$summary$mean.se.ER
-  )
 }
 
 
@@ -145,7 +125,7 @@ detect_G <- make.detectability(
   key.function = "hn",
   scale.param = 170,
   # shape.param = 3,
-  truncation = 260
+  truncation = 155
 )
 plot(detect_G, pop_desc, legend = FALSE)
 
@@ -158,9 +138,9 @@ detect_NADIR <- make.detectability(
 plot(detect_NADIR, pop_desc)
 
 
-ABUNDANCE_LIST <- c(5, 10, 20, 30, 40, 50, 60, 70, 80, 90)
+ABUNDANCE_LIST <- rev(c(5, 10, 20, 30, 40, 50, 60, 70, 80, 90))
 
-loaded_objects <- ls(pattern = "^QC_")
+loaded_objects <- rev(ls(pattern = "^QC_"))
 dev.off() # clear plots from memory
 TOTAL_COUNT <- length(ABUNDANCE_LIST) * length(loaded_objects)
 

@@ -126,6 +126,7 @@ detect_G <- make.detectability(
   scale.param = 170,
   # shape.param = 3,
   truncation = 155
+  truncation = 155
 )
 plot(detect_G, pop_desc, legend = FALSE)
 

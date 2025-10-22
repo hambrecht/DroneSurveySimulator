@@ -2,6 +2,7 @@ library(here)
 library(knitr)
 library(dplyr)
 library(dsims)
+library(dsims)
 
 
 # Extract key metrics from each simulation summary
@@ -9,6 +10,8 @@ extract_metrics <- function(sim) {
   summary_data <- summary(sim, description.summary = FALSE)
 
   list(
+    mean_estimate_density = round(summary_data@individuals$D$mean.Estimate * 1e6, 3), # mean estimate of abundance across simulation
+    true_density = round(summary_data@individuals$D$Truth * 1e6, 3), # Input density, covered to individuals/km2
     mean_estimate_density = round(summary_data@individuals$D$mean.Estimate * 1e6, 3), # mean estimate of abundance across simulation
     true_density = round(summary_data@individuals$D$Truth * 1e6, 3), # Input density, covered to individuals/km2
     relative_mean_estimate_density = round(summary_data@individuals$D$mean.Estimate / summary_data@individuals$D$Truth, 3), # mean estimate of abundance across simulation
@@ -19,9 +22,11 @@ extract_metrics <- function(sim) {
     sd_of_means = round(summary_data@individuals$D$sd.of.means / summary_data@individuals$D$mean.Estimate, 3), # the standard deviation of the estimates
     mean_ER = summary_data@individuals$summary$mean.ER, # mean standard error of the encounter rates cross simulation
     mean_se_ER = summary_data@individuals$summary$mean.se.ER # standard deviation of the encounter rates across simulation
+    mean_se_ER = summary_data@individuals$summary$mean.se.ER # standard deviation of the encounter rates across simulation
   )
 }
 
+summary(H_SG_sim, description.summary = FALSE)
 summary(H_SG_sim, description.summary = FALSE)
 
 
@@ -88,6 +93,18 @@ for (file in inputFilePaths) {
     Mean_ER = c(FW_Sys_2C_metric$mean_ER, FW_ZZ_2C_metric$mean_ER, FW_Sys_G_metric$mean_ER, FW_ZZ_G_metric$mean_ER, QC_Sys_nadir_metric$mean_ER, QC_Sys_metric$mean_ER, H_SG_metric$mean_ER),
     Mean_se_ER = c(FW_Sys_2C_metric$mean_se_ER, FW_ZZ_2C_metric$mean_se_ER, FW_Sys_G_metric$mean_se_ER, FW_ZZ_G_metric$mean_se_ER, QC_Sys_nadir_metric$mean_se_ER, QC_Sys_metric$mean_se_ER, H_SG_metric$mean_se_ER)
   )
+    Simulation = c("FW-Sys_2C", "FW-ZZ_2C", "FW-Sys_G", "FW-ZZ_G", "QC-Sys_NADIR", "QC-Sys", "H-SG"),
+    Mean_estimated_Density = c(FW_Sys_2C_metric$mean_estimate_density, FW_ZZ_2C_metric$mean_estimate_density, FW_Sys_G_metric$mean_estimate_density, FW_ZZ_G_metric$mean_estimate_density, QC_Sys_nadir_metric$mean_estimate_density, QC_Sys_metric$mean_estimate_density, H_SG_metric$mean_estimate_density),
+    True_Density = c(FW_Sys_2C_metric$true_density, FW_ZZ_2C_metric$true_density, FW_Sys_G_metric$true_density, FW_ZZ_G_metric$true_density, QC_Sys_nadir_metric$true_density, QC_Sys_metric$true_density, H_SG_metric$true_density),
+    Mean_relative_Estimate = c(FW_Sys_2C_metric$relative_mean_estimate, FW_ZZ_2C_metric$relative_mean_estimate, FW_Sys_G_metric$relative_mean_estimate, FW_ZZ_G_metric$relative_mean_estimate, QC_Sys_nadir_metric$relative_mean_estimate, QC_Sys_metric$relative_mean_estimate, H_SG_metric$relative_mean_estimate),
+    Percent_Bias = c(FW_Sys_2C_metric$percent_bias, FW_ZZ_2C_metric$percent_bias, FW_Sys_G_metric$percent_bias, FW_ZZ_G_metric$percent_bias, QC_Sys_nadir_metric$percent_bias, QC_Sys_metric$percent_bias, H_SG_metric$percent_bias),
+    RRMSE = c(FW_Sys_2C_metric$rrmse, FW_ZZ_2C_metric$rrmse, FW_Sys_G_metric$rrmse, FW_ZZ_G_metric$rrmse, QC_Sys_nadir_metric$rrmse, QC_Sys_metric$rrmse, H_SG_metric$rrmse),
+    CI_Coverage_Prob = c(FW_Sys_2C_metric$ci_coverage_prob, FW_ZZ_2C_metric$ci_coverage_prob, FW_Sys_G_metric$ci_coverage_prob, FW_ZZ_G_metric$ci_coverage_prob, QC_Sys_nadir_metric$ci_coverage_prob, QC_Sys_metric$ci_coverage_prob, H_SG_metric$ci_coverage_prob),
+    Mean_SE = c(FW_Sys_2C_metric$mean_rse, FW_ZZ_2C_metric$mean_rse, FW_Sys_G_metric$mean_rse, FW_ZZ_G_metric$mean_rse, QC_Sys_nadir_metric$mean_rse, QC_Sys_metric$mean_rse, H_SG_metric$mean_rse),
+    CV = c(FW_Sys_2C_metric$sd_of_means, FW_ZZ_2C_metric$sd_of_means, FW_Sys_G_metric$sd_of_means, FW_ZZ_G_metric$sd_of_means, QC_Sys_nadir_metric$sd_of_means, QC_Sys_metric$sd_of_means, H_SG_metric$sd_of_means),
+    Mean_ER = c(FW_Sys_2C_metric$mean_ER, FW_ZZ_2C_metric$mean_ER, FW_Sys_G_metric$mean_ER, FW_ZZ_G_metric$mean_ER, QC_Sys_nadir_metric$mean_ER, QC_Sys_metric$mean_ER, H_SG_metric$mean_ER),
+    Mean_se_ER = c(FW_Sys_2C_metric$mean_se_ER, FW_ZZ_2C_metric$mean_se_ER, FW_Sys_G_metric$mean_se_ER, FW_ZZ_G_metric$mean_se_ER, QC_Sys_nadir_metric$mean_se_ER, QC_Sys_metric$mean_se_ER, H_SG_metric$mean_se_ER)
+  )
   metrics_list[[sim_name]] <- metrics
 }
 
@@ -129,6 +146,8 @@ averaged_df <- averaged_df %>% arrange(Simulation)
 transposed_df <- as.data.frame(t(averaged_df))
 
 # Set the column names to the first row and remove the first row
+colnames(transposed_df) <- transposed_df[1, ]
+transposed_df <- transposed_df[-1, ]
 colnames(transposed_df) <- transposed_df[1, ]
 transposed_df <- transposed_df[-1, ]
 

@@ -474,7 +474,7 @@ H_SG_design <- make.design(
   design.angle = 0, # align transect with north south
   seg.threshold = 10, # any segments less than 10% of the segment length (i.e. 1km) will be discarded.
   edge.protocol = "minus",
-  truncation = 600, # IMAGE_WIDTH
+  truncation = 500, # IMAGE_WIDTH
   coverage.grid = cover
 )
 H_SG_transects <- generate.transects(H_SG_design)

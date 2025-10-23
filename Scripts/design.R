@@ -753,10 +753,10 @@ QC_Sys_design <- make.design(
   spacing = spacing, # numeric(0)
   design.angle = 0,
   edge.protocol = "minus",
-  truncation = 260, # IMAGE_WIDTH
+  truncation = 155, # IMAGE_WIDTH
   coverage.grid = cover
 )
-# QC_Sys_design@truncation <- 260
+# QC_Sys_design@truncation <- 155
 
 QC_Sys_transects <- generate.transects(QC_Sys_design)
 plot(QC_Sys_transects)

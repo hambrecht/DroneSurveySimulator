@@ -577,16 +577,16 @@ FW_Sys_G_design <- make.design(
   spacing = spacing,
   design.angle = 0,
   edge.protocol = "minus",
-  truncation = 260, # IMAGE_WIDTH
+  truncation = 155, # IMAGE_WIDTH
   coverage.grid = cover
 )
 FW_Sys_2C_design <- FW_Sys_G_design
-FW_Sys_G_design@truncation <- 260
+FW_Sys_G_design@truncation <- 155
 FW_Sys_G_transects <- generate.transects(FW_Sys_G_design)
 ### Coverage
 FW_Sys_G_design <- run.coverage(FW_Sys_G_design, reps = COV_REPS)
 
-FW_Sys_2C_design@truncation <- 180
+FW_Sys_2C_design@truncation <- 110
 FW_Sys_2C_transects <- generate.transects(FW_Sys_2C_design)
 ### Coverage
 FW_Sys_2C_design <- run.coverage(FW_Sys_2C_design, reps = COV_REPS)
@@ -602,16 +602,16 @@ FW_ZZ_G_design <- make.design(
   spacing = numeric(0),
   design.angle = 0,
   edge.protocol = "minus",
-  truncation = 260, # IMAGE_WIDTH
+  truncation = 155, # IMAGE_WIDTH/2
   coverage.grid = cover
 )
 FW_ZZ_2C_design <- FW_ZZ_G_design
-FW_ZZ_G_design@truncation <- 260
+FW_ZZ_G_design@truncation <- 155
 FW_ZZ_G_transects <- generate.transects(FW_ZZ_G_design)
 ### Coverage
 FW_ZZ_G_design <- run.coverage(FW_ZZ_G_design, reps = COV_REPS)
 
-FW_ZZ_2C_design@truncation <- 180
+FW_ZZ_2C_design@truncation <- 110
 FW_ZZ_2C_transects <- generate.transects(FW_ZZ_2C_design)
 ### Coverage
 FW_ZZ_2C_design <- run.coverage(FW_ZZ_2C_design, reps = COV_REPS)
@@ -687,8 +687,7 @@ FW_ZZ_2C_design <- run.coverage(FW_ZZ_2C_design, reps = COV_REPS)
 ## Systematic subplot design
 total_length <- H_SG_design@design.statistics$line.length[2]
 number_blocks <- round(total_length / 26000)
-# spacing <- 400
-spacing <- 260*2
+
 
 poly_dim <- find_best_block_dim(total_length, number_blocks, spacing) # poly_dim, 7 lines, 3715x3640m
 

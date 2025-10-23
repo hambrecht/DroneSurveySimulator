@@ -492,7 +492,7 @@ total_length <- H_SG_design@design.statistics$line.length[2]
 ## Fix-wing
 # Compute polygon dimensions
 number_blocks <- round(total_length / 367200) # 367.2km is the total distance superwake can fly, assuming a speed of 17m/s and a flight time of 6h.
-spacing <- 800
+spacing <- 310
 poly_dim <- find_best_block_dim(total_length, number_blocks, spacing)
 # Check if the polygons can fit into the area
 

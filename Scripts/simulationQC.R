@@ -141,7 +141,7 @@ plot(detect_NADIR, pop_desc)
 
 ABUNDANCE_LIST <- rev(c(5, 10, 20, 30, 40, 50, 60, 70, 80, 90))
 
-loaded_objects <- rev(ls(pattern = "^QC_"))
+loaded_objects <- rev(ls(pattern = "^QC.*design.*"))
 dev.off() # clear plots from memory
 TOTAL_COUNT <- length(ABUNDANCE_LIST) * length(loaded_objects)
 

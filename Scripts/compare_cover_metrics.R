@@ -5,7 +5,7 @@ library(sf)
 library(dplyr)
 library(GGally)
 library(dssd)
-library(reshape2)
+# library(reshape2)
 
 # Create a named vector with old and new group names
 group_names <- c(
@@ -19,7 +19,7 @@ group_names <- c(
 )
 
 # List all files containing 'cover' in folder Output/Simulation
-files <- list.files(path = here("Output", "Simulation"), pattern = "cover", full.names = TRUE)
+files <- list.files(path = here("Output", "Simulation"), pattern = "cover-WMU", full.names = TRUE)
 wmu_path_list <- list.files(path = here("Output", "PrepData"), pattern = "prepared", full.names = TRUE)
 # wmu_path_list <- wmu_path_list[-4]
 
@@ -61,6 +61,7 @@ for (i in 1:length(file_ids)) {
         merged_df <- bind_rows(merged_df, temp_df)
     }
 }
+
 
 # Sort merged_df by the `Simulation` column
 merged_df <- merged_df %>% arrange(Simulation)

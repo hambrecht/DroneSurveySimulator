@@ -103,5 +103,3 @@ if (nrow(sum_stats_df) > 0) {
 } else {
     message("sum_stats_df is empty. No CSV file was written.")
 }
-
-

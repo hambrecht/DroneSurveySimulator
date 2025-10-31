@@ -5,7 +5,7 @@ library(sf)
 library(dplyr)
 library(GGally)
 library(dssd)
-# library(reshape2)
+library(reshape2) # for dcast function
 
 # Create a named vector with old and new group names
 group_names <- c(

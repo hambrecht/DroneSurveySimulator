@@ -22,6 +22,7 @@ libs/*
 /libs
 /libs/
 /libs/*
+*temp*
 
 # Example code in package build process
 *-Ex.R

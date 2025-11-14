@@ -22,10 +22,11 @@ detect_H_data <- compute_detectability("hn", 140, NULL, 500)
 detect_FW2_data <- compute_detectability("hn", 170, NULL, 110)
 detect_FWG_data <- compute_detectability("hn", 170, NULL, 155)
 detect_uf_data <- compute_detectability("uf", 1, NULL, 40)
-# detect_uf_data <- compute_detectability("hn", 170, NULL, 50)
+
 
 # Define custom colors
 custom_colors <- c("#a6cee3", "#1f78b4", "#1f78b4", "#b2df8a")
+
 
 # Set the output file path using the here package
 output_path <- here("Output", "Plots", "detectability_plot.tiff")
@@ -38,15 +39,15 @@ par(mar = c(5, 5, 4, 2) + 0.1, cex = 0.9, cex.lab = 0.9, cex.axis = 0.9, lwd = 1
 
 # Plot the data
 plot(detect_H_data$distance, detect_H_data$detectability, type = "l", col = custom_colors[4], lwd = 7, xlim = c(0, 500), ylim = c(0, 1), xlab = "Distance", ylab = "Detectability")
-# plot(detect_FWG_data$distance, detect_FWG_data$detectability, type = "l", col = custom_colors[3], lwd = 7, xlim = c(0, 260), ylim = c(0, 1), xlab = "Distance", ylab = "Detectability")
 lines(detect_FWG_data$distance, detect_FWG_data$detectability, col = custom_colors[3], lwd = 7, lty = 3) # Dotted line
 lines(detect_FW2_data$distance, detect_FW2_data$detectability, col = 'black', lwd = 7) # Shadow
 lines(detect_FW2_data$distance, detect_FW2_data$detectability, col = custom_colors[2], lwd = 5)
 lines(detect_uf_data$distance, detect_uf_data$detectability, col = custom_colors[1], lwd = 7)
 
+
 # Add a legend
 legend("topright", legend = c("NADIR", "2 Cameras", "Gimbal", "Helicopter"), col = custom_colors, lty = c(1, 1, 2, 1), lwd = 2, cex = 0.9, box.lwd = 1, box.col = "NA", bg = "white")
-# legend("topright", legend = c("NADIR", "Gimbal"), col = custom_colors, lty = c(1, 1), lwd = 2, cex = 0.9, box.lwd = 1, box.col = "NA", bg = "white")
+
 
 
 # Close the TIFF device

@@ -112,7 +112,7 @@ detect_H <- make.detectability(
   key.function = "hn",
   scale.param = 140, # heli:50
   # shape.param = 2, # heli:2
-  truncation = 600 # heli:20
+  truncation = 500 # heli:20
 )
 plot(detect_H, pop_desc, legend = FALSE)
 
@@ -120,7 +120,7 @@ detect_FW2 <- make.detectability(
   key.function = "hn",
   scale.param = 170,
   # shape.param = 1.3,
-  truncation = 180 
+  truncation = 110 
 )
 plot(detect_FW2, pop_desc, legend = FALSE)
 
@@ -128,7 +128,7 @@ detect_FWG <- make.detectability(
   key.function = "hn",
   scale.param = 170,
   # shape.param = 3,
-  truncation = 260
+  truncation = 155
 )
 plot(detect_FWG, pop_desc, legend = FALSE)
 
@@ -136,7 +136,7 @@ plot(detect_FWG, pop_desc, legend = FALSE)
 detect_uf <- make.detectability(
   key.function = "uf",
   scale.param = 1, # accounting for canopy cover
-  truncation = 50
+  truncation = 40
 )
 plot(detect_uf, pop_desc)
 
@@ -170,6 +170,30 @@ H_SG_sim <- make.simulation(
   detectability = detect_H,
   ds.analysis = ddf_analyses
 )
+
+SW_ddf_analyses <- make.ds.analysis(
+  dfmodel = ~1,
+  key = "hr",
+  criteria = "AIC",
+  truncation = 155,
+)
+#Superwake
+SW_simulation <- make.simulation(
+  reps = SIM_REPS,
+  design = H_SG_design,
+  population.description = pop_desc,
+  detectability = detect_FWG,
+  ds.analysis = SW_ddf_analyses
+)
+
+SW_simulation <- run.simulation(simulation = SW_simulation, run.parallel = T, max.cores = 20)
+
+
+# Save simulation data
+output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
+# output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
+save(H_SG_sim, FW_Sys_2C_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_nadir_sim, QC_Sys_sim, SW_simulation, file = output_path)
+
 
 # Drone sims
 example_population <- generate.population(object = pop_desc, detectability = detect_uf, region = region)
@@ -210,7 +234,7 @@ ddf_analyses_FW_2C <- make.ds.analysis(
   dfmodel = ~1,
   key = "hr",
   criteria = "AIC",
-  truncation = 180,
+  truncation = 110,
   group.strata = data.frame(design.id = FW_Sys_G_design@region@strata.name, analysis.id = rep("A", length(FW_Sys_G_design@region@strata.name)))
 )
 
@@ -218,11 +242,11 @@ ddf_analyses_FW_G <- make.ds.analysis(
   dfmodel = ~1,
   key = "hr",
   criteria = "AIC",
-  truncation = 260,
+  truncation = 155,
   group.strata = data.frame(design.id = FW_Sys_G_design@region@strata.name, analysis.id = rep("A", length(FW_Sys_G_design@region@strata.name)))
 )
-FW_Sys_G_design@truncation <- 180
-FW_ZZ_G_design@truncation <- 180
+FW_Sys_G_design@truncation <- 155
+FW_ZZ_G_design@truncation <- 155
 FW_Sys_2C_sim <- make.simulation(
   reps = SIM_REPS,
   design = FW_Sys_G_design,
@@ -238,8 +262,8 @@ FW_ZZ_2C_sim <- make.simulation(
   detectability = detect_FW2,
   ds.analysis = ddf_analyses_FW_2C
 )
-FW_Sys_G_design@truncation <- 260
-FW_ZZ_G_design@truncation <- 260
+FW_Sys_G_design@truncation <- 155
+FW_ZZ_G_design@truncation <- 155
 FW_Sys_G_sim <- make.simulation(
   reps = SIM_REPS,
   design = FW_Sys_G_design,
@@ -334,11 +358,11 @@ ddf_analyses_QC_nadir <- make.ds.analysis(
   dfmodel = ~1,
   key = "hr",
   criteria = "AIC",
-  truncation = 50,
+  truncation = 40,
   group.strata = data.frame(design.id = QC_Sys_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_design@region@strata.name)))
 )
 
-QC_Sys_design@truncation <- 50
+QC_Sys_design@truncation <- 40
 QC_Sys_nadir_sim <- make.simulation(
   reps = SIM_REPS,
   design = QC_Sys_design,
@@ -359,11 +383,11 @@ ddf_analyses_QC <- make.ds.analysis(
   dfmodel = ~1,
   key = "hr",
   criteria = "AIC",
-  truncation = 260,
+  truncation = 155,
   group.strata = data.frame(design.id = QC_Sys_design@region@strata.name, analysis.id = rep("A", length(QC_Sys_design@region@strata.name)))
 )
 
-QC_Sys_design@truncation <- 260
+QC_Sys_design@truncation <- 155
 QC_Sys_sim <- make.simulation(
   reps = SIM_REPS,
   design = QC_Sys_design,

@@ -69,131 +69,134 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[1]
-input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
-load(file = input_path)
-input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
-load(file = input_path)
+wmu_number <- wmu_number_list[5]
+for (wmu_number in wmu_number_list) {
+  rm(H_SG_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_nadir_sim, QC_Sys_sim, SW_simulation)
+  input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
+  load(file = input_path)
+  input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
+  load(file = input_path)
 
-# Save simulation data
-input_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
-load(file = input_path)
-
-
-
-
-# Define constants
-ALTITUDE <- 120 # Height in meters
-CAMERA_HFOV <- 25 # Horizontal FOV in degrees. Max adjustment of 25 degrees. If more than 25 degrees then a third camera or gimbal would be needed to cover 0. Proposed intervals for adjustments are 0, 10, 20, 25
-CAMERA_ANGLE <- 35 # Adjustment in degrees; max 25 with two fix cameras or 35 with gimbal in forested
-IMAGE_WIDTH <- calculate_image_width(ALTITUDE, CAMERA_HFOV, CAMERA_ANGLE)
-print(paste0("Half swath width is: ", IMAGE_WIDTH, " m"))
-
-# Create population description
-pop_desc <- make.population.description(
-  region = region,
-  density = density,
-  N = total_abundance,
-  fixed.N = T
-)
-
-# Define and visualise detection function
-detect_hr_overview <- make.detectability(
-  key.function = "hr",
-  scale.param = rep(50, 10),
-  shape.param = seq(0.1, 4, 0.4),
-  truncation = 550
-)
-COLORS <- brewer.pal(10, "Paired")
-plot(detect_hr_overview, pop_desc, col = COLORS)
-legend(x = "topright", legend = seq(0.1, 4, 0.4), col = COLORS, lty = 1, cex = 0.8)
-
-detect_H <- make.detectability(
-  key.function = "hn",
-  scale.param = 140, # heli:50
-  # shape.param = 2, # heli:2
-  truncation = 500 # heli:20
-)
-plot(detect_H, pop_desc, legend = FALSE)
-
-detect_FW2 <- make.detectability(
-  key.function = "hn",
-  scale.param = 170,
-  # shape.param = 1.3,
-  truncation = 110 
-)
-plot(detect_FW2, pop_desc, legend = FALSE)
-
-detect_FWG <- make.detectability(
-  key.function = "hn",
-  scale.param = 170,
-  # shape.param = 3,
-  truncation = 155
-)
-plot(detect_FWG, pop_desc, legend = FALSE)
-
-# Define and visualise uniform detection function
-detect_uf <- make.detectability(
-  key.function = "uf",
-  scale.param = 1, # accounting for canopy cover
-  truncation = 40
-)
-plot(detect_uf, pop_desc)
-
-# Set detection function for simulation
+  # Save simulation data
+  input_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
+  load(file = input_path)
 
 
 
-## Simulation
 
-SIM_REPS <- 999
-# # Define analysis models
-# ddf_analyses <- make.ds.analysis(
-#   dfmodel = ~1,
-#   key = "hn",
-#   criteria = "AIC",
-#   truncation = IMAGE_WIDTH
-# )
-ddf_analyses <- make.ds.analysis(
-  dfmodel = ~1,
-  key = "hr",
-  criteria = "AIC",
-  truncation = 500
-)
+  # Define constants
+  ALTITUDE <- 120 # Height in meters
+  CAMERA_HFOV <- 25 # Horizontal FOV in degrees. Max adjustment of 25 degrees. If more than 25 degrees then a third camera or gimbal would be needed to cover 0. Proposed intervals for adjustments are 0, 10, 20, 25
+  CAMERA_ANGLE <- 35 # Adjustment in degrees; max 25 with two fix cameras or 35 with gimbal in forested
+  IMAGE_WIDTH <- calculate_image_width(ALTITUDE, CAMERA_HFOV, CAMERA_ANGLE)
+  print(paste0("Half swath width is: ", IMAGE_WIDTH, " m"))
+
+  # Create population description
+  pop_desc <- make.population.description(
+    region = region,
+    density = density,
+    N = total_abundance,
+    fixed.N = T
+  )
+
+  # Define and visualise detection function
+  detect_hr_overview <- make.detectability(
+    key.function = "hr",
+    scale.param = rep(50, 10),
+    shape.param = seq(0.1, 4, 0.4),
+    truncation = 550
+  )
+  COLORS <- brewer.pal(10, "Paired")
+  plot(detect_hr_overview, pop_desc, col = COLORS)
+  legend(x = "topright", legend = seq(0.1, 4, 0.4), col = COLORS, lty = 1, cex = 0.8)
+
+  detect_H <- make.detectability(
+    key.function = "hn",
+    scale.param = 140, # heli:50
+    # shape.param = 2, # heli:2
+    truncation = 500 # heli:20
+  )
+  plot(detect_H, pop_desc, legend = FALSE)
+
+  detect_FW2 <- make.detectability(
+    key.function = "hn",
+    scale.param = 170,
+    # shape.param = 1.3,
+    truncation = 110 
+  )
+  plot(detect_FW2, pop_desc, legend = FALSE)
+
+  detect_FWG <- make.detectability(
+    key.function = "hn",
+    scale.param = 170,
+    # shape.param = 3,
+    truncation = 155
+  )
+  plot(detect_FWG, pop_desc, legend = FALSE)
+
+  # Define and visualise uniform detection function
+  detect_uf <- make.detectability(
+    key.function = "uf",
+    scale.param = 1, # accounting for canopy cover
+    truncation = 40
+  )
+  plot(detect_uf, pop_desc)
+
+  # Set detection function for simulation
 
 
-# Create and run the simulation
-H_SG_sim <- make.simulation(
-  reps = SIM_REPS,
-  design = H_SG_design,
-  population.description = pop_desc,
-  detectability = detect_H,
-  ds.analysis = ddf_analyses
-)
 
-SW_ddf_analyses <- make.ds.analysis(
-  dfmodel = ~1,
-  key = "hr",
-  criteria = "AIC",
-  truncation = 155,
-)
-#Superwake
-SW_simulation <- make.simulation(
-  reps = SIM_REPS,
-  design = H_SG_design,
-  population.description = pop_desc,
-  detectability = detect_FWG,
-  ds.analysis = SW_ddf_analyses
-)
+  ## Simulation
 
-SW_simulation <- run.simulation(simulation = SW_simulation, run.parallel = T, max.cores = 20)
+  SIM_REPS <- 999
+  # # Define analysis models
+  # ddf_analyses <- make.ds.analysis(
+  #   dfmodel = ~1,
+  #   key = "hn",
+  #   criteria = "AIC",
+  #   truncation = IMAGE_WIDTH
+  # )
+  ddf_analyses <- make.ds.analysis(
+    dfmodel = ~1,
+    key = "hr",
+    criteria = "AIC",
+    truncation = 500
+  )
 
 
-# Save simulation data
-output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
-# output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
-save(H_SG_sim, FW_Sys_2C_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_nadir_sim, QC_Sys_sim, SW_simulation, file = output_path)
+  # Create and run the simulation
+  H_SG_sim <- make.simulation(
+    reps = SIM_REPS,
+    design = H_SG_design,
+    population.description = pop_desc,
+    detectability = detect_H,
+    ds.analysis = ddf_analyses
+  )
 
+  SW_ddf_analyses <- make.ds.analysis(
+    dfmodel = ~1,
+    key = "hr",
+    criteria = "AIC",
+    truncation = 155,
+  )
+  #Superwake
+  SW_simulation <- make.simulation(
+    reps = SIM_REPS,
+    design = H_SG_design,
+    population.description = pop_desc,
+    detectability = detect_FWG,
+    ds.analysis = SW_ddf_analyses
+  )
+
+  SW_simulation <- run.simulation(simulation = SW_simulation, run.parallel = T, max.cores = 20)
+  H_SG_sim <- run.simulation(simulation = H_SG_sim, run.parallel = T, max.cores = 20)
+
+
+  # Save simulation data
+  output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
+  # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
+  save(H_SG_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_nadir_sim, QC_Sys_sim, SW_simulation, file = output_path)
+}
 
 # Drone sims
 example_population <- generate.population(object = pop_desc, detectability = detect_uf, region = region)

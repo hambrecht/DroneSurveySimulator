@@ -38,7 +38,7 @@ tiff(filename = output_path, width = 2250, height = 1125, units = "px", res = 30
 par(mar = c(5, 5, 4, 2) + 0.1, cex = 0.9, cex.lab = 0.9, cex.axis = 0.9, lwd = 1, bty = "n", family = "Arial")
 
 # Plot the data
-plot(detect_H_data$distance, detect_H_data$detectability, type = "l", col = custom_colors[4], lwd = 7, xlim = c(0, 500), ylim = c(0, 1), xlab = "Distance", ylab = "Detectability")
+plot(detect_H_data$distance, detect_H_data$detectability, type = "l", col = custom_colors[4], lwd = 7, xlim = c(0, 500), ylim = c(0, 1), xlab = "Distance (m)", ylab = "Detectability")
 lines(detect_FWG_data$distance, detect_FWG_data$detectability, col = custom_colors[3], lwd = 7, lty = 3) # Dotted line
 lines(detect_FW2_data$distance, detect_FW2_data$detectability, col = 'black', lwd = 7) # Shadow
 lines(detect_FW2_data$distance, detect_FW2_data$detectability, col = custom_colors[2], lwd = 5)
@@ -46,7 +46,7 @@ lines(detect_uf_data$distance, detect_uf_data$detectability, col = custom_colors
 
 
 # Add a legend
-legend("topright", legend = c("NADIR", "2 Cameras", "Gimbal", "Helicopter"), col = custom_colors, lty = c(1, 1, 2, 1), lwd = 2, cex = 0.9, box.lwd = 1, box.col = "NA", bg = "white")
+legend("topright", legend = c("nadir", "2 Cameras", "Gimbal", "Helicopter"), col = custom_colors, lty = c(1, 1, 2, 1), lwd = 2, cex = 0.9, box.lwd = 1, box.col = "NA", bg = "white")
 
 
 

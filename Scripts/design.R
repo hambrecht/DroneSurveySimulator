@@ -409,7 +409,7 @@ extract_metrics <- function(sim) {
 
 # Load density data
 wmu_number_list <- c("501", "503", "512", "517", "528")
-wmu_number <- wmu_number_list[3]
+wmu_number <- wmu_number_list[5]
 input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
 load(file = input_path)
 
@@ -436,30 +436,36 @@ COV_REPS <- 100
 # TRANSECT_ANGLE <- LONGEST_DIMENSION$angle
 
 # create coverage grid
-cover <- make.coverage(region,
-                       spacing = COV_SPACE # OR
-                       # n.grid.points = 1000
-)
+# cover <- make.coverage(region,
+#                        spacing = COV_SPACE # OR
+#                        # n.grid.points = 1000
+# )
 # plot(region, cover)
 
-H_SG_design@coverage.grid <- cover
-H_SG_design <- run.coverage(H_SG_design, reps = COV_REPS)
-FW_Sys_G_design@coverage.grid <- cover
-FW_Sys_G_design <- run.coverage(FW_Sys_G_design, reps = COV_REPS)
 
-FW_Sys_2C_design@coverage.grid <- cover
-FW_Sys_2C_design <- run.coverage(FW_Sys_2C_design, reps = COV_REPS)
+FW_Seg_G_design <- H_SG_design
+FW_Seg_G_design@truncation <- 155
+FW_Seg_G_design@coverage.grid <- cover
+FW_Seg_G_design <- run.coverage(FW_Seg_G_design, reps = COV_REPS)
 
-FW_ZZ_G_design@coverage.grid <- cover
-FW_ZZ_G_design <- run.coverage(FW_ZZ_G_design, reps = COV_REPS)
+# H_SG_design@coverage.grid <- cover
+# H_SG_design <- run.coverage(H_SG_design, reps = COV_REPS)
+# FW_Sys_G_design@coverage.grid <- cover
+# FW_Sys_G_design <- run.coverage(FW_Sys_G_design, reps = COV_REPS)
 
-FW_ZZ_2C_design@coverage.grid <- cover
-FW_ZZ_2C_design <- run.coverage(FW_ZZ_2C_design, reps = COV_REPS)
+# FW_Sys_2C_design@coverage.grid <- cover
+# FW_Sys_2C_design <- run.coverage(FW_Sys_2C_design, reps = COV_REPS)
 
-QC_Sys_design@coverage.grid <- cover
-system.time(QC_Sys_design <- run.coverage(QC_Sys_design, reps = COV_REPS))[3] / 60
-QC_Sys_nadir_design@coverage.grid <- cover
-system.time(QC_Sys_nadir_design <- run.coverage(QC_Sys_nadir_design, reps = COV_REPS))[3] / 60
+# FW_ZZ_G_design@coverage.grid <- cover
+# FW_ZZ_G_design <- run.coverage(FW_ZZ_G_design, reps = COV_REPS)
+
+# FW_ZZ_2C_design@coverage.grid <- cover
+# FW_ZZ_2C_design <- run.coverage(FW_ZZ_2C_design, reps = COV_REPS)
+
+# QC_Sys_design@coverage.grid <- cover
+# system.time(QC_Sys_design <- run.coverage(QC_Sys_design, reps = COV_REPS))[3] / 60
+# QC_Sys_nadir_design@coverage.grid <- cover
+# system.time(QC_Sys_nadir_design <- run.coverage(QC_Sys_nadir_design, reps = COV_REPS))[3] / 60
 
 
 
@@ -792,6 +798,7 @@ par(mfrow = c(1, 1))
 ## The cyclic trackline length is the trackline length plus the off-effort transit distance required to return from the end of the last transect to the beginning of the first transect.
 # Extract key metrics from each simulation summary
 H_SG_design_metric <- extract_design_metrics(H_SG_design)
+FW_Seg_G_design_metric <- extract_design_metrics(FW_Seg_G_design)
 FW_Sys_2C_design_metric <- extract_design_metrics(FW_Sys_2C_design)
 FW_ZZ_2C_design_metric <- extract_design_metrics(FW_ZZ_2C_design)
 FW_Sys_G_design_metric <- extract_design_metrics(FW_Sys_G_design)
@@ -801,8 +808,9 @@ QC_Sys_design_metric <- extract_design_metrics(QC_Sys_design)
 
 # Combine metrics into a single dataframe
 design_comparison_df <- data.frame(
-  Simulation = c("FW-Sys-2C", "FW-ZZ-2C", "FW-Sys-G", "FW-ZZ-G", "QC-Sys-NADIR", "QC-Sys", "H-SG"),
+  Simulation = c("FW-Seg-G", "FW-Sys-2C", "FW-ZZ-2C", "FW-Sys-G", "FW-ZZ-G", "QC-Sys-NADIR", "QC-Sys", "H-SG"),
   Design = c(
+    FW_Seg_G_design_metric$design_type[1],
     FW_Sys_2C_design_metric$design_type[1],
     FW_ZZ_2C_design_metric$design_type[1],
     FW_Sys_G_design_metric$design_type[1],
@@ -812,6 +820,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$design_type
   ),
   Mean_Sampler_Count = c(
+    FW_Seg_G_design_metric$mean_sampler_count,
     FW_Sys_2C_design_metric$mean_sampler_count,
     FW_ZZ_2C_design_metric$mean_sampler_count,
     FW_Sys_G_design_metric$mean_sampler_count,
@@ -821,6 +830,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$mean_sampler_count
   ),
   Mean_Cover_Area = c(
+    FW_Seg_G_design_metric$mean_cover_area,
     FW_Sys_2C_design_metric$mean_cover_area,
     FW_ZZ_2C_design_metric$mean_cover_area,
     FW_Sys_G_design_metric$mean_cover_area,
@@ -830,6 +840,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$mean_cover_area
   ),
   Mean_Cover_Percentage = c(
+    FW_Seg_G_design_metric$mean_cover_percentage,
     FW_Sys_2C_design_metric$mean_cover_percentage,
     FW_ZZ_2C_design_metric$mean_cover_percentage,
     FW_Sys_G_design_metric$mean_cover_percentage,
@@ -839,6 +850,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$mean_cover_percentage
   ),
   Mean_Line_Length = c(
+    FW_Seg_G_design_metric$mean_line_length,
     FW_Sys_2C_design_metric$mean_line_length,
     FW_ZZ_2C_design_metric$mean_line_length,
     FW_Sys_G_design_metric$mean_line_length,
@@ -848,6 +860,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$mean_line_length
   ),
   Mean_Trackline_Length = c(
+    FW_Seg_G_design_metric$mean_trackline,
     FW_Sys_2C_design_metric$mean_trackline,
     FW_ZZ_2C_design_metric$mean_trackline,
     FW_Sys_G_design_metric$mean_trackline,
@@ -857,6 +870,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$mean_trackline
   ),
   Mean_Cyclic_Trackline_Length = c(
+    FW_Seg_G_design_metric$mean_cyclic_trackline,
     FW_Sys_2C_design_metric$mean_cyclic_trackline,
     FW_ZZ_2C_design_metric$mean_cyclic_trackline,
     FW_Sys_G_design_metric$mean_cyclic_trackline,
@@ -866,6 +880,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$mean_cyclic_trackline
   ),
   Mean_On_Effort = c(
+    FW_Seg_G_design_metric$mean_on_effort,
     FW_Sys_2C_design_metric$mean_on_effort,
     FW_ZZ_2C_design_metric$mean_on_effort,
     FW_Sys_G_design_metric$mean_on_effort,
@@ -875,6 +890,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$mean_on_effort
   ),
   Mean_Off_Effort = c(
+    FW_Seg_G_design_metric$mean_off_effort,
     FW_Sys_2C_design_metric$mean_off_effort,
     FW_ZZ_2C_design_metric$mean_off_effort,
     FW_Sys_G_design_metric$mean_off_effort,
@@ -884,6 +900,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$mean_off_effort
   ),
   Mean_Return_to_Home = c(
+    FW_Seg_G_design_metric$mean_return2home,
     FW_Sys_2C_design_metric$mean_return2home,
     FW_ZZ_2C_design_metric$mean_return2home,
     FW_Sys_G_design_metric$mean_return2home,
@@ -893,6 +910,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$mean_return2home
   ),
   Mean_Off_Effort_Return = c(
+    FW_Seg_G_design_metric$mean_off_effort_return,
     FW_Sys_2C_design_metric$mean_off_effort_return,
     FW_ZZ_2C_design_metric$mean_off_effort_return,
     FW_Sys_G_design_metric$mean_off_effort_return,
@@ -902,6 +920,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$mean_off_effort_return
   ),
   On_Effort_Percentage = c(
+    FW_Seg_G_design_metric$on_effort_percentage,
     FW_Sys_2C_design_metric$on_effort_percentage,
     FW_ZZ_2C_design_metric$on_effort_percentage,
     FW_Sys_G_design_metric$on_effort_percentage,
@@ -911,6 +930,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$on_effort_percentage
   ),
   Off_Effort_Percentage = c(
+    FW_Seg_G_design_metric$off_effort_percentage,
     FW_Sys_2C_design_metric$off_effort_percentage,
     FW_ZZ_2C_design_metric$off_effort_percentage,
     FW_Sys_G_design_metric$off_effort_percentage,
@@ -920,6 +940,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$off_effort_percentage
   ),
   Return_to_Home_Percentage = c(
+    FW_Seg_G_design_metric$return2home_percentage,
     FW_Sys_2C_design_metric$return2home_percentage,
     FW_ZZ_2C_design_metric$return2home_percentage,
     FW_Sys_G_design_metric$return2home_percentage,
@@ -929,6 +950,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$return2home_percentage
   ),
   Off_Effort_Return_Percentage = c(
+    FW_Seg_G_design_metric$off_effort_return_percentage,
     FW_Sys_2C_design_metric$off_effort_return_percentage,
     FW_ZZ_2C_design_metric$off_effort_return_percentage,
     FW_Sys_G_design_metric$off_effort_return_percentage,
@@ -938,6 +960,7 @@ design_comparison_df <- data.frame(
     H_SG_design_metric$off_effort_return_percentage
   ),
   Number_of_Plots = c(
+    length(FW_Seg_G_design_metric$design_type),
     length(FW_Sys_2C_design_metric$design_type),
     length(FW_ZZ_2C_design_metric$design_type),
     length(FW_Sys_G_design_metric$design_type),
@@ -956,5 +979,5 @@ kable(design_comparison_df)
 # Save simulation data
 output_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
 # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H-SG-DF", detectF@key.function, ".RData"))
-save(cover, H_SG_design, FW_Sys_2C_design, FW_ZZ_2C_design, FW_Sys_G_design, FW_ZZ_G_design, QC_Sys_nadir_design, QC_Sys_design, design_comparison_df, file = output_path)
+save(cover, H_SG_design, FW_Seg_G_design, FW_Sys_2C_design, FW_ZZ_2C_design, FW_Sys_G_design, FW_ZZ_G_design, QC_Sys_nadir_design, QC_Sys_design, design_comparison_df, file = output_path)
 

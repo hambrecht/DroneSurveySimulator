@@ -71,7 +71,7 @@ extract_metrics <- function(sim) {
 wmu_number_list <- c("501", "503", "512", "517", "528")
 wmu_number <- wmu_number_list[5]
 for (wmu_number in wmu_number_list) {
-  rm(H_SG_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_nadir_sim, QC_Sys_sim, SW_simulation)
+  
   input_path <- here("Output", "Density", paste0("density", wmu_number, ".RData"))
   load(file = input_path)
   input_path <- here("Output", "Simulation", paste0("cover-WMU", wmu_number, ".RData"))
@@ -150,12 +150,7 @@ for (wmu_number in wmu_number_list) {
 
   SIM_REPS <- 999
   # # Define analysis models
-  # ddf_analyses <- make.ds.analysis(
-  #   dfmodel = ~1,
-  #   key = "hn",
-  #   criteria = "AIC",
-  #   truncation = IMAGE_WIDTH
-  # )
+
   ddf_analyses <- make.ds.analysis(
     dfmodel = ~1,
     key = "hr",
@@ -173,29 +168,29 @@ for (wmu_number in wmu_number_list) {
     ds.analysis = ddf_analyses
   )
 
-  SW_ddf_analyses <- make.ds.analysis(
+  FW-Seg_G_ddf_analyses <- make.ds.analysis(
     dfmodel = ~1,
     key = "hr",
     criteria = "AIC",
     truncation = 155,
   )
   #Superwake
-  SW_simulation <- make.simulation(
+ FW-Seg_G_simulation <- make.simulation(
     reps = SIM_REPS,
     design = H_SG_design,
     population.description = pop_desc,
     detectability = detect_FWG,
-    ds.analysis = SW_ddf_analyses
+    ds.analysis = FW-Seg_G_ddf_analyses
   )
 
-  SW_simulation <- run.simulation(simulation = SW_simulation, run.parallel = T, max.cores = 20)
+  FW-Seg_G_simulation <- run.simulation(simulation = FW-Seg_G_simulation, run.parallel = T, max.cores = 20)
   H_SG_sim <- run.simulation(simulation = H_SG_sim, run.parallel = T, max.cores = 20)
 
 
   # Save simulation data
   output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number, ".RData"))
-  # output_path <- here("Output", "Simulation", paste0("simulation-WMU", wmu_number,"-T",IMAGE_WIDTH,"H_SG-DF", detectF@key.function, ".RData"))
-  save(H_SG_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_nadir_sim, QC_Sys_sim, SW_simulation, file = output_path)
+  save(H_SG_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_nadir_sim, QC_Sys_sim, FW-Seg_G_simulation, file = output_path)
+  rm(H_SG_sim, FW_Sys_2C_sim, FW_ZZ_2C_sim, FW_Sys_G_sim, FW_ZZ_G_sim, QC_Sys_nadir_sim, QC_Sys_sim, FW-Seg_G_simulation)
 }
 
 # Drone sims
